@@ -1,0 +1,4 @@
+github.com/friedenberg/go-signals v1.0.2 h1:x5yTsh/9crh4knh+5oGwLJtmUgguGZWovJ51Z2DMq9Y=
+github.com/friedenberg/go-signals v1.0.2/go.mod h1:kEUocyO/+XNUKXKYL4rxnuclDsPUb3gLx6dzREPX1+s=
+github.com/pkg/errors v0.9.1 h1:FEBLx1zS214owpjy7qsBeixbURkuhQAwrK5UwLGTwt4=
+github.com/pkg/errors v0.9.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=

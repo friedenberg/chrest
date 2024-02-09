@@ -1,0 +1,21 @@
+{
+  "manifest_version": 3,
+  "name": "chrest",
+  "description": "Manage windows and tabs via REST",
+  "version": "1.0",
+  "permissions": [
+    "tabs",
+    "tabCapture",
+    "debugger",
+    "nativeMessaging",
+    "management",
+    "unlimitedStorage"
+  ],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'"
+  },
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  }
+}
