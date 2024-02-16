@@ -1,4 +1,4 @@
-package main
+package chrest
 
 import (
 	"bytes"

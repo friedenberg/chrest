@@ -1,9 +1,11 @@
 {
   "manifest_version": 3,
   "name": "chrest",
-  "description": "Manage windows and tabs via REST",
+  "description": "Manage windows, tabs, and bookmarks via REST",
   "version": "1.0",
   "permissions": [
+    "background",
+    "bookmarks",
     "tabs",
     "tabCapture",
     "debugger",
@@ -15,7 +17,7 @@
     "extension_pages": "script-src 'self'; object-src 'self'"
   },
   "background": {
-    "service_worker": "background.js",
+    "service_worker": "main.js",
     "type": "module"
   }
 }

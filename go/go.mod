@@ -1,4 +1,4 @@
-module chrome-json
+module code.linenisgreat.com/chrest
 
 go 1.21.6
 

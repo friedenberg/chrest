@@ -1,4 +1,4 @@
-package main
+package chrest
 
 import (
 	"io"
@@ -25,9 +25,9 @@ func ByteArrayToInt32(arr [4]byte) int32 {
 func ReadInt32(r io.Reader, i *int32) (n int64, err error) {
 	var b [4]byte
 
-  var n1 int
+	var n1 int
 	n1, err = ReadAllOrDieTrying(r, b[:])
-  n += int64(n1)
+	n += int64(n1)
 
 	if err != nil {
 		return
