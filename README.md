@@ -1,12 +1,16 @@
+
+Chrest: healthier window and tab hygiene
+
+--------------------------------------------------------------------------------
+
 Chrest is a CLI tool and Chrome extension that allow you to manage Chrome via
 REST. Chrest was inspired by (and somewhat forked from)
 [`TabFS`](https://omar.website/tabfs/).
 
-Chrest consists of three parts:
+Chrest consists of two parts:
 
-1.  Chrome Extension: `Chrest` ([/extension](extension))
-2.  Native Messaging Host: `chrest-cavity` ([/go/cavity](go/cavity))
-3.  CLI Client: `chrest-whitening` ([/go/whitening](go/whitening))
+1.  Chrome Extension: ([/extension](extension))
+2.  Native Messaging Host & CLI Client: `chrest` ([/](/))
 
 # Examples
 
@@ -17,7 +21,7 @@ like [`http`](https://httpie.io/) and [`jq`](https://jqlang.github.io/jq/).
 -   Getting all windows and tabs:
 
         $ http --ignore-stdin --offline localhost/windows |
-        $   chrest-whitening client |
+        $   chrest client |
         $   jq
         > [
         >   {
@@ -63,7 +67,7 @@ like [`http`](https://httpie.io/) and [`jq`](https://jqlang.github.io/jq/).
 
         $ http --ignore-stdin --offline localhost/windows \
         $   urls[]=https://github.com/friedenberg/chrest |
-        $   chrest-whitening client |
+        $   chrest client |
         $   jq
         > {
         >   "alwaysOnTop": false,
@@ -107,15 +111,24 @@ like [`http`](https://httpie.io/) and [`jq`](https://jqlang.github.io/jq/).
 -   Closing a window:
 
         $ http --ignore-stdin --offline DELETE localhost/windows/1531273390 |
-        $   chrest-whitening client |
+        $   chrest client |
         $   jq
 
 # Installation
 
+1.  Clone this repo: `git clone github.com/friedenberg/chrest`
 1.  Go to [Chrome extensions](chrome://extensions/)
-2.  Enable Developer mode (top-right corner)
-3.  Load-unpacked the [`extension/`](extension) folder from this repo
-4.  TBA
+1.  Enable Developer mode (top-right corner)
+1.  Load-unpacked the [`extension/`](extension) folder from this repo
+    
+    Take note of the extension ID, it looks like
+    `lbgclgjcapgipnneocphmhckebhbbkac`
+
+1.  `go build`
+1.  `./chrest install <extension ID>`
+1.  Add `$HOME/.local/bin` to your `$PATH`
+1.  Reload the extension in Chrome to start the service worker
+1.  Try `http --ignore-stdin --offline localhost/windows | ./chrest client | jq`
 
 # Todo
 
@@ -126,6 +139,6 @@ like [`http`](https://httpie.io/) and [`jq`](https://jqlang.github.io/jq/).
 # Known Issues
 
 -   Chrome will turn off service workers when there are no windows left, so at
-    least 1 window needs to exist for `chrest-cavity` to be running. I may add a
-    fallback in `chrest-whitening` to use `AppleScript` to create a new window
+    least 1 window needs to exist for `chrest` to be running. I may add a
+    fallback in `chrest` to use `AppleScript` to create a new window
     if the server is not running.
