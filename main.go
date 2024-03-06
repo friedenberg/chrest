@@ -9,6 +9,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"os/exec"
 	"path"
 
 	"github.com/pkg/errors"
@@ -38,6 +39,13 @@ func main() {
 		err = CmdServer(c)
 
 	case "client":
+		for i, x := range os.Args {
+			if x == "client" {
+				os.Args = append(os.Args[:i], os.Args[i+1:]...)
+				break
+			}
+		}
+
 		var c Config
 
 		if err = c.Read(); err != nil {
@@ -57,6 +65,15 @@ func main() {
 		}
 
 		err = CmdInstall(c)
+
+	case "demo":
+		var c Config
+
+		if err = c.Read(); err != nil {
+			break
+		}
+
+		err = CmdDemo(c)
 	}
 
 	if err != nil {
@@ -102,10 +119,26 @@ func CmdServer(c Config) (err error) {
 }
 
 func CmdClient(c Config) (err error) {
+	printFullRequest := flag.Bool("full-request", false, "print the full request including headers")
 	flag.Parse()
 
 	var sock string
 	if sock, err = c.SocketPath(); err != nil {
+		return
+	}
+
+	cmdHttpArgs := append([]string{"--offline"}, flag.Args()...)
+	cmdHttp := exec.Command("http", cmdHttpArgs...)
+	cmdHttp.Stdin = os.Stdin
+
+	var stdout io.ReadCloser
+
+	if stdout, err = cmdHttp.StdoutPipe(); err != nil {
+		return
+	}
+
+	// TODO error message when http is missing
+	if err = cmdHttp.Start(); err != nil {
 		return
 	}
 
@@ -117,26 +150,35 @@ func CmdClient(c Config) (err error) {
 		return
 	}
 
-	// args := flag.Args()[1:]
+	if *printFullRequest {
+		_, err = io.Copy(os.Stdout, conn)
 
-	// if len(args) == 0 {
-	// 	panic("no path provided")
-	// }
+		if err != nil {
+			return
+		}
 
-	// path := args[0]
-	// if path == "-" {
-	if resp, err = ResponseFromStdin(conn); err != nil {
 		return
 	}
-	// } else {
-	// 	if resp, err = ResponseFromArgs(conn, args...); err != nil {
-	// 		panic(err)
-	// 	}
-	// }
 
-	_, err = io.Copy(os.Stdout, resp.Body)
+	if resp, err = ResponseFromReader(stdout, conn); err != nil {
+		return
+	}
 
-	if err != nil {
+	if err = cmdHttp.Wait(); err != nil {
+		return
+	}
+
+	cmdJq := exec.Command("jq")
+	cmdJq.Stdin = resp.Body
+	cmdJq.Stdout = os.Stdout
+
+	// TODO error message when jq is missing
+	if err = cmdJq.Run(); err != nil {
+		return
+	}
+
+	if resp.StatusCode >= 400 {
+		err = errors.Errorf("http error: %s", http.StatusText(resp.StatusCode))
 		return
 	}
 
@@ -215,4 +257,46 @@ func CmdInstall(c Config) (err error) {
 	}
 
 	return
+}
+
+func CmdDemo(c Config) (err error) {
+	return
+	// flag.Parse()
+
+	// var sock string
+	// if sock, err = c.SocketPath(); err != nil {
+	// 	return
+	// }
+
+	// var resp *http.Response
+
+	// var conn net.Conn
+
+	// if conn, err = net.Dial("unix", sock); err != nil {
+	// 	return
+	// }
+
+	// script := flag.Args()[1]
+
+	// if resp, err = ResponseFromStdin(conn); err != nil {
+	// 	return
+	// }
+	// // } else {
+	// // 	if resp, err = ResponseFromArgs(conn, args...); err != nil {
+	// // 		panic(err)
+	// // 	}
+	// // }
+
+	// _, err = io.Copy(os.Stdout, resp.Body)
+
+	// if err != nil {
+	// 	return
+	// }
+
+	// if resp.StatusCode >= 400 {
+	// 	err = errors.Errorf("http error: %s", http.StatusText(resp.StatusCode))
+	// 	return
+	// }
+
+	// return
 }

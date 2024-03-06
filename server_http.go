@@ -7,11 +7,12 @@ import (
 )
 
 type (
-	JsonObject = map[string]interface{}
-	Request    JsonObject
+	JsonAnything = interface{}
+	JsonObject   = map[string]JsonAnything
+	Request      JsonObject
 )
 
-func NewRequest(in *http.Request, body JsonObject) (out Request) {
+func NewRequest(in *http.Request, body JsonAnything) (out Request) {
 	out = map[string]interface{}{
 		"path":   in.URL.Path,
 		"method": in.Method,
@@ -30,9 +31,9 @@ func ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 	var err error
 
-	var m Message
+	var m JsonAnything
 
-	err = dec.Decode(&m.Content)
+	err = dec.Decode(&m)
 
 	if err == io.EOF {
 		err = nil
@@ -42,21 +43,19 @@ func ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		panic(err)
 	}
 
-	m.Content = NewRequest(req, m.Content)
-
-	_, err = m.WriteToChrome()
+	_, err = WriteToChrome(NewRequest(req, m))
 
 	if err != nil {
 		panic(err)
 	}
 
-	_, err = m.ReadFromChrome()
+	var res JsonObject
+
+	_, err = ReadFromChrome(&res)
 
 	if err != nil && err != io.EOF {
 		panic(err)
 	}
-
-	res := m.Content
 
 	w.WriteHeader(int(res["status"].(float64)))
 

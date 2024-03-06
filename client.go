@@ -4,15 +4,15 @@ import (
 	"bufio"
 	"context"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
-	"os"
 )
 
-func ResponseFromStdin(conn net.Conn) (resp *http.Response, err error) {
+func ResponseFromReader(r io.Reader, conn net.Conn) (resp *http.Response, err error) {
 	var req *http.Request
 
-	if req, err = http.ReadRequest(bufio.NewReader(os.Stdin)); err != nil {
+	if req, err = http.ReadRequest(bufio.NewReader(r)); err != nil {
 		return
 	}
 

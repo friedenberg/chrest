@@ -48,27 +48,29 @@ func (s *ServerSocket) acceptConn(conn *net.UnixConn) {
 	var err error
 
 	for {
-		var m Message
+		var m JsonAnything
 
-		err = dec.Decode(&m.Content)
-
-		if err != nil {
-			panic(err)
-		}
-
-		_, err = m.WriteToChrome()
+		err = dec.Decode(&m)
 
 		if err != nil {
 			panic(err)
 		}
 
-		_, err = m.ReadFromChrome()
+		_, err = WriteToChrome(m)
+
+		if err != nil {
+			panic(err)
+		}
+
+		var resp JsonObject
+
+		_, err = ReadFromChrome(&resp)
 
 		if err != nil && err != io.EOF {
 			panic(err)
 		}
 
-		err = enc.Encode(m.Content)
+		err = enc.Encode(resp)
 
 		if err != nil {
 			panic(err)

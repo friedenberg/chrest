@@ -5,6 +5,7 @@
   "version": "1.0",
   "permissions": [
     "background",
+    "history",
     "bookmarks",
     "tabs",
     "tabCapture",

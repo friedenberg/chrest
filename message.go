@@ -7,17 +7,12 @@ import (
 	"os"
 )
 
-type Message struct {
-	bytes.Buffer
-	Content map[string]interface{}
-}
-
-func (m *Message) WriteToChrome() (n int64, err error) {
+func WriteToChrome(m interface{}) (n int64, err error) {
 	w := os.Stdout
 
 	var b []byte
 
-	b, err = json.Marshal(m.Content)
+	b, err = json.Marshal(m)
 
 	if err != nil {
 		return
@@ -45,27 +40,7 @@ func (m *Message) WriteToChrome() (n int64, err error) {
 	return
 }
 
-func (m *Message) WriteTo(w io.Writer) (n int64, err error) {
-	var b []byte
-
-	b, err = json.Marshal(m.Content)
-
-	if err != nil {
-		return
-	}
-
-	var n1 int
-	n1, err = WriteAllOrDieTrying(w, b)
-	n += int64(n1)
-
-	if err != nil {
-		return
-	}
-
-	return
-}
-
-func (m *Message) ReadFromChrome() (n int64, err error) {
+func ReadFromChrome(m interface{}) (n int64, err error) {
 	r := os.Stdin
 
 	var ml int32
@@ -87,15 +62,11 @@ func (m *Message) ReadFromChrome() (n int64, err error) {
 		return
 	}
 
-	err = json.Unmarshal(b.Bytes(), &m.Content)
+	err = json.Unmarshal(b.Bytes(), &m)
 
 	if err != nil {
 		return
 	}
 
-	return
-}
-
-func (m *Message) ReadFrom(r io.Reader) (n int64, err error) {
 	return
 }
