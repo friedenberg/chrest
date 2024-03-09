@@ -38,17 +38,6 @@ async function updateTab(body, groupCache, windowCache) {
   const id = body.id;
   delete body.id;
 
-  // if (body.windowId) {
-  //   const windowId = parseInt(body.windowId);
-  //   delete body.windowId;
-
-  //   if (windowId == -1) {
-  //     return await chrome.tabs.remove(id);
-  //   } else {
-  //     await chrome.tabs.move(id, { index: -1, windowId: windowId });
-  //   }
-  // }
-
   if (body.windowIdOrName) {
     let windowId = parseInt(body.windowIdOrName);
 
@@ -56,20 +45,18 @@ async function updateTab(body, groupCache, windowCache) {
       windowId = windowCache[body.windowIdOrName];
     }
 
-    if (!windowId) {
-      const w = await chrome.windows.create();
-      windowId = w.id;
-    }
-
     if (windowId == -1) {
       await chrome.tabs.remove(id);
     } else {
-      await chrome.tabs.move(id, {
-        index: -1,
-        windowId: windowId,
-      });
-
-      await removeEmptyTabs(windowId);
+      if (!windowId) {
+        const w = await chrome.windows.create({ tabId: id });
+        windowId = w.id;
+      } else {
+        await chrome.tabs.move(id, {
+          index: -1,
+          windowId: windowId,
+        });
+      }
 
       windowCache[body.windowIdOrName] = windowId;
     }
@@ -107,23 +94,24 @@ async function updateTab(body, groupCache, windowCache) {
     delete body.groupIdOrName;
   }
 
+  if (body.open) {
+    delete body.open;
+    body.active = true;
+    await openTab(id);
+  }
+
+  delete body.open;
+
   return await chrome.tabs.update(id, body);
 }
 
-async function removeEmptyTabs(windowId) {
-  const tabs = await tabsFromWindows(await chrome.windows.get(windowId));
-  console.log(tabs);
-
-  tabs.forEach(
-    async function (tab) {
-      console.log(tab);
-      if (tab.url != "chrome://newtab/") {
-        return;
-      }
-
-      await chrome.tabs.remove(tab.id);
-    }
-  );
+async function openTab(id) {
+  let tab = await chrome.tabs.get(id);
+  let windowId = tab.windowId;
+  await Promise.all([
+    chrome.windows.update(windowId, { focused: true }),
+    chrome.tabs.update(id, { active: true }),
+  ]);
 }
 
 Routes["/bookmarks_and_tabs"] = {
@@ -322,6 +310,16 @@ Routes["/tabs/#TAB_ID"] = {
   },
 };
 
+Routes["/tabs/#TAB_ID/open"] = {
+  async post({ tabId }) {
+    await openTab(tabId);
+
+    return {
+      status: 204,
+    };
+  },
+};
+
 Routes["/extensions"] = {
   async get() {
     return {
@@ -468,6 +466,10 @@ async function onMessage(req) {
 
   try {
     response = await tryMatchRoute(req);
+
+    if (response == null) {
+      response = { status: 204 };
+    }
   } catch (e) {
     console.error(e);
     response.status = 500;

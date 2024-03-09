@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"path/filepath"
 
 	"github.com/pkg/errors"
 )
@@ -128,6 +129,7 @@ func CmdClient(c Config) (err error) {
 	}
 
 	cmdHttpArgs := append([]string{"--offline"}, flag.Args()...)
+	cmdHttpArgs[2] = filepath.Join("localhost", cmdHttpArgs[2])
 	cmdHttp := exec.Command("http", cmdHttpArgs...)
 	cmdHttp.Stdin = os.Stdin
 
