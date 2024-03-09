@@ -13,6 +13,7 @@ import (
 	"path"
 	"path/filepath"
 
+	"code.linenisgreat.com/chrest"
 	"github.com/pkg/errors"
 )
 
@@ -31,9 +32,9 @@ func main() {
 
 	switch cmd {
 	default:
-		var c Config
+		var c chrest.Config
 
-		if c, err = ConfigDefault(); err != nil {
+		if c, err = chrest.ConfigDefault(); err != nil {
 			break
 		}
 
@@ -47,7 +48,7 @@ func main() {
 			}
 		}
 
-		var c Config
+		var c chrest.Config
 
 		if err = c.Read(); err != nil {
 			break
@@ -59,7 +60,7 @@ func main() {
 		err = CmdInit()
 
 	case "install":
-		var c Config
+		var c chrest.Config
 
 		if err = c.Read(); err != nil {
 			break
@@ -68,7 +69,7 @@ func main() {
 		err = CmdInstall(c)
 
 	case "demo":
-		var c Config
+		var c chrest.Config
 
 		if err = c.Read(); err != nil {
 			break
@@ -83,7 +84,7 @@ func main() {
 	}
 }
 
-func CmdServer(c Config) (err error) {
+func CmdServer(c chrest.Config) (err error) {
 	if err = c.Read(); err != nil {
 		log.Fatal(err)
 	}
@@ -108,18 +109,18 @@ func CmdServer(c Config) (err error) {
 
 	log.Printf("starting server on %q", sock)
 
-	socket := ServerSocket{SockPath: sock}
+	socket := chrest.ServerSocket{SockPath: sock}
 
 	if err = socket.Listen(); err != nil {
 		log.Fatal(err)
 	}
 
-	server := http.Server{Handler: http.HandlerFunc(ServeHTTP)}
+	server := http.Server{Handler: http.HandlerFunc(chrest.ServeHTTP)}
 	server.Serve(socket.Listener)
 	return
 }
 
-func CmdClient(c Config) (err error) {
+func CmdClient(c chrest.Config) (err error) {
 	printFullRequest := flag.Bool("full-request", false, "print the full request including headers")
 	flag.Parse()
 
@@ -162,7 +163,7 @@ func CmdClient(c Config) (err error) {
 		return
 	}
 
-	if resp, err = ResponseFromReader(stdout, conn); err != nil {
+	if resp, err = chrest.ResponseFromReader(stdout, conn); err != nil {
 		return
 	}
 
@@ -188,9 +189,9 @@ func CmdClient(c Config) (err error) {
 }
 
 func CmdInit() (err error) {
-	var c Config
+	var c chrest.Config
 
-	if c, err = ConfigDefault(); err != nil {
+	if c, err = chrest.ConfigDefault(); err != nil {
 		return
 	}
 
@@ -202,7 +203,7 @@ func CmdInit() (err error) {
 }
 
 // TODO use config
-func CmdInstall(c Config) (err error) {
+func CmdInstall(c chrest.Config) (err error) {
 	flag.Parse()
 
 	args := flag.Args()[1:]
@@ -222,14 +223,14 @@ func CmdInstall(c Config) (err error) {
 
 	newPath := c.ServerPath()
 
-	err = Symlink(exe, newPath)
+	err = chrest.Symlink(exe, newPath)
 	if err != nil {
 		return
 	}
 
-	var ij InstallJSON
+	var ij chrest.InstallJSON
 
-	if ij, err = MakeInstallJSON(
+	if ij, err = chrest.MakeInstallJSON(
 		newPath,
 		args...,
 	); err != nil {
@@ -261,7 +262,7 @@ func CmdInstall(c Config) (err error) {
 	return
 }
 
-func CmdDemo(c Config) (err error) {
+func CmdDemo(c chrest.Config) (err error) {
 	return
 	// flag.Parse()
 
