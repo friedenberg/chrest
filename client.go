@@ -46,6 +46,10 @@ func AskChrome(c Config, req *http.Request) (response interface{}, err error) {
 	}
 
 	if resp, err = http.ReadResponse(bufio.NewReader(conn), req); err != nil {
+		if err == io.EOF {
+			err = nil
+		}
+
 		return
 	}
 

@@ -114,14 +114,51 @@ async function openTab(id) {
   ]);
 }
 
-Routes["/bookmarks_and_tabs"] = {
+Routes["/urls"] = {
   async get(req) {
     return {
       status: 200,
       body: [
-        await tabsFromWindows(await chrome.windows.getAll()),
-        await chrome.bookmarks.search({}),
+        (await tabsFromWindows(await chrome.windows.getAll())).map((o) => ({
+          title: o.title,
+          type: "tab",
+          id: parseInt(o.id),
+          windowId: parseInt(o.windowId),
+          url: o.url,
+        })),
+        (await chrome.bookmarks.search({})).map((o) => ({
+          title: o.title,
+          type: "bookmark",
+          id: parseInt(o.id),
+          url: o.url,
+        })),
+        (await chrome.history.search({ text: "" })).map((o) => ({
+          title: o.title,
+          type: "history",
+          id: parseInt(o.id),
+          url: o.url,
+        })),
       ].flat(),
+    };
+  },
+  async delete(req) {
+    // await Promise.all(
+    //   (
+    //     await tabsFromWindows(await chrome.windows.getAll())
+    //   ).forEach((o) => (
+    //   )),
+    //   (
+    //     await chrome.bookmarks.search({})
+    //   ).forEach((o) => (
+    //   )),
+    //   (
+    //     await chrome.history.search({ text: "" })
+    //   ).forEach((o) => (
+    //   ))
+    // );
+
+    return {
+      status: 202,
     };
   },
 };
