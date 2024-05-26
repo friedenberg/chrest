@@ -26,6 +26,7 @@ func ResponseFromReader(r io.Reader, conn net.Conn) (resp *http.Response, err er
 	return
 }
 
+// TODO figure out which method retunrs err == io.EOF and set err to nil
 func AskChrome(c Config, req *http.Request) (response interface{}, err error) {
 	var sock string
 

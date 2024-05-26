@@ -34,84 +34,19 @@ async function tabsFromWindows(windowOrWindowList) {
   }
 }
 
-async function updateTab(body, groupCache, windowCache) {
-  const id = body.id;
-  delete body.id;
+async function removeBookmarks(urls) {
+  let bookmarks = await chrome.bookmarks.search({});
+  let removeBookmarks = [];
 
-  if (body.windowIdOrName) {
-    let windowId = parseInt(body.windowIdOrName);
-
-    if (isNaN(windowId)) {
-      windowId = windowCache[body.windowIdOrName];
-    }
-
-    if (windowId == -1) {
-      await chrome.tabs.remove(id);
-    } else {
-      if (!windowId) {
-        const w = await chrome.windows.create({ tabId: id });
-        windowId = w.id;
-      } else {
-        await chrome.tabs.move(id, {
-          index: -1,
-          windowId: windowId,
-        });
+  await Promise.all(
+    bookmarks.reduce((acc, bm) => {
+      if (urls.includes(bm.url)) {
+        acc.push(chrome.bookmarks.remove(bm.id));
       }
 
-      windowCache[body.windowIdOrName] = windowId;
-    }
-
-    delete body.windowIdOrName;
-  }
-
-  if (body.groupIdOrName) {
-    let groupId = parseInt(body.groupIdOrName);
-    let groupObj = {
-      tabIds: id,
-    };
-
-    if (isNaN(groupId)) {
-      groupId = groupCache[groupIdOrName];
-    }
-
-    if (!groupId) {
-      groupObj["groupId"] = groupId;
-    }
-
-    if (groupId == -1) {
-      groupId = await chrome.tabs.ungroup(id);
-
-      groupCache[body.groupIdOrName] = groupId;
-    } else {
-      groupId = await chrome.tabs.group({
-        tabIds: id,
-        groupId: groupId,
-      });
-
-      groupCache[body.groupIdOrName] = groupId;
-    }
-
-    delete body.groupIdOrName;
-  }
-
-  if (body.open) {
-    delete body.open;
-    body.active = true;
-    await openTab(id);
-  }
-
-  delete body.open;
-
-  return await chrome.tabs.update(id, body);
-}
-
-async function openTab(id) {
-  let tab = await chrome.tabs.get(id);
-  let windowId = tab.windowId;
-  await Promise.all([
-    chrome.windows.update(windowId, { focused: true }),
-    chrome.tabs.update(id, { active: true }),
-  ]);
+      return acc;
+    }, [])
+  );
 }
 
 Routes["/urls"] = {
@@ -125,43 +60,121 @@ Routes["/urls"] = {
           id: parseInt(o.id),
           windowId: parseInt(o.windowId),
           url: o.url,
+          date: new Date(o.lastAccessed),
         })),
         (await chrome.bookmarks.search({})).map((o) => ({
           title: o.title,
           type: "bookmark",
           id: parseInt(o.id),
           url: o.url,
+          date: new Date(o.dateAdded),
         })),
         (await chrome.history.search({ text: "" })).map((o) => ({
           title: o.title,
           type: "history",
           id: parseInt(o.id),
           url: o.url,
+          date: new Date(o.lastVisitTime),
         })),
       ].flat(),
     };
   },
-  async delete(req) {
-    // await Promise.all(
-    //   (
-    //     await tabsFromWindows(await chrome.windows.getAll())
-    //   ).forEach((o) => (
-    //   )),
-    //   (
-    //     await chrome.bookmarks.search({})
-    //   ).forEach((o) => (
-    //   )),
-    //   (
-    //     await chrome.history.search({ text: "" })
-    //   ).forEach((o) => (
-    //   ))
-    // );
+  async put(req) {
+    await Promise.all(
+      await removeTabs(req.body.deleted),
+      await removeBookmarks(req.body.deleted)
+    );
 
     return {
       status: 202,
     };
   },
 };
+
+//  ____           _
+// |  _ \ ___  ___| |_ ___  _ __ ___
+// | |_) / _ \/ __| __/ _ \| '__/ _ \
+// |  _ <  __/\__ \ || (_) | | |  __/
+// |_| \_\___||___/\__\___/|_|  \___|
+//
+
+Routes["/restore"] = {
+  description: "Restores chrome windows and tabs to a specific state",
+  async delete(req) {
+    await Promise.all(
+      (
+        await chrome.windows.getAll()
+      ).map((w) => {
+        return chrome.windows.remove(w.id);
+      })
+    );
+
+    return {
+      status: 204,
+    };
+  },
+  async post(req) {
+    const makePromise = async function (body) {
+      let tabs = body["tabs"];
+      delete body["tabs"];
+
+      let w = await chrome.windows.create(body);
+
+      tabs = tabs.map((t) => {
+        t = cleanTabForSave(t);
+        t["windowId"] = w.id;
+        return t;
+      });
+
+      w.tabs = await Promise.all(tabs.map(makeTab));
+
+      return w;
+    };
+
+    return {
+      status: 201,
+      body: await Promise.all(req.body.map((b) => makePromise(b))),
+    };
+  },
+};
+
+//  ____
+// / ___|  __ ___   _____
+// \___ \ / _` \ \ / / _ \
+//  ___) | (_| |\ V /  __/
+// |____/ \__,_| \_/ \___|
+//
+
+Routes["/save"] = {
+  description: "Outputs windows and tabs in a saveable state",
+  async get(req) {
+    const windows = await chrome.windows.getAll();
+    return {
+      status: 200,
+      body: (await windowsWithTabs(windows)).map(cleanWindowForSave),
+    };
+  },
+};
+
+// __        ___           _
+// \ \      / (_)_ __   __| | _____      _____
+//  \ \ /\ / /| | '_ \ / _` |/ _ \ \ /\ / / __|
+//   \ V  V / | | | | | (_| | (_) \ V  V /\__ \
+//    \_/\_/  |_|_| |_|\__,_|\___/ \_/\_/ |___/
+//
+
+const cleanWindowForSave = function (w) {
+  delete w["alwaysOnTop"];
+  delete w["id"];
+  delete w["left"];
+  delete w["top"];
+  delete w["width"];
+  delete w["height"];
+
+  w.tabs = w.tabs.map(cleanTabForSave);
+
+  return w;
+}
 
 Routes["/windows"] = {
   description: "Create a new window.",
@@ -264,24 +277,146 @@ Routes["/windows/#WINDOW_ID/tabs"] = {
   },
 };
 
+//  _____     _
+// |_   _|_ _| |__  ___
+//   | |/ _` | '_ \/ __|
+//   | | (_| | |_) \__ \
+//   |_|\__,_|_.__/|___/
+//
+//
+//
+
+const makeTab = async function (body) {
+  return await chrome.tabs.create(body);
+};
+
+const cleanTabForSave = function (t) {
+  delete t["audible"];
+  delete t["autoDiscardable"];
+  delete t["discarded"];
+  delete t["favIconUrl"];
+  delete t["groupId"];
+  delete t["height"];
+  delete t["highlighted"];
+  delete t["id"];
+  delete t["incognito"];
+  delete t["lastAccessed"];
+  delete t["mutedInfo"];
+  delete t["openerTabId"];
+  delete t["status"];
+  delete t["title"];
+  delete t["width"];
+  delete t["windowId"];
+  return t;
+};
+
+async function updateTab(body, groupCache, windowCache) {
+  const id = body.id;
+  delete body.id;
+
+  if (body.windowIdOrName) {
+    let windowId = parseInt(body.windowIdOrName);
+
+    if (isNaN(windowId)) {
+      windowId = windowCache[body.windowIdOrName];
+    }
+
+    if (windowId == -1) {
+      await chrome.tabs.remove(id);
+    } else {
+      if (!windowId) {
+        const w = await chrome.windows.create({ tabId: id });
+        windowId = w.id;
+      } else {
+        await chrome.tabs.move(id, {
+          index: -1,
+          windowId: windowId,
+        });
+      }
+
+      windowCache[body.windowIdOrName] = windowId;
+    }
+
+    delete body.windowIdOrName;
+  }
+
+  if (body.groupIdOrName) {
+    let groupId = parseInt(body.groupIdOrName);
+    let groupObj = {
+      tabIds: id,
+    };
+
+    if (isNaN(groupId)) {
+      groupId = groupCache[groupIdOrName];
+    }
+
+    if (!groupId) {
+      groupObj["groupId"] = groupId;
+    }
+
+    if (groupId == -1) {
+      groupId = await chrome.tabs.ungroup(id);
+
+      groupCache[body.groupIdOrName] = groupId;
+    } else {
+      groupId = await chrome.tabs.group({
+        tabIds: id,
+        groupId: groupId,
+      });
+
+      groupCache[body.groupIdOrName] = groupId;
+    }
+
+    delete body.groupIdOrName;
+  }
+
+  if (body.open) {
+    delete body.open;
+    body.active = true;
+    await openTab(id);
+  }
+
+  delete body.open;
+
+  return await chrome.tabs.update(id, body);
+}
+
+async function openTab(id) {
+  let tab = await chrome.tabs.get(id);
+  let windowId = tab.windowId;
+  await Promise.all([
+    chrome.windows.update(windowId, { focused: true }),
+    chrome.tabs.update(id, { active: true }),
+  ]);
+}
+
+async function removeTabs(urls) {
+  let tabs = await tabsFromWindows(await chrome.windows.getAll());
+
+  await chrome.tabs.remove(
+    tabs.reduce((acc, o) => {
+      if (urls.includes(o.url)) {
+        acc.push(o.id);
+      }
+
+      return acc;
+    }, [])
+  );
+}
+
 Routes["/tabs"] = {
   description: "Create a new window.",
   usage: 'echo "https://www.google.com" > $0',
   async post(req) {
-    //TODO
-    const makePromise = async function (body) {
-      return await chrome.tabs.create(body);
-    };
-
     if (Array.isArray(req.body)) {
       return {
         status: 201,
-        body: await Promise.all(req.body.map((b) => makePromise(b))),
+        body: await Promise.all(req.body.map((b) => makeTab(b))),
       };
     } else {
       return {
         status: 201,
-        body: await makePromise(req.body),
+        body: await makeTab(req.body),
       };
     }
   },
@@ -378,19 +513,6 @@ const stringToUtf8Array = (function () {
   return (str) => encoder.encode(str);
 })();
 
-Routes["/tabs/create"] = {
-  description: "Create a new tab.",
-  usage: 'echo "https://www.google.com" > $0',
-  async write({ buf }) {
-    const url = buf.trim();
-    await chrome.tabs.create({ url });
-    return { size: stringToUtf8Array(buf).length };
-  },
-  async truncate() {
-    return {};
-  },
-};
-
 Routes["/tabs/last-focused"] = {
   description: `Represents the most recently focused tab.
 It's a symbolic link to the folder /tabs/by-id/[ID of most recently focused tab].`,
@@ -402,6 +524,13 @@ It's a symbolic link to the folder /tabs/by-id/[ID of most recently focused tab]
   },
 };
 
+//  ____              _                         _
+// | __ )  ___   ___ | | ___ __ ___   __ _ _ __| | _____
+// |  _ \ / _ \ / _ \| |/ / '_ ` _ \ / _` | '__| |/ / __|
+// | |_) | (_) | (_) |   <| | | | | | (_| | |  |   <\__ \
+// |____/ \___/ \___/|_|\_\_| |_| |_|\__,_|_|  |_|\_\___/
+//
+
 Routes["/bookmarks"] = {
   description: ``,
   async get() {
@@ -411,6 +540,13 @@ Routes["/bookmarks"] = {
     };
   },
 };
+
+//  _   _ _     _
+// | | | (_)___| |_ ___  _ __ _   _
+// | |_| | / __| __/ _ \| '__| | | |
+// |  _  | \__ \ || (_) | |  | |_| |
+// |_| |_|_|___/\__\___/|_|   \__, |
+//                            |___/
 
 Routes["/history"] = {
   description: ``,
@@ -521,7 +657,8 @@ async function onMessage(req) {
   }
 }
 
-function tryConnect() {
+function tryConnect(e) {
+  console.log(`try connect: ${e}`);
   port = chrome.runtime.connectNative("com.linenisgreat.code.chrest");
   port.onMessage.addListener(onMessage);
   port.onDisconnect.addListener((p) => {
@@ -535,5 +672,11 @@ if (typeof process === "object") {
   // return everything they might want to test
   module.exports = { Routes, tryMatchRoute };
 } else {
-  tryConnect();
+  tryConnect(null);
 }
+
+chrome.runtime.onStartup.addListener(() => {
+  tryConnect({ reason: "startup" });
+});
+
+// chrome.runtime.onInstalled.addListener(tryConnect);
