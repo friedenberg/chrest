@@ -244,6 +244,28 @@ Routes["/windows/last-focused"] = {
   },
 };
 
+Routes["/windows/last-focused/tabs"] = {
+  description: `A symbolic link to /windows/[id for the last focused window].`,
+  async get(req) {
+    return {
+      status: 200,
+      body: await chrome.tabs.query({ windowId }),
+    };
+  },
+  async post(req) {
+    let w = await windowsWithTabs(await chrome.windows.getLastFocused());
+
+    let added_tabs = await Promise.all(req.body.map((url) => makeTab({url: url, windowId: w.id})));
+
+    w.tabs.push(added_tabs);
+
+    return {
+      status: 201,
+      body: w,
+    };
+  },
+};
+
 Routes["/windows/#WINDOW_ID"] = {
   async get({ windowId }) {
     return {
@@ -277,13 +299,14 @@ Routes["/windows/#WINDOW_ID/tabs"] = {
   },
 };
 
+const getWindowTabs = async function (windowId) {
+}
+
 //  _____     _
 // |_   _|_ _| |__  ___
 //   | |/ _` | '_ \/ __|
 //   | | (_| | |_) \__ \
 //   |_|\__,_|_.__/|___/
-//
-//
 //
 
 const makeTab = async function (body) {
