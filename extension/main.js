@@ -5,7 +5,7 @@ async function windowsWithTabs(windowOrWindowList) {
     const windows = windowOrWindowList;
 
     return await Promise.all(
-      windows.map(async function (w) {
+      windows.map(async function(w) {
         w["tabs"] = await chrome.tabs.query({ windowId: w["id"] });
         return w;
       })
@@ -23,7 +23,7 @@ async function tabsFromWindows(windowOrWindowList) {
 
     return (
       await Promise.all(
-        windows.map(async function (w) {
+        windows.map(async function(w) {
           return await chrome.tabs.query({ windowId: w["id"] });
         })
       )
@@ -114,7 +114,7 @@ Routes["/restore"] = {
     };
   },
   async post(req) {
-    const makePromise = async function (body) {
+    const makePromise = async function(body) {
       let tabs = body["tabs"];
       delete body["tabs"];
 
@@ -163,7 +163,7 @@ Routes["/save"] = {
 //    \_/\_/  |_|_| |_|\__,_|\___/ \_/\_/ |___/
 //
 
-const cleanWindowForSave = function (w) {
+const cleanWindowForSave = function(w) {
   delete w["alwaysOnTop"];
   delete w["id"];
   delete w["left"];
@@ -174,13 +174,13 @@ const cleanWindowForSave = function (w) {
   w.tabs = w.tabs.map(cleanTabForSave);
 
   return w;
-}
+};
 
 Routes["/windows"] = {
   description: "Create a new window.",
   usage: 'echo "https://www.google.com" > $0',
   async post(req) {
-    const makePromise = async function (body) {
+    const makePromise = async function(body) {
       return await chrome.windows.create(body);
     };
 
@@ -197,7 +197,7 @@ Routes["/windows"] = {
     }
   },
   async put(req) {
-    const makePromise = async function (body) {
+    const makePromise = async function(body) {
       const id = body.id;
       delete body.id;
       return await chrome.windows.update(id, body);
@@ -234,51 +234,73 @@ Routes["/windows/current"] = {
   },
 };
 
-Routes["/windows/last-focused"] = {
-  description: `A symbolic link to /windows/[id for the last focused window].`,
-  async get() {
-    return {
-      status: 200,
-      body: await windowsWithTabs(await chrome.windows.getLastFocused()),
-    };
-  },
-};
+// Routes["/windows/last-focused"] = {
+//   description: `A symbolic link to /windows/[id for the last focused window].`,
+//   async get() {
+//     return {
+//       status: 200,
+//       body: await windowsWithTabs(await chrome.windows.getLastFocused()),
+//     };
+//   },
+// };
 
-Routes["/windows/last-focused/tabs"] = {
-  description: `A symbolic link to /windows/[id for the last focused window].`,
-  async get(req) {
-    return {
-      status: 200,
-      body: await chrome.tabs.query({ windowId }),
-    };
-  },
-  async post(req) {
-    let w = await windowsWithTabs(await chrome.windows.getLastFocused());
+// Routes["/windows/last-focused/tabs"] = {
+//   description: `A symbolic link to /windows/[id for the last focused window].`,
+//   async get(req) {
+//     return {
+//       status: 200,
+//       body: await chrome.tabs.query({ windowId }),
+//     };
+//   },
+//   async post(req) {
+//     let w = await windowsWithTabs(await chrome.windows.getLastFocused());
 
-    let added_tabs = await Promise.all(req.body.map((url) => makeTab({url: url, windowId: w.id})));
+//     let added_tabs = await Promise.all(
+//       req.body.map((url) => makeTab({ url: url, windowId: w.id }))
+//     );
 
-    w.tabs.push(added_tabs);
+//     w.tabs.push(added_tabs);
 
-    return {
-      status: 201,
-      body: w,
-    };
-  },
-};
+//     return {
+//       status: 201,
+//       body: w,
+//     };
+//   },
+// };
+async function normalizeWindowID(windowID) {
+  if (windowID === "last-focused") {
+    let w = await chrome.windows.getLastFocused();
+    windowID = w.id;
+  }
+
+  return windowID;
+}
+
+async function getWindowWithID(windowID) {
+  var w;
+
+  if (windowID === "last-focused") {
+    w = chrome.windows.getLastFocused();
+  } else {
+    w = chrome.windows.get(windowID);
+  }
+
+  return await windowsWithTabs(await w);
+}
 
 Routes["/windows/#WINDOW_ID"] = {
   async get({ windowId }) {
     return {
       status: 200,
-      body: await windowsWithTabs(await chrome.windows.get(windowId)),
+      body: await getWindowWithID(windowId),
     };
   },
   async put(req) {
+    let wid = await normalizeWindowID(req.windowId);
+
     return {
       status: 200,
-      body: await windowsWithTabs(
-        await chrome.windows.update(req.windowId, req.body)
-      ),
+      body: await windowsWithTabs(await chrome.windows.update(wid, req.body)),
     };
   },
   async delete({ windowId }) {
@@ -297,10 +319,60 @@ Routes["/windows/#WINDOW_ID/tabs"] = {
       body: await chrome.tabs.query({ windowId }),
     };
   },
+  async post(req) {
+    let wid = await normalizeWindowID(req.windowId);
+
+    if (Array.isArray(req.body)) {
+      return {
+        status: 201,
+        body: await Promise.all(req.body.map(b => (makeTabWithWindowId(b, wid)))),
+      };
+    } else {
+      return {
+        status: 201,
+        body: await makeTabWithWindowId(req.body, wid),
+      };
+    }
+  },
 };
 
-const getWindowTabs = async function (windowId) {
-}
+Routes["/windows/#WINDOW_ID/tab-urls"] = {
+  async get({ windowId }) {
+    return {
+      status: 200,
+      body: (await chrome.tabs.query({ windowId })).map((t) => t.url),
+    };
+  },
+  async post(req) {
+    let wid = await normalizeWindowID(req.windowId);
+    console.log(wid, req.body);
+
+    await Promise.all(
+      req.body.map((url) => {
+        return chrome.tabs.create({ windowId: wid, url: url });
+      })
+    );
+
+    return {
+      status: 200,
+    };
+  },
+  async post(req) {
+    let wid = await normalizeWindowID(req.windowId);
+
+    await Promise.all(
+      req.body.map((url) => {
+        return chrome.tabs.create({ windowId: wid, url: url });
+      })
+    );
+
+    return {
+      status: 200,
+    };
+  },
+};
+
+const getWindowTabs = async function(windowId) { };
 
 //  _____     _
 // |_   _|_ _| |__  ___
@@ -309,11 +381,16 @@ const getWindowTabs = async function (windowId) {
 //   |_|\__,_|_.__/|___/
 //
 
-const makeTab = async function (body) {
+const makeTab = async function(body) {
   return await chrome.tabs.create(body);
 };
 
-const cleanTabForSave = function (t) {
+const makeTabWithWindowId = async function(body, wid) {
+  body.windowId = wid;
+  return makeTab(body);
+};
+
+const cleanTabForSave = function(t) {
   delete t["audible"];
   delete t["autoDiscardable"];
   delete t["discarded"];
@@ -531,7 +608,7 @@ Routes["/runtime/reload"] = {
   },
 };
 
-const stringToUtf8Array = (function () {
+const stringToUtf8Array = (function() {
   const encoder = new TextEncoder("utf-8");
   return (str) => encoder.encode(str);
 })();
@@ -586,29 +663,33 @@ for (let key in Routes) {
   Routes[key].__matchVarCount = 0;
   Routes[key].__regex = new RegExp(
     "^" +
-      key
-        .split("/")
-        .map((keySegment) =>
-          keySegment
-            .replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
-            .replace(/([#:])([A-Z_]+)/g, (_, sigil, varName) => {
-              Routes[key].__matchVarCount++;
-              return (
-                `(?<${sigil === "#" ? "int$" : "string$"}${varName}>` +
-                (sigil === "#" ? "[0-9]+" : "[^/]+") +
-                `)`
-              );
-            })
-        )
-        .join("/") +
-      "$"
+    key
+      .split("/")
+      .map((keySegment) =>
+        keySegment
+          .replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+          .replace(/([#:])([A-Z_]+)/g, (_, sigil, varName) => {
+            console.log(key, sigil, varName);
+            Routes[key].__matchVarCount++;
+            return (
+              `(?<${sigil === "#" ? "int$" : "string$"}${varName}>` +
+              (sigil === "#" ? "[^/]+" : "[^/]+") +
+              `)`
+            );
+          })
+      )
+      .join("/") +
+    "$"
   );
 
-  Routes[key].__match = function (path) {
+  Routes[key].__match = function(path) {
+    console.log(path);
     const result = Routes[key].__regex.exec(path);
     if (!result) {
       return;
     }
+
+    console.log(key);
 
     const vars = {};
     for (let [typeAndVarName, value] of Object.entries(result.groups || {})) {
@@ -616,7 +697,8 @@ for (let key in Routes) {
       // TAB_ID -> tabId
       varName = varName.toLowerCase();
       varName = varName.replace(/_([a-z])/g, (c) => c[1].toUpperCase());
-      vars[varName] = type_ === "int" ? parseInt(value) : value;
+      vars[varName] = value;
+      // vars[varName] = type_ === "int" ? parseInt(value) : value;
     }
     return vars;
   };

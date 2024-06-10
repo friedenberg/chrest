@@ -13,7 +13,7 @@ import (
 	"path"
 	"path/filepath"
 
-	"code.linenisgreat.com/chrest"
+	chrest "code.linenisgreat.com/chrest/src"
 	"github.com/pkg/errors"
 )
 
@@ -121,7 +121,12 @@ func CmdServer(c chrest.Config) (err error) {
 }
 
 func CmdClient(c chrest.Config) (err error) {
-	printFullRequest := flag.Bool("full-request", false, "print the full request including headers")
+	printFullRequest := flag.Bool(
+    "full-request",
+    false,
+    "print the full request including headers",
+  )
+
 	flag.Parse()
 
 	var sock string
