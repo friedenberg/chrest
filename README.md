@@ -130,6 +130,13 @@ like [`http`](https://httpie.io/) and [`jq`](https://jqlang.github.io/jq/).
 1.  Reload the extension in Chrome to start the service worker
 1.  Try `http --ignore-stdin --offline localhost/windows | ./chrest client | jq`
 
+example: 
+
+```shell
+# fish shell
+go build -o chrest cmd/main.go; and ./chrest install lbgclgjcapgipnneocphmhckebhbbkac
+```
+
 # Todo
 
 -   mutate bookmark endpoints

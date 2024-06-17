@@ -6,20 +6,25 @@ import (
 	"io"
 	"net"
 	"net/http"
+
+	"golang.org/x/xerrors"
 )
 
-func ResponseFromReader(r io.Reader, conn net.Conn) (resp *http.Response, err error) {
+func ResponseFromReader(httpRequestReader io.Reader, conn net.Conn) (resp *http.Response, err error) {
 	var req *http.Request
 
-	if req, err = http.ReadRequest(bufio.NewReader(r)); err != nil {
+	if req, err = http.ReadRequest(bufio.NewReader(httpRequestReader)); err != nil {
+		err = xerrors.Errorf("failed to read request: %w", err)
 		return
 	}
 
 	if err = req.Write(conn); err != nil {
+		err = xerrors.Errorf("failed to write to socket: %w", err)
 		return
 	}
 
 	if resp, err = http.ReadResponse(bufio.NewReader(conn), req); err != nil {
+		err = xerrors.Errorf("failed to read response: %w", err)
 		return
 	}
 

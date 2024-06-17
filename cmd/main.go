@@ -15,6 +15,7 @@ import (
 
 	chrest "code.linenisgreat.com/chrest/src"
 	"github.com/pkg/errors"
+	"golang.org/x/xerrors"
 )
 
 func init() {
@@ -122,10 +123,10 @@ func CmdServer(c chrest.Config) (err error) {
 
 func CmdClient(c chrest.Config) (err error) {
 	printFullRequest := flag.Bool(
-    "full-request",
-    false,
-    "print the full request including headers",
-  )
+		"full-request",
+		false,
+		"print the full request including headers",
+	)
 
 	flag.Parse()
 
@@ -139,15 +140,19 @@ func CmdClient(c chrest.Config) (err error) {
 	cmdHttp := exec.Command("http", cmdHttpArgs...)
 	cmdHttp.Stdin = os.Stdin
 
-	var stdout io.ReadCloser
+	var httpieStdout, httpieStderr io.ReadCloser
 
-	if stdout, err = cmdHttp.StdoutPipe(); err != nil {
+	if httpieStdout, err = cmdHttp.StdoutPipe(); err != nil {
+		return
+	}
+
+	if httpieStderr, err = cmdHttp.StderrPipe(); err != nil {
 		return
 	}
 
 	// TODO error message when http is missing
 	if err = cmdHttp.Start(); err != nil {
-		return
+		panic(err)
 	}
 
 	var resp *http.Response
@@ -155,24 +160,34 @@ func CmdClient(c chrest.Config) (err error) {
 	var conn net.Conn
 
 	if conn, err = net.Dial("unix", sock); err != nil {
-		return
+		panic(err)
 	}
 
 	if *printFullRequest {
-		_, err = io.Copy(os.Stdout, conn)
+		if _, err = io.Copy(os.Stdout, httpieStdout); err != nil {
+			err = xerrors.Errorf("failed to write request to stdout: %w", err)
+			return
+		}
 
-		if err != nil {
+		if _, err = io.Copy(os.Stderr, httpieStderr); err != nil {
+			err = xerrors.Errorf("failed to write request to stdout: %w", err)
+			return
+		}
+
+		if err = cmdHttp.Wait(); err != nil {
+			err = xerrors.Errorf("httpie failed: %w", err)
 			return
 		}
 
 		return
 	}
 
-	if resp, err = chrest.ResponseFromReader(stdout, conn); err != nil {
+	if resp, err = chrest.ResponseFromReader(httpieStdout, conn); err != nil {
 		return
 	}
 
 	if err = cmdHttp.Wait(); err != nil {
+		err = xerrors.Errorf("waiting for httpie failed: %w", err)
 		return
 	}
 
@@ -182,6 +197,7 @@ func CmdClient(c chrest.Config) (err error) {
 
 	// TODO error message when jq is missing
 	if err = cmdJq.Run(); err != nil {
+		panic(err)
 		return
 	}
 

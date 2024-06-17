@@ -7,7 +7,7 @@ Routes["/urls"] = {
     return {
       status: 200,
       body: [
-        (await tabsFromWindows(await chrome.windows.getAll())).map((o) => ({
+        (await lib.tabsFromWindows(await chrome.windows.getAll())).map((o) => ({
           title: o.title,
           type: "tab",
           id: parseInt(o.id),
@@ -366,11 +366,12 @@ Routes["/tabs/#TAB_ID"] = {
         ),
       };
     } else {
-      req.body.id = req.tabId;
+      // req.body.id = req.tabId;
+      let res = await chrome.tabs.update(parseInt(req.tabId), req.body);
 
       return {
         status: 200,
-        body: await lib.updateTab(req.body, groupCache, windowCache),
+        body: res,
       };
     }
   },

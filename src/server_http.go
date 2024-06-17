@@ -40,13 +40,13 @@ func ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	}
 
 	if err != nil {
-		panic(err)
+		flushError(err, enc, w, req)
 	}
 
 	_, err = WriteToChrome(NewRequest(req, m))
 
 	if err != nil {
-		panic(err)
+		flushError(err, enc, w, req)
 	}
 
 	var res JsonObject
@@ -54,7 +54,7 @@ func ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	_, err = ReadFromChrome(&res)
 
 	if err != nil && err != io.EOF {
-		panic(err)
+		flushError(err, enc, w, req)
 	}
 
 	w.WriteHeader(int(res["status"].(float64)))
@@ -78,6 +78,31 @@ func ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	}
 
 	err = enc.Encode(b)
+
+	if err != nil {
+		flushError(err, enc, w, req)
+	}
+}
+
+const StatusBadBoy = http.StatusBadRequest
+
+func flushError(
+	err error,
+	enc *json.Encoder,
+	w http.ResponseWriter,
+	req *http.Request,
+) {
+	w.WriteHeader(StatusBadBoy)
+
+	type errResponse struct {
+		Error string `json:"error"`
+	}
+
+	res := errResponse{
+		Error: err.Error(),
+	}
+
+	err = enc.Encode(res)
 
 	if err != nil {
 		panic(err)
