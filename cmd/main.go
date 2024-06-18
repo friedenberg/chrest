@@ -14,8 +14,7 @@ import (
 	"path/filepath"
 
 	chrest "code.linenisgreat.com/chrest/src"
-	"github.com/pkg/errors"
-	"golang.org/x/xerrors"
+	"code.linenisgreat.com/zit/go/zit/src/alfa/errors"
 )
 
 func init() {
@@ -143,16 +142,19 @@ func CmdClient(c chrest.Config) (err error) {
 	var httpieStdout, httpieStderr io.ReadCloser
 
 	if httpieStdout, err = cmdHttp.StdoutPipe(); err != nil {
+		err = errors.Wrap(err)
 		return
 	}
 
 	if httpieStderr, err = cmdHttp.StderrPipe(); err != nil {
+		err = errors.Wrap(err)
 		return
 	}
 
 	// TODO error message when http is missing
 	if err = cmdHttp.Start(); err != nil {
-		panic(err)
+		err = errors.Wrap(err)
+		return
 	}
 
 	var resp *http.Response
@@ -160,22 +162,23 @@ func CmdClient(c chrest.Config) (err error) {
 	var conn net.Conn
 
 	if conn, err = net.Dial("unix", sock); err != nil {
-		panic(err)
+		err = errors.Wrap(err)
+		return
 	}
 
 	if *printFullRequest {
 		if _, err = io.Copy(os.Stdout, httpieStdout); err != nil {
-			err = xerrors.Errorf("failed to write request to stdout: %w", err)
+			err = errors.Errorf("failed to write request to stdout: %w", err)
 			return
 		}
 
 		if _, err = io.Copy(os.Stderr, httpieStderr); err != nil {
-			err = xerrors.Errorf("failed to write request to stdout: %w", err)
+			err = errors.Errorf("failed to write request to stdout: %w", err)
 			return
 		}
 
 		if err = cmdHttp.Wait(); err != nil {
-			err = xerrors.Errorf("httpie failed: %w", err)
+			err = errors.Errorf("httpie failed: %w", err)
 			return
 		}
 
@@ -183,11 +186,12 @@ func CmdClient(c chrest.Config) (err error) {
 	}
 
 	if resp, err = chrest.ResponseFromReader(httpieStdout, conn); err != nil {
+		err = errors.Wrap(err)
 		return
 	}
 
 	if err = cmdHttp.Wait(); err != nil {
-		err = xerrors.Errorf("waiting for httpie failed: %w", err)
+		err = errors.Errorf("waiting for httpie failed: %w", err)
 		return
 	}
 
@@ -197,7 +201,7 @@ func CmdClient(c chrest.Config) (err error) {
 
 	// TODO error message when jq is missing
 	if err = cmdJq.Run(); err != nil {
-		panic(err)
+		err = errors.Wrap(err)
 		return
 	}
 
@@ -213,10 +217,12 @@ func CmdInit() (err error) {
 	var c chrest.Config
 
 	if c, err = chrest.ConfigDefault(); err != nil {
+		err = errors.Wrap(err)
 		return
 	}
 
 	if err = c.Write(); err != nil {
+		err = errors.Wrap(err)
 		return
 	}
 
@@ -235,8 +241,8 @@ func CmdInstall(c chrest.Config) (err error) {
 	}
 
 	var exe string
-	exe, err = os.Executable()
-	if err != nil {
+	if exe, err = os.Executable(); err != nil {
+		err = errors.Wrap(err)
 		return
 	}
 
@@ -244,8 +250,8 @@ func CmdInstall(c chrest.Config) (err error) {
 
 	newPath := c.ServerPath()
 
-	err = chrest.Symlink(exe, newPath)
-	if err != nil {
+	if err = chrest.Symlink(exe, newPath); err != nil {
+		err = errors.Wrap(err)
 		return
 	}
 
@@ -255,13 +261,14 @@ func CmdInstall(c chrest.Config) (err error) {
 		newPath,
 		args...,
 	); err != nil {
+		err = errors.Wrap(err)
 		return
 	}
 
 	var b []byte
 
-	b, err = json.Marshal(ij)
-	if err != nil {
+	if b, err = json.Marshal(ij); err != nil {
+		err = errors.Wrap(err)
 		return
 	}
 
@@ -271,12 +278,12 @@ func CmdInstall(c chrest.Config) (err error) {
 		"com.linenisgreat.code.chrest.json",
 	)
 
-	err = os.WriteFile(
+	if err = os.WriteFile(
 		path,
 		b,
 		0o666,
-	)
-	if err != nil {
+	); err != nil {
+		err = errors.Wrap(err)
 		return
 	}
 

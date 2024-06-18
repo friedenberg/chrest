@@ -4,9 +4,10 @@ import (
 	"io"
 	"unsafe"
 
-	"github.com/pkg/errors"
+	"code.linenisgreat.com/zit/go/zit/src/alfa/errors"
 )
 
+// TODO read from ohio
 func Int32ToByteArray(i int32) [4]byte {
 	return *(*[unsafe.Sizeof(i)]byte)(unsafe.Pointer(&i))
 }

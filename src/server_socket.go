@@ -7,6 +7,8 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+
+	"code.linenisgreat.com/zit/go/zit/src/alfa/errors"
 )
 
 type ServerSocket struct {
@@ -19,6 +21,7 @@ func (s *ServerSocket) Listen() (err error) {
 	dir := filepath.Dir(s.SockPath)
 
 	if err = os.MkdirAll(dir, 0o700); err != nil {
+		err = errors.Wrap(err)
 		return
 	}
 
@@ -27,10 +30,12 @@ func (s *ServerSocket) Listen() (err error) {
 	os.Remove(s.SockPath)
 
 	if s.Address, err = net.ResolveUnixAddr("unix", s.SockPath); err != nil {
+		err = errors.Wrap(err)
 		return
 	}
 
 	if s.Listener, err = net.ListenUnix("unix", s.Address); err != nil {
+		err = errors.Wrap(err)
 		return
 	}
 
@@ -39,6 +44,7 @@ func (s *ServerSocket) Listen() (err error) {
 	return
 }
 
+// TODO remove panics in place of structured errors
 func (s *ServerSocket) acceptConn(conn *net.UnixConn) {
 	log.Print("accepted conn")
 

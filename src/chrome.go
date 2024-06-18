@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"io"
 	"os"
+
+	"code.linenisgreat.com/zit/go/zit/src/alfa/errors"
 )
 
 func WriteToChrome(m interface{}) (n int64, err error) {
@@ -12,9 +14,8 @@ func WriteToChrome(m interface{}) (n int64, err error) {
 
 	var b []byte
 
-	b, err = json.Marshal(m)
-
-	if err != nil {
+	if b, err = json.Marshal(m); err != nil {
+		err = errors.Wrap(err)
 		return
 	}
 
@@ -27,6 +28,7 @@ func WriteToChrome(m interface{}) (n int64, err error) {
 	n += int64(n1)
 
 	if err != nil {
+		err = errors.Wrap(err)
 		return
 	}
 
@@ -34,6 +36,7 @@ func WriteToChrome(m interface{}) (n int64, err error) {
 	n += int64(n1)
 
 	if err != nil {
+		err = errors.Wrap(err)
 		return
 	}
 
@@ -50,6 +53,7 @@ func ReadFromChrome(m interface{}) (n int64, err error) {
 	n += int64(n1)
 
 	if err != nil {
+		err = errors.Wrap(err)
 		return
 	}
 
@@ -59,12 +63,14 @@ func ReadFromChrome(m interface{}) (n int64, err error) {
 	n += n1
 
 	if err != nil {
+		err = errors.Wrap(err)
 		return
 	}
 
 	err = json.Unmarshal(b.Bytes(), &m)
 
 	if err != nil {
+		err = errors.Wrap(err)
 		return
 	}
 

@@ -3,6 +3,8 @@ package chrest
 import (
 	"fmt"
 	"path/filepath"
+
+	"code.linenisgreat.com/zit/go/zit/src/alfa/errors"
 )
 
 type InstallJSON struct {
@@ -15,6 +17,7 @@ type InstallJSON struct {
 
 func MakeInstallJSON(p string, ids ...string) (ij InstallJSON, err error) {
 	if p, err = filepath.Abs(p); err != nil {
+		err = errors.Wrap(err)
 		return
 	}
 

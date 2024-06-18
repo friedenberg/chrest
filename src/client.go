@@ -7,24 +7,24 @@ import (
 	"net"
 	"net/http"
 
-	"golang.org/x/xerrors"
+	"code.linenisgreat.com/zit/go/zit/src/alfa/errors"
 )
 
 func ResponseFromReader(httpRequestReader io.Reader, conn net.Conn) (resp *http.Response, err error) {
 	var req *http.Request
 
 	if req, err = http.ReadRequest(bufio.NewReader(httpRequestReader)); err != nil {
-		err = xerrors.Errorf("failed to read request: %w", err)
+		err = errors.Errorf("failed to read request: %w", err)
 		return
 	}
 
 	if err = req.Write(conn); err != nil {
-		err = xerrors.Errorf("failed to write to socket: %w", err)
+		err = errors.Errorf("failed to write to socket: %w", err)
 		return
 	}
 
 	if resp, err = http.ReadResponse(bufio.NewReader(conn), req); err != nil {
-		err = xerrors.Errorf("failed to read response: %w", err)
+		err = errors.Errorf("failed to read response: %w", err)
 		return
 	}
 
@@ -36,6 +36,7 @@ func AskChrome(c Config, req *http.Request) (response interface{}, err error) {
 	var sock string
 
 	if sock, err = c.SocketPath(); err != nil {
+		err = errors.Wrap(err)
 		return
 	}
 
@@ -44,16 +45,20 @@ func AskChrome(c Config, req *http.Request) (response interface{}, err error) {
 	var conn net.Conn
 
 	if conn, err = net.Dial("unix", sock); err != nil {
+		err = errors.Wrap(err)
 		return
 	}
 
 	if err = req.Write(conn); err != nil {
+		err = errors.Wrap(err)
 		return
 	}
 
 	if resp, err = http.ReadResponse(bufio.NewReader(conn), req); err != nil {
 		if err == io.EOF {
 			err = nil
+		} else {
+			err = errors.Wrap(err)
 		}
 
 		return
@@ -62,6 +67,7 @@ func AskChrome(c Config, req *http.Request) (response interface{}, err error) {
 	dec := json.NewDecoder(bufio.NewReader(resp.Body))
 
 	if err = dec.Decode(&response); err != nil {
+		err = errors.Wrap(err)
 		return
 	}
 

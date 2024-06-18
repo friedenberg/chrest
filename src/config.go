@@ -7,6 +7,8 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+
+	"code.linenisgreat.com/zit/go/zit/src/alfa/errors"
 )
 
 type Config struct {
@@ -22,6 +24,7 @@ func (c Config) SocketPath() (v string, err error) {
 	var dir string
 
 	if dir, err = StateDirectory(); err != nil {
+		err = errors.Wrap(err)
 		return
 	}
 
@@ -34,6 +37,7 @@ func ConfigDefault() (c Config, err error) {
 	c.Port = "3001"
 
 	if c.Home, err = os.UserHomeDir(); err != nil {
+		err = errors.Wrap(err)
 		return
 	}
 
@@ -44,8 +48,8 @@ func StateDirectory() (v string, err error) {
 	v = os.Getenv("XDG_STATE_HOME")
 
 	if v == "" {
-		v, err = os.UserHomeDir()
-		if err != nil {
+		if v, err = os.UserHomeDir(); err != nil {
+			err = errors.Wrap(err)
 			return
 		}
 
@@ -71,6 +75,7 @@ func (c Config) Directory() (v string) {
 
 func (c *Config) Read() (err error) {
 	if c.Home, err = os.UserHomeDir(); err != nil {
+		err = errors.Wrap(err)
 		return
 	}
 
@@ -79,6 +84,7 @@ func (c *Config) Read() (err error) {
 	var f *os.File
 
 	if f, err = os.Open(p); err != nil {
+		err = errors.Wrap(err)
 		return
 	}
 
@@ -87,6 +93,7 @@ func (c *Config) Read() (err error) {
 	dec := json.NewDecoder(bufio.NewReader(f))
 
 	if err = dec.Decode(c); err != nil {
+		err = errors.Wrap(err)
 		return
 	}
 
@@ -100,6 +107,7 @@ func (c *Config) Write() (err error) {
 	var f *os.File
 
 	if f, err = os.CreateTemp("", ""); err != nil {
+		err = errors.Wrap(err)
 		return
 	}
 
@@ -110,20 +118,24 @@ func (c *Config) Write() (err error) {
 	enc := json.NewEncoder(w)
 
 	if err = enc.Encode(c); err != nil {
+		err = errors.Wrap(err)
 		return
 	}
 
 	if err = w.Flush(); err != nil {
+		err = errors.Wrap(err)
 		return
 	}
 
 	log.Print(f.Name(), p)
 
 	if err = os.MkdirAll(dir, 0o700); err != nil {
+		err = errors.Wrap(err)
 		return
 	}
 
 	if err = os.Rename(f.Name(), p); err != nil {
+		err = errors.Wrap(err)
 		return
 	}
 

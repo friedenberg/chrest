@@ -2,18 +2,20 @@ package chrest
 
 import (
 	"os"
+
+	"code.linenisgreat.com/zit/go/zit/src/alfa/errors"
 )
 
 func Symlink(oldPath, newPath string) (err error) {
 	if _, err = os.Lstat(newPath); err == nil {
-		err = os.Remove(newPath)
-		if err != nil {
+		if err = os.Remove(newPath); err != nil {
+			err = errors.Wrap(err)
 			return
 		}
 	}
 
-	err = os.Symlink(oldPath, newPath)
-	if err != nil {
+	if err = os.Symlink(oldPath, newPath); err != nil {
+		err = errors.Wrap(err)
 		return
 	}
 

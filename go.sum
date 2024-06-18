@@ -1,3 +1,5 @@
+code.linenisgreat.com/zit/go/zit v0.0.0-20240618134352-24f7f078dd92 h1:vV4pku1611vnAPfFaGOzmFA6Kkow1W9XRVTpp4CG18k=
+code.linenisgreat.com/zit/go/zit v0.0.0-20240618134352-24f7f078dd92/go.mod h1:AIr6rEiqXbBGaplGA3F7arZTrULjP9x4qgUr9SM1p8c=
 github.com/friedenberg/go-signals v1.0.2 h1:x5yTsh/9crh4knh+5oGwLJtmUgguGZWovJ51Z2DMq9Y=
 github.com/friedenberg/go-signals v1.0.2/go.mod h1:kEUocyO/+XNUKXKYL4rxnuclDsPUb3gLx6dzREPX1+s=
 github.com/pkg/errors v0.9.1 h1:FEBLx1zS214owpjy7qsBeixbURkuhQAwrK5UwLGTwt4=
