@@ -2,6 +2,7 @@ package chrest
 
 import (
 	"bufio"
+	"context"
 	"encoding/json"
 	"io"
 	"net"
@@ -32,7 +33,11 @@ func ResponseFromReader(httpRequestReader io.Reader, conn net.Conn) (resp *http.
 }
 
 // TODO figure out which method retunrs err == io.EOF and set err to nil
-func AskChrome(c Config, req *http.Request) (response interface{}, err error) {
+func AskChrome(
+	ctx context.Context,
+	c Config,
+	req *http.Request,
+) (response interface{}, err error) {
 	var sock string
 
 	if sock, err = c.SocketPath(); err != nil {
@@ -42,9 +47,11 @@ func AskChrome(c Config, req *http.Request) (response interface{}, err error) {
 
 	var resp *http.Response
 
+	var dialer net.Dialer
+
 	var conn net.Conn
 
-	if conn, err = net.Dial("unix", sock); err != nil {
+	if conn, err = dialer.DialContext(ctx, "unix", sock); err != nil {
 		err = errors.Wrap(err)
 		return
 	}
