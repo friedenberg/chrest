@@ -71,6 +71,12 @@ Routes["/restore"] = {
       let tabs = body["tabs"];
       delete body["tabs"];
 
+      if (body.type !== "normal") {
+        return null;
+      }
+
+      delete body.type;
+
       let w = await chrome.windows.create(body);
 
       tabs = tabs.map((t) => {
@@ -79,7 +85,7 @@ Routes["/restore"] = {
         return t;
       });
 
-      w.tabs = await Promise.all(tabs.map(makeTab));
+      w.tabs = await Promise.all(tabs.map(lib.makeTab));
 
       return w;
     };

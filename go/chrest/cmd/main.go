@@ -13,7 +13,7 @@ import (
 	"path"
 	"path/filepath"
 
-	chrest "code.linenisgreat.com/chrest/src"
+	"code.linenisgreat.com/chrest/go/chrest"
 	"code.linenisgreat.com/zit/go/zit/src/alfa/errors"
 )
 

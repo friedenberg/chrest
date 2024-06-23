@@ -1,4 +1,4 @@
-module code.linenisgreat.com/chrest
+module code.linenisgreat.com/chrest/go/chrest
 
 go 1.21.6
 

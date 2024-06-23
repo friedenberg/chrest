@@ -43,7 +43,10 @@ async function onMessage(req) {
     console.error(e);
     response.status = 500;
     response.body = {
-      error: e.toString(),
+      error: {
+        message: e.message,
+        stack: e.stack,
+      },
     };
   }
 
