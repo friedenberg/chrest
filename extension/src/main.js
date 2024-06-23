@@ -1,4 +1,5 @@
 import * as routes from "./routes.js";
+import { parse } from 'stack-trace';
 
 async function tryMatchRoute(req) {
   for (let route of routes.sortedRoutes) {
@@ -45,7 +46,7 @@ async function onMessage(req) {
     response.body = {
       error: {
         message: e.message,
-        stack: e.stack,
+        stack: parse(e),
       },
     };
   }
