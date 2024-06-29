@@ -34,8 +34,11 @@ Routes["/urls"] = {
   },
   async put(req) {
     await Promise.all(
-      await lib.removeTabs(req.body.deleted),
-      await lib.removeBookmarks(req.body.deleted)
+      [
+        lib.removeTabs(req.body.deleted),
+        lib.removeBookmarks(req.body.deleted),
+        lib.makeTabs(req.body.added),
+      ],
     );
 
     return {
@@ -44,15 +47,22 @@ Routes["/urls"] = {
   },
 };
 
-//  ____           _
-// |  _ \ ___  ___| |_ ___  _ __ ___
-// | |_) / _ \/ __| __/ _ \| '__/ _ \
-// |  _ <  __/\__ \ || (_) | | |  __/
-// |_| \_\___||___/\__\___/|_|  \___|
+//  ____  _        _
+// / ___|| |_ __ _| |_ ___
+// \___ \| __/ _` | __/ _ \
+//  ___) | || (_| | ||  __/
+// |____/ \__\__,_|\__\___|
 //
 
-Routes["/restore"] = {
-  description: "Restores chrome windows and tabs to a specific state",
+Routes["/state"] = {
+  description: "Save, restore, or clear chrome windows and tabs with to a state",
+  async get(req) {
+    const windows = await chrome.windows.getAll();
+    return {
+      status: 200,
+      body: (await lib.windowsWithTabs(windows)).map(lib.cleanWindowForSave),
+    };
+  },
   async delete(req) {
     await Promise.all(
       (
@@ -93,24 +103,6 @@ Routes["/restore"] = {
     return {
       status: 201,
       body: await Promise.all(req.body.map((b) => makePromise(b))),
-    };
-  },
-};
-
-//  ____
-// / ___|  __ ___   _____
-// \___ \ / _` \ \ / / _ \
-//  ___) | (_| |\ V /  __/
-// |____/ \__,_| \_/ \___|
-//
-
-Routes["/save"] = {
-  description: "Outputs windows and tabs in a saveable state",
-  async get(req) {
-    const windows = await chrome.windows.getAll();
-    return {
-      status: 200,
-      body: (await lib.windowsWithTabs(windows)).map(lib.cleanWindowForSave),
     };
   },
 };
@@ -303,7 +295,6 @@ Routes["/windows/#WINDOW_ID/tab-urls"] = {
 //   |_|\__,_|_.__/|___/
 //
 
-
 Routes["/tabs"] = {
   description: "Create a new window.",
   usage: 'echo "https://www.google.com" > $0',
@@ -479,13 +470,10 @@ for (let key in Routes) {
   );
 
   Routes[key].__match = function(path) {
-    console.log(path);
     const result = Routes[key].__regex.exec(path);
     if (!result) {
       return;
     }
-
-    console.log(key);
 
     const vars = {};
     for (let [typeAndVarName, value] of Object.entries(result.groups || {})) {

@@ -34,6 +34,10 @@ export async function tabsFromWindows(windowOrWindowList) {
 }
 
 export async function removeBookmarks(urls) {
+  if (urls === undefined) {
+    return;
+  }
+
   let bookmarks = await chrome.bookmarks.search({});
   let removeBookmarks = [];
 
@@ -82,8 +86,30 @@ export async function getWindowWithID(windowID) {
   return await windowsWithTabs(await w);
 }
 
+export const makeTabs = async function(bodies) {
+  const ws = await chrome.windows.getAll();
+
+  if (ws.length == 0) {
+    return chrome.windows.create({url: bodies.map(b => b.url)});
+  } else {
+    return Promise.all(
+      bodies.map(b => chrome.tabs.create(b)),
+    );
+  }
+};
+
 export const makeTab = async function(body) {
-  return await chrome.tabs.create(body);
+  try {
+    const ws = await chrome.windows.getAll();
+
+    if (ws.length == 0) {
+      return await chrome.windows.create(body);
+    } else {
+      return await chrome.tabs.create(body);
+    }
+  } catch {
+    return await chrome.windows.create(body);
+  }
 };
 
 export const makeTabWithWindowId = async function(body, wid) {
@@ -192,6 +218,10 @@ export async function openTab(id) {
 }
 
 export async function removeTabs(urls) {
+  if (urls === undefined) {
+    return;
+  }
+
   let tabs = await tabsFromWindows(await chrome.windows.getAll());
 
   await chrome.tabs.remove(

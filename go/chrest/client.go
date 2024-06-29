@@ -11,7 +11,10 @@ import (
 	"code.linenisgreat.com/zit/go/zit/src/alfa/errors"
 )
 
-func ResponseFromReader(httpRequestReader io.Reader, conn net.Conn) (resp *http.Response, err error) {
+func ResponseFromReader(
+	httpRequestReader io.Reader,
+	conn net.Conn,
+) (resp *http.Response, err error) {
 	var req *http.Request
 
 	if req, err = http.ReadRequest(bufio.NewReader(httpRequestReader)); err != nil {
@@ -74,7 +77,7 @@ func AskChrome(
 	dec := json.NewDecoder(bufio.NewReader(resp.Body))
 
 	if err = dec.Decode(&response); err != nil {
-		err = errors.Wrap(err)
+		err = errors.WrapExcept(err, io.EOF)
 		return
 	}
 
