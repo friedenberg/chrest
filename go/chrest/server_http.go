@@ -9,12 +9,12 @@ import (
 )
 
 type (
-	JsonAnything = interface{}
-	JsonObject   = map[string]JsonAnything
-	Request      JsonObject
+	JSONAnything = interface{}
+	JSONObject   = map[string]JSONAnything
+	Request      JSONObject
 )
 
-func NewRequest(in *http.Request, body JsonAnything) (out Request) {
+func NewRequest(in *http.Request, body JSONAnything) (out Request) {
 	out = map[string]interface{}{
 		"path":   in.URL.Path,
 		"method": in.Method,
@@ -33,7 +33,7 @@ func ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 	var err error
 
-	var m JsonAnything
+	var m JSONAnything
 
 	err = dec.Decode(&m)
 
@@ -51,7 +51,7 @@ func ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		flushError(err, enc, w, req)
 	}
 
-	var res JsonObject
+	var res JSONObject
 
 	_, err = ReadFromChrome(&res)
 
@@ -94,12 +94,12 @@ func ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	}
 
 	switch bjo := b.(type) {
-	case JsonObject:
+	case JSONObject:
 		if len(bjo) == 0 {
 			return
 		}
 
-	case []JsonObject:
+	case []JSONObject:
 		if len(bjo) == 0 {
 			return
 		}

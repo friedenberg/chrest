@@ -37,10 +37,12 @@ func ResponseFromReader(
 
 type ResponseWithParsedJSONBody struct {
 	*http.Response
-	ParsedJSONBody interface{}
+	ParsedJSONBody JSONAnything
 }
 
 // TODO figure out which method retunrs err == io.EOF and set err to nil
+// TODO make more ergonomic by providing serializable interfaces and structured
+// request instead of raw *http.Request
 func AskChrome(
 	ctx context.Context,
 	c Config,

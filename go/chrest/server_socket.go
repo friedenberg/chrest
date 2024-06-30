@@ -1,8 +1,6 @@
 package chrest
 
 import (
-	"encoding/json"
-	"io"
 	"log"
 	"net"
 	"os"
@@ -42,44 +40,4 @@ func (s *ServerSocket) Listen() (err error) {
 	log.Printf("listening: %s", s.SockPath)
 
 	return
-}
-
-// TODO remove panics in place of structured errors
-func (s *ServerSocket) acceptConn(conn *net.UnixConn) {
-	log.Print("accepted conn")
-
-	dec := json.NewDecoder(conn)
-	enc := json.NewEncoder(conn)
-
-	var err error
-
-	for {
-		var m JsonAnything
-
-		err = dec.Decode(&m)
-
-		if err != nil {
-			panic(err)
-		}
-
-		_, err = WriteToChrome(m)
-
-		if err != nil {
-			panic(err)
-		}
-
-		var resp JsonObject
-
-		_, err = ReadFromChrome(&resp)
-
-		if err != nil && err != io.EOF {
-			panic(err)
-		}
-
-		err = enc.Encode(resp)
-
-		if err != nil {
-			panic(err)
-		}
-	}
 }
