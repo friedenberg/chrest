@@ -22,6 +22,7 @@ async function tryMatchRoute(req) {
 }
 
 let port;
+const now = new Date();
 
 async function onMessage(req) {
   let response = {};
@@ -53,6 +54,9 @@ async function onMessage(req) {
 
   if (!didTimeout) {
     clearTimeout(timeout);
+    response.headers = {
+      "X-Chrest-Startup-Time": now.toISOString(), 
+    };
     port.postMessage(response);
   }
 }

@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+
+	"code.linenisgreat.com/zit/go/zit/src/alfa/errors"
 )
 
 type (
@@ -55,6 +57,32 @@ func ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 	if err != nil && err != io.EOF {
 		flushError(err, enc, w, req)
+	}
+
+	headers, ok := res["headers"].(map[string]interface{})
+
+	if !ok {
+		flushError(
+			errors.Errorf("expected %T but got %T", headers, res["headers"]),
+			enc,
+			w,
+			req,
+		)
+	}
+
+	for k, v := range headers {
+		vs, ok := v.(string)
+
+		if !ok {
+			flushError(
+				errors.Errorf("expected %T but got %T", vs, v),
+				enc,
+				w,
+				req,
+			)
+		}
+
+		w.Header().Add(k, vs)
 	}
 
 	w.WriteHeader(int(res["status"].(float64)))

@@ -15,6 +15,7 @@ import (
 
 	"code.linenisgreat.com/chrest/go/chrest"
 	"code.linenisgreat.com/zit/go/zit/src/alfa/errors"
+	"code.linenisgreat.com/zit/go/zit/src/charlie/files"
 )
 
 func init() {
@@ -193,6 +194,16 @@ func CmdClient(c chrest.Config) (err error) {
 	if err = cmdHttp.Wait(); err != nil {
 		err = errors.Errorf("waiting for httpie failed: %w", err)
 		return
+	}
+
+	if files.IsTty(os.Stdout) {
+		for k, vs := range resp.Header {
+			for _, v := range vs {
+				fmt.Printf("%s: %s\n", k, v)
+			}
+		}
+
+		fmt.Println()
 	}
 
 	cmdJq := exec.Command("jq")
