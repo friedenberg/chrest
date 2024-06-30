@@ -6,8 +6,8 @@ SHELL := bash
 MAKEFLAGS += --warn-undefined-variables
 MAKEFLAGS += --no-builtin-rules
 MAKEFLAGS += --output-sync=target
-n_prc := $(shell sysctl -n hw.logicalcpu)
-MAKEFLAGS := --jobs=$(n_prc)
+# n_prc := $(shell sysctl -n hw.logicalcpu)
+# MAKEFLAGS := --jobs=$(n_prc)
 timeout := 10
 cmd_bats := BATS_TEST_TIMEOUT=$(timeout) bats --tap
 
@@ -18,4 +18,22 @@ endif
 
 .PHONY: build watch exclude graph_dependencies
 
-build: build/zit;
+build: build/go build/extension;
+
+reload: build
+> pushd go/chrest
+> ./build/chrest install jbcogiaaaaikinoljmplilmcnicpfoek
+> popd
+> chrest client POST /runtime/reload || true
+> sleep 1
+> chrest client GET /runtime/reload
+
+.PHONY: build/go
+build/go:
+> pushd go/chrest
+> $(MAKE)
+
+.PHONY: build/extension
+build/extension:
+> pushd extension
+> $(MAKE)

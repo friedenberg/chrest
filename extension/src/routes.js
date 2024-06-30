@@ -394,6 +394,12 @@ Routes["/extensions"] = {
 };
 
 Routes["/runtime/reload"] = {
+  async get() {
+    return {
+      status: 200,
+      body: await chrome.runtime.getManifest(),
+    };
+  },
   async post() {
     await chrome.runtime.reload();
     return { status: 204 };

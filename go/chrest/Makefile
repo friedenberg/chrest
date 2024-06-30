@@ -6,8 +6,8 @@ SHELL := bash
 MAKEFLAGS += --warn-undefined-variables
 MAKEFLAGS += --no-builtin-rules
 MAKEFLAGS += --output-sync=target
-n_prc := $(shell sysctl -n hw.logicalcpu)
-MAKEFLAGS := --jobs=$(n_prc)
+# n_prc := $(shell sysctl -n hw.logicalcpu)
+# MAKEFLAGS := --jobs=$(n_prc)
 timeout := 10
 cmd_bats := BATS_TEST_TIMEOUT=$(timeout) bats --tap
 

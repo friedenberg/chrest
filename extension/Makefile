@@ -6,8 +6,8 @@ SHELL := bash
 MAKEFLAGS += --warn-undefined-variables
 MAKEFLAGS += --no-builtin-rules
 MAKEFLAGS += --output-sync=target
-n_prc := $(shell sysctl -n hw.logicalcpu)
-MAKEFLAGS := --jobs=$(n_prc)
+# n_prc := $(shell sysctl -n hw.logicalcpu)
+# MAKEFLAGS := --jobs=$(n_prc)
 timeout := 10
 cmd_bats := BATS_TEST_TIMEOUT=$(timeout) bats --tap
 
@@ -18,11 +18,14 @@ endif
 
 .PHONY: build watch exclude graph_dependencies
 
-dist: dist/main.js
->cp manifest.json $@/manifest.json
+build: dist/main.js;
+
+dist/manifest.json: manifest.json
+>cp $< $@
 
 files_js := $(shell find src -iname '*.js')
 
-dist/main.js: $(files_js)
+dist/main.js: $(files_js) dist/manifest.json
 >mkdir -p $(dir $@)
->npx rollup --config
+>eval "$$(direnv hook bash)"
+>nix develop github:friedenberg/dev-flake-templates?dir=javascript --command bash -c "npx rollup --config"

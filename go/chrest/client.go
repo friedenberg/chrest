@@ -35,20 +35,23 @@ func ResponseFromReader(
 	return
 }
 
+type ResponseWithParsedJSONBody struct {
+	*http.Response
+	ParsedJSONBody interface{}
+}
+
 // TODO figure out which method retunrs err == io.EOF and set err to nil
 func AskChrome(
 	ctx context.Context,
 	c Config,
 	req *http.Request,
-) (response interface{}, err error) {
+) (resp ResponseWithParsedJSONBody, err error) {
 	var sock string
 
 	if sock, err = c.SocketPath(); err != nil {
 		err = errors.Wrap(err)
 		return
 	}
-
-	var resp *http.Response
 
 	var dialer net.Dialer
 
@@ -64,7 +67,7 @@ func AskChrome(
 		return
 	}
 
-	if resp, err = http.ReadResponse(bufio.NewReader(conn), req); err != nil {
+	if resp.Response, err = http.ReadResponse(bufio.NewReader(conn), req); err != nil {
 		if err == io.EOF {
 			err = nil
 		} else {
@@ -76,7 +79,7 @@ func AskChrome(
 
 	dec := json.NewDecoder(bufio.NewReader(resp.Body))
 
-	if err = dec.Decode(&response); err != nil {
+	if err = dec.Decode(&resp.ParsedJSONBody); err != nil {
 		err = errors.WrapExcept(err, io.EOF)
 		return
 	}
