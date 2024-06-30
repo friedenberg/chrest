@@ -24,9 +24,7 @@ reload: build
 > pushd go/chrest
 > ./build/chrest install jbcogiaaaaikinoljmplilmcnicpfoek
 > popd
-> chrest client POST /runtime/reload || true
-> sleep 1
-> chrest client GET /runtime/reload
+> chrest server-reload
 
 .PHONY: build/go
 build/go:
