@@ -38,14 +38,14 @@ func main() {
 
 		err = CmdServer(c)
 
-	case "server-reload":
+	case "reload-extension":
 		var c chrest.Config
 
 		if err = c.Read(); err != nil {
 			break
 		}
 
-		if err = CmdServerReload(c); err != nil {
+		if err = CmdReloadExtension(c); err != nil {
 			break
 		}
 

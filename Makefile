@@ -24,7 +24,7 @@ reload: build
 > pushd go/chrest
 > ./build/chrest install jbcogiaaaaikinoljmplilmcnicpfoek
 > popd
-> chrest server-reload
+> chrest reload-extension
 
 .PHONY: build/go
 build/go:

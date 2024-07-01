@@ -9,12 +9,12 @@ import (
 )
 
 type (
-	JSONAnything = interface{}
-	JSONObject   = map[string]JSONAnything
-	Request      JSONObject
+	JSONAnything          = interface{}
+	JSONObject            = map[string]JSONAnything
+	ServerRequestJSONBody JSONObject
 )
 
-func NewRequest(in *http.Request, body JSONAnything) (out Request) {
+func NewRequest(in *http.Request, body JSONAnything) (out ServerRequestJSONBody) {
 	out = map[string]interface{}{
 		"path":   in.URL.Path,
 		"method": in.Method,

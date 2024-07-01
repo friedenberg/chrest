@@ -10,7 +10,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"sync"
-	"time"
 
 	"code.linenisgreat.com/chrest/go/chrest"
 	"code.linenisgreat.com/zit/go/zit/src/alfa/errors"
@@ -28,49 +27,6 @@ func ClientAddFlags() {
 		false,
 		"print the full request including headers",
 	)
-}
-
-func CmdServerReload(c chrest.Config) (err error) {
-	var exe string
-
-	if exe, err = os.Executable(); err != nil {
-		err = errors.Wrap(err)
-		return
-	}
-
-	os.Args = []string{exe, "POST", "/runtime/reload"}
-
-	fmt.Println("reloading server")
-
-	if err = CmdClient(c); err != nil {
-		if errors.Is(err, io.ErrUnexpectedEOF) {
-			err = nil
-		} else {
-			err = errors.Wrap(err)
-			return
-		}
-	}
-
-	os.Args[1] = "GET"
-
-	for {
-		fmt.Println("waiting for server to come back up")
-
-		if err = CmdClient(c); err != nil {
-			if errors.Is(err, io.ErrUnexpectedEOF) {
-				err = nil
-				time.Sleep(1e8)
-				continue
-			} else {
-				err = errors.Wrap(err)
-				return
-			}
-		}
-
-		break
-	}
-
-	return
 }
 
 func CmdClient(c chrest.Config) (err error) {
