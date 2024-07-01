@@ -11,6 +11,7 @@ import (
 type (
 	JSONAnything          = interface{}
 	JSONObject            = map[string]JSONAnything
+	JSONArray             = []JSONAnything
 	ServerRequestJSONBody JSONObject
 )
 

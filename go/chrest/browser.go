@@ -100,14 +100,11 @@ func (b Browser) HTTPRequestWithContext(
 	}
 
 	if resp.Response, err = http.ReadResponse(bufio.NewReader(conn), req); err != nil {
-		if err == io.EOF {
-			err = nil
-		} else {
-			err = errors.Wrap(err)
-		}
-
+		err = errors.Wrap(err)
 		return
 	}
+
+	// TODO handle response status
 
 	dec := json.NewDecoder(bufio.NewReader(resp.Body))
 

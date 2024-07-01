@@ -90,7 +90,7 @@ export const makeTabs = async function(bodies) {
   const ws = await chrome.windows.getAll();
 
   if (ws.length == 0) {
-    return chrome.windows.create({url: bodies.map(b => b.url)});
+    return chrome.windows.create(bodies.map(b => b.url));
   } else {
     return Promise.all(
       bodies.map(b => chrome.tabs.create(b)),

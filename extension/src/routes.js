@@ -33,16 +33,20 @@ Routes["/urls"] = {
     };
   },
   async put(req) {
+    const added = lib.makeTabs(req.body.added);
+
     await Promise.all(
       [
         lib.removeTabs(req.body.deleted),
         lib.removeBookmarks(req.body.deleted),
-        lib.makeTabs(req.body.added),
       ],
     );
 
     return {
-      status: 202,
+      body: {
+        added: await added,
+      },
+      status: 200,
     };
   },
 };
