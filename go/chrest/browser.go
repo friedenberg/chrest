@@ -113,7 +113,7 @@ func (b Browser) HTTPRequestWithContext(
 	dec := json.NewDecoder(bufio.NewReader(resp.Body))
 
 	if err = dec.Decode(&resp.ParsedJSONBody); err != nil {
-		err = errors.WrapExcept(err, io.EOF)
+		err = errors.WrapExceptAsNil(err, io.EOF)
 		return
 	}
 
