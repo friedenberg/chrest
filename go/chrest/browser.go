@@ -7,7 +7,6 @@ import (
 	"io"
 	"net"
 	"net/http"
-	"path"
 	"time"
 
 	"code.linenisgreat.com/zit/go/zit/src/alfa/errors"
@@ -37,7 +36,7 @@ func (b Browser) Request(
 
 	if httpReq, err = http.NewRequest(
 		req.Method,
-		path.Join("http://localhost", req.Path),
+		req.Path,
 		req.Body,
 	); err != nil {
 		err = errors.Wrap(err)
@@ -113,7 +112,14 @@ func (b Browser) HTTPRequestWithContext(
 	dec := json.NewDecoder(bufio.NewReader(resp.Body))
 
 	if err = dec.Decode(&resp.ParsedJSONBody); err != nil {
-		err = errors.WrapExceptAsNil(err, io.EOF)
+		err = errors.Wrapf(
+			err,
+			"Url: %s, Request: %#v, Response: %#v",
+			req.URL,
+			req,
+			resp.Response,
+		)
+
 		return
 	}
 
