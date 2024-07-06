@@ -1,6 +1,6 @@
 module code.linenisgreat.com/chrest/go/chrest
 
-go 1.21.6
+go 1.22.4
 
 require (
 	code.linenisgreat.com/zit/go/zit v0.0.0-20240618134352-24f7f078dd92 // indirect

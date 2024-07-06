@@ -54,7 +54,17 @@ func ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 	var res JSONObject
 
+	// TODO handle case when extension is offline
 	_, err = ReadFromChrome(&res)
+
+	if errors.IsEOF(err) {
+		flushError(
+			errors.Errorf("extension service working may be offline"),
+			enc,
+			w,
+			req,
+		)
+	}
 
 	if err != nil && err != io.EOF {
 		flushError(err, enc, w, req)

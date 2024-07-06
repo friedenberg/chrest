@@ -106,6 +106,10 @@ func (b Browser) HTTPRequestWithContext(
 
 	// TODO handle response status
 
+	if resp.Body == nil {
+		return
+	}
+
 	dec := json.NewDecoder(bufio.NewReader(resp.Body))
 
 	if err = dec.Decode(&resp.ParsedJSONBody); err != nil {
