@@ -106,7 +106,7 @@ func (b Browser) HTTPRequestWithContext(
 
 	// TODO handle response status
 
-	if resp.Body == nil {
+	if resp.Body == nil || resp.ContentLength == 0 {
 		return
 	}
 
