@@ -74,6 +74,10 @@ export async function normalizeWindowID(windowID) {
   return windowID;
 }
 
+export async function getNonAppWindows() {
+  return (await chrome.windows.getAll()).filter(w => w["type"] !== "app");
+}
+
 export async function getWindowWithID(windowID) {
   var w;
 

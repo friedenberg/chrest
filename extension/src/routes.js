@@ -7,7 +7,7 @@ Routes["/urls"] = {
     return {
       status: 200,
       body: [
-        (await lib.tabsFromWindows(await chrome.windows.getAll())).map((o) => ({
+        (await lib.tabsFromWindows(await lib.getNonAppWindows())).map((o) => ({
           title: o.title,
           type: "tab",
           id: parseInt(o.id),
