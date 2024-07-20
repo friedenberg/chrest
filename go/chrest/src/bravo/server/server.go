@@ -1,4 +1,4 @@
-package chrest
+package server
 
 import (
 	"bytes"
@@ -7,9 +7,10 @@ import (
 	"os"
 
 	"code.linenisgreat.com/zit/go/zit/src/alfa/errors"
+	"code.linenisgreat.com/zit/go/zit/src/charlie/ohio"
 )
 
-func WriteToChrome(m interface{}) (n int64, err error) {
+func WriteToBrowser(m interface{}) (n int64, err error) {
 	w := os.Stdout
 
 	var b []byte
@@ -21,10 +22,9 @@ func WriteToChrome(m interface{}) (n int64, err error) {
 
 	i := int32(len(b))
 	// TODO overflow safe
-	ml := Int32ToByteArray(i)
 
 	var n1 int
-	n1, err = WriteAllOrDieTrying(w, ml[:])
+	n1, err = ohio.WriteFixedInt32(w, i)
 	n += int64(n1)
 
 	if err != nil {
@@ -32,7 +32,7 @@ func WriteToChrome(m interface{}) (n int64, err error) {
 		return
 	}
 
-	n1, err = WriteAllOrDieTrying(w, b)
+	n1, err = ohio.WriteAllOrDieTrying(w, b)
 	n += int64(n1)
 
 	if err != nil {
@@ -43,13 +43,13 @@ func WriteToChrome(m interface{}) (n int64, err error) {
 	return
 }
 
-func ReadFromChrome(m interface{}) (n int64, err error) {
+func ReadFromBrowser(m interface{}) (n int64, err error) {
 	r := os.Stdin
 
 	var ml int32
 
-	var n1 int64
-	n1, err = ReadInt32(r, &ml)
+	var n1 int
+	n1, ml, err = ohio.ReadFixedInt32(r)
 	n += int64(n1)
 
 	if err != nil {
@@ -59,8 +59,9 @@ func ReadFromChrome(m interface{}) (n int64, err error) {
 
 	var b bytes.Buffer
 
-	n1, err = io.CopyN(&b, r, int64(ml))
-	n += n1
+	var n2 int64
+	n2, err = io.CopyN(&b, r, int64(ml))
+	n += n2
 
 	if err != nil {
 		err = errors.Wrap(err)
@@ -68,7 +69,6 @@ func ReadFromChrome(m interface{}) (n int64, err error) {
 	}
 
 	err = json.Unmarshal(b.Bytes(), &m)
-
 	if err != nil {
 		err = errors.Wrap(err)
 		return

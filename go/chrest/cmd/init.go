@@ -1,14 +1,14 @@
 package main
 
 import (
-	"code.linenisgreat.com/chrest/go/chrest"
+	"code.linenisgreat.com/chrest/go/chrest/src/bravo/config"
 	"code.linenisgreat.com/zit/go/zit/src/alfa/errors"
 )
 
 func CmdInit() (err error) {
-	var c chrest.Config
+	var c config.Config
 
-	if c, err = chrest.ConfigDefault(); err != nil {
+	if c, err = config.ConfigDefault(); err != nil {
 		err = errors.Wrap(err)
 		return
 	}

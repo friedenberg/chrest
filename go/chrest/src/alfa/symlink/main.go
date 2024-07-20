@@ -1,4 +1,4 @@
-package chrest
+package symlink
 
 import (
 	"os"

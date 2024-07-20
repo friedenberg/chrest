@@ -6,12 +6,13 @@ import (
 	"os"
 	"path"
 
-	"code.linenisgreat.com/chrest/go/chrest"
+	"code.linenisgreat.com/chrest/go/chrest/src/alfa/symlink"
+	"code.linenisgreat.com/chrest/go/chrest/src/bravo/config"
+	"code.linenisgreat.com/chrest/go/chrest/src/bravo/install"
 	"code.linenisgreat.com/zit/go/zit/src/alfa/errors"
 )
 
-// TODO use config
-func CmdInstall(c chrest.Config) (err error) {
+func CmdInstall(c config.Config) (err error) {
 	flag.Parse()
 	args := flag.Args()
 
@@ -30,15 +31,16 @@ func CmdInstall(c chrest.Config) (err error) {
 
 	newPath := c.ServerPath()
 
-	if err = chrest.Symlink(exe, newPath); err != nil {
+	if err = symlink.Symlink(exe, newPath); err != nil {
 		err = errors.Wrap(err)
 		return
 	}
 
-	var ij chrest.InstallJSON
+	var ij any
 
-	if ij, err = chrest.MakeInstallJSON(
+	if ij, err = install.MakeJSON(
 		newPath,
+		c.Browser,
 		args...,
 	); err != nil {
 		err = errors.Wrap(err)
@@ -52,11 +54,20 @@ func CmdInstall(c chrest.Config) (err error) {
 		return
 	}
 
-	path := path.Join(
+	dir := path.Join(
 		c.Home,
-		"Library/Application Support/Google/Chrome/NativeMessagingHosts",
+		install.GetUserPath(c.Browser),
+	)
+
+	path := path.Join(
+		dir,
 		"com.linenisgreat.code.chrest.json",
 	)
+
+	if err = os.MkdirAll(dir, 0o700); err != nil {
+		err = errors.Wrap(err)
+		return
+	}
 
 	if err = os.WriteFile(
 		path,

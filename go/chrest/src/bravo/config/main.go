@@ -1,4 +1,4 @@
-package chrest
+package config
 
 import (
 	"bufio"
@@ -8,12 +8,14 @@ import (
 	"path"
 	"path/filepath"
 
+	"code.linenisgreat.com/chrest/go/chrest/src/alfa/browser"
 	"code.linenisgreat.com/zit/go/zit/src/alfa/errors"
 )
 
 type Config struct {
-	Home string `json:"-"`
-	Port string `json:"port"`
+	Home            string `json:"-"`
+	browser.Browser `json:"browser"`
+	Port            string `json:"port"`
 }
 
 func (c Config) ServerPath() string {
@@ -35,6 +37,7 @@ func (c Config) SocketPath() (v string, err error) {
 
 func ConfigDefault() (c Config, err error) {
 	c.Port = "3001"
+	c.Browser = browser.Chrome
 
 	if c.Home, err = os.UserHomeDir(); err != nil {
 		err = errors.Wrap(err)
@@ -84,11 +87,16 @@ func (c *Config) Read() (err error) {
 	var f *os.File
 
 	if f, err = os.Open(p); err != nil {
-		err = errors.Wrap(err)
+		if errors.IsNotExist(err) {
+			err = nil
+		} else {
+			err = errors.Wrap(err)
+		}
+
 		return
 	}
 
-	defer f.Close()
+	defer errors.DeferredCloser(&err, f)
 
 	dec := json.NewDecoder(bufio.NewReader(f))
 

@@ -5,7 +5,7 @@ import (
 	"log"
 	"os"
 
-	"code.linenisgreat.com/chrest/go/chrest"
+	"code.linenisgreat.com/chrest/go/chrest/src/bravo/config"
 )
 
 func init() {
@@ -30,16 +30,16 @@ func main() {
 
 	switch cmd {
 	default:
-		var c chrest.Config
+		var c config.Config
 
-		if c, err = chrest.ConfigDefault(); err != nil {
+		if c, err = config.ConfigDefault(); err != nil {
 			break
 		}
 
 		err = CmdServer(c)
 
 	case "reload-extension":
-		var c chrest.Config
+		var c config.Config
 
 		if err = c.Read(); err != nil {
 			break
@@ -50,7 +50,7 @@ func main() {
 		}
 
 	case "client":
-		var c chrest.Config
+		var c config.Config
 
 		if err = c.Read(); err != nil {
 			break
@@ -62,7 +62,7 @@ func main() {
 		err = CmdInit()
 
 	case "install":
-		var c chrest.Config
+		var c config.Config
 
 		if err = c.Read(); err != nil {
 			break
@@ -71,7 +71,7 @@ func main() {
 		err = CmdInstall(c)
 
 	case "demo":
-		var c chrest.Config
+		var c config.Config
 
 		if err = c.Read(); err != nil {
 			break

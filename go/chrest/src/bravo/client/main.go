@@ -1,4 +1,4 @@
-package chrest
+package client
 
 import (
 	"bufio"
@@ -9,13 +9,13 @@ import (
 	"net/http"
 	"time"
 
+	"code.linenisgreat.com/chrest/go/chrest/src/bravo/config"
+	"code.linenisgreat.com/chrest/go/chrest/src/bravo/server"
 	"code.linenisgreat.com/zit/go/zit/src/alfa/errors"
 )
 
-// TODO rename to browser and make structure
-
-type Browser struct {
-	Config
+type BrowserProxy struct {
+	config.Config
 }
 
 type BrowserRequest struct {
@@ -26,10 +26,10 @@ type BrowserRequest struct {
 
 type ResponseWithParsedJSONBody struct {
 	*http.Response
-	ParsedJSONBody JSONAnything
+	ParsedJSONBody server.JSONAnything
 }
 
-func (b Browser) Request(
+func (b BrowserProxy) Request(
 	req BrowserRequest,
 ) (resp ResponseWithParsedJSONBody, err error) {
 	var httpReq *http.Request
@@ -51,7 +51,7 @@ func (b Browser) Request(
 	return
 }
 
-func (b Browser) HTTPRequest(
+func (b BrowserProxy) HTTPRequest(
 	req *http.Request,
 ) (resp ResponseWithParsedJSONBody, err error) {
 	ctx, cancel := context.WithDeadline(
@@ -74,7 +74,7 @@ func (b Browser) HTTPRequest(
 }
 
 // TODO figure out which method retunrs err == io.EOF and set err to nil
-func (b Browser) HTTPRequestWithContext(
+func (b BrowserProxy) HTTPRequestWithContext(
 	ctx context.Context,
 	req *http.Request,
 ) (resp ResponseWithParsedJSONBody, err error) {

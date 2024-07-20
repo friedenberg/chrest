@@ -1,4 +1,4 @@
-package chrest
+package server
 
 import (
 	"encoding/json"
@@ -46,7 +46,7 @@ func ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		flushError(err, enc, w, req)
 	}
 
-	_, err = WriteToChrome(NewRequest(req, m))
+	_, err = WriteToBrowser(NewRequest(req, m))
 
 	if err != nil {
 		flushError(err, enc, w, req)
@@ -55,7 +55,7 @@ func ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	var res JSONObject
 
 	// TODO handle case when extension is offline
-	_, err = ReadFromChrome(&res)
+	_, err = ReadFromBrowser(&res)
 
 	if errors.IsEOF(err) {
 		flushError(

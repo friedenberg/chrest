@@ -3,31 +3,31 @@ package main
 import (
 	"log"
 	"net/http"
-	"os"
 
-	"code.linenisgreat.com/chrest/go/chrest"
+	"code.linenisgreat.com/chrest/go/chrest/src/bravo/config"
+	"code.linenisgreat.com/chrest/go/chrest/src/bravo/server"
 	"code.linenisgreat.com/zit/go/zit/src/alfa/errors"
 )
 
-func CmdServer(c chrest.Config) (err error) {
+func CmdServer(c config.Config) (err error) {
 	if err = c.Read(); err != nil {
 		err = errors.Wrap(err)
 		return
 	}
 
-	serverPath := c.ServerPath()
+	// serverPath := c.ServerPath()
 
-	var exe string
+	// var exe string
 
-	if exe, err = os.Executable(); err != nil {
-		err = errors.Wrap(err)
-		return
-	}
+	// if exe, err = os.Executable(); err != nil {
+	// 	err = errors.Wrap(err)
+	// 	return
+	// }
 
-	if serverPath != exe {
-		err = errors.Errorf("expected bin: %s, actual bin: %s", serverPath, exe)
-		return
-	}
+	// if serverPath != exe {
+	// 	err = errors.Errorf("expected bin: %s, actual bin: %s", serverPath, exe)
+	// 	return
+	// }
 
 	var sock string
 
@@ -38,14 +38,14 @@ func CmdServer(c chrest.Config) (err error) {
 
 	log.Printf("starting server on %q", sock)
 
-	socket := chrest.ServerSocket{SockPath: sock}
+	socket := server.ServerSocket{SockPath: sock}
 
 	if err = socket.Listen(); err != nil {
 		err = errors.Wrap(err)
 		return
 	}
 
-	server := http.Server{Handler: http.HandlerFunc(chrest.ServeHTTP)}
+	server := http.Server{Handler: http.HandlerFunc(server.ServeHTTP)}
 
 	if err = server.Serve(socket.Listener); err != nil {
 		err = errors.Wrap(err)

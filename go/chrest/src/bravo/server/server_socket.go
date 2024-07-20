@@ -1,4 +1,4 @@
-package chrest
+package server
 
 import (
 	"log"

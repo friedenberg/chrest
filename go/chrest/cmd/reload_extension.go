@@ -7,12 +7,12 @@ import (
 	"syscall"
 	"time"
 
-	"code.linenisgreat.com/chrest/go/chrest"
+	"code.linenisgreat.com/chrest/go/chrest/src/bravo/config"
 	"code.linenisgreat.com/zit/go/zit/src/alfa/errors"
 	"code.linenisgreat.com/zit/go/zit/src/bravo/ui"
 )
 
-func CmdReloadExtension(c chrest.Config) (err error) {
+func CmdReloadExtension(c config.Config) (err error) {
 	var exe string
 
 	if exe, err = os.Executable(); err != nil {

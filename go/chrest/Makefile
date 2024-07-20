@@ -25,4 +25,5 @@ files_go_src := $(shell find . -iname '*.go')
 
 build/chrest: $(files_go_cmd) $(files_go_src)
 >mkdir -p build
+>eval "$$(direnv hook bash)"
 >go build -o $@ $(files_go_cmd)

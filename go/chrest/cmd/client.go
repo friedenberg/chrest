@@ -11,7 +11,8 @@ import (
 	"path/filepath"
 	"sync"
 
-	"code.linenisgreat.com/chrest/go/chrest"
+	"code.linenisgreat.com/chrest/go/chrest/src/bravo/client"
+	"code.linenisgreat.com/chrest/go/chrest/src/bravo/config"
 	"code.linenisgreat.com/zit/go/zit/src/alfa/errors"
 	"code.linenisgreat.com/zit/go/zit/src/charlie/files"
 )
@@ -29,7 +30,7 @@ func ClientAddFlags() {
 	)
 }
 
-func CmdClient(c chrest.Config) (err error) {
+func CmdClient(c config.Config) (err error) {
 	clientAddFlagsOnce.Do(ClientAddFlags)
 	flag.Parse()
 
@@ -89,7 +90,7 @@ func CmdClient(c chrest.Config) (err error) {
 		return
 	}
 
-	if resp, err = chrest.ResponseFromReader(httpieStdout, conn); err != nil {
+	if resp, err = client.ResponseFromReader(httpieStdout, conn); err != nil {
 		err = errors.Wrap(err)
 		return
 	}

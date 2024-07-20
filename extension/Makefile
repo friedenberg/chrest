@@ -21,6 +21,7 @@ endif
 build: dist/main.js;
 
 dist/manifest.json: manifest.json
+>mkdir -p dist/
 >cp $< $@
 
 files_js := $(shell find src -iname '*.js')
@@ -28,4 +29,4 @@ files_js := $(shell find src -iname '*.js')
 dist/main.js: $(files_js) dist/manifest.json
 >mkdir -p $(dir $@)
 >eval "$$(direnv hook bash)"
->nix develop github:friedenberg/dev-flake-templates?dir=javascript --command bash -c "npx rollup --config"
+>npx rollup --config
