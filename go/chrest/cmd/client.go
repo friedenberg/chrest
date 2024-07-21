@@ -9,7 +9,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"sync"
 
 	"code.linenisgreat.com/chrest/go/chrest/src/bravo/client"
 	"code.linenisgreat.com/chrest/go/chrest/src/bravo/config"
@@ -17,10 +16,7 @@ import (
 	"code.linenisgreat.com/zit/go/zit/src/charlie/files"
 )
 
-var (
-	printFullRequest   *bool
-	clientAddFlagsOnce sync.Once
-)
+var printFullRequest *bool
 
 func ClientAddFlags() {
 	printFullRequest = flag.Bool(
@@ -31,7 +27,7 @@ func ClientAddFlags() {
 }
 
 func CmdClient(c config.Config) (err error) {
-	clientAddFlagsOnce.Do(ClientAddFlags)
+	addFlagsOnce.Do(ClientAddFlags)
 	flag.Parse()
 
 	var sock string

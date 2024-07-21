@@ -35,18 +35,6 @@ func (c Config) SocketPath() (v string, err error) {
 	return
 }
 
-func ConfigDefault() (c Config, err error) {
-	c.Port = "3001"
-	c.Browser = browser.Chrome
-
-	if c.Home, err = os.UserHomeDir(); err != nil {
-		err = errors.Wrap(err)
-		return
-	}
-
-	return
-}
-
 func StateDirectory() (v string, err error) {
 	v = os.Getenv("XDG_STATE_HOME")
 

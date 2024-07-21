@@ -1,18 +1,30 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"os"
+	"sync"
 
 	"code.linenisgreat.com/chrest/go/chrest/src/bravo/config"
+	"code.linenisgreat.com/zit/go/zit/src/alfa/errors"
+	"code.linenisgreat.com/zit/go/zit/src/bravo/ui"
 )
+
+var addFlagsOnce sync.Once
+
 
 func init() {
 	log.SetPrefix("chrest ")
 }
 
 func main() {
+	if err := run(); err != nil {
+		ui.Err().Print(err)
+		os.Exit(1)
+	}
+}
+
+func run() (err error) {
 	var cmd string
 
 	if len(os.Args) > 1 {
@@ -26,63 +38,73 @@ func main() {
 		}
 	}
 
-	var err error
+	var c config.Config
+
+	if c, err = config.Default(); err != nil {
+		err = errors.Wrap(err)
+		return
+	}
 
 	switch cmd {
 	default:
-		var c config.Config
-
-		if c, err = config.ConfigDefault(); err != nil {
-			break
+		if c, err = config.Default(); err != nil {
+			err = errors.Wrap(err)
+			return
 		}
 
-		err = CmdServer(c)
+		if err = CmdServer(c); err != nil {
+			err = errors.Wrap(err)
+			return
+		}
 
 	case "reload-extension":
-		var c config.Config
-
 		if err = c.Read(); err != nil {
-			break
+			err = errors.Wrap(err)
+			return
 		}
 
 		if err = CmdReloadExtension(c); err != nil {
-			break
+			err = errors.Wrap(err)
+			return
 		}
 
 	case "client":
-		var c config.Config
-
 		if err = c.Read(); err != nil {
-			break
+			err = errors.Wrap(err)
+			return
 		}
 
-		err = CmdClient(c)
+		if err = CmdClient(c); err != nil {
+			err = errors.Wrap(err)
+			return
+		}
 
 	case "init":
-		err = CmdInit()
-
-	case "install":
-		var c config.Config
-
-		if err = c.Read(); err != nil {
-			break
+		if err = CmdInit(); err != nil {
+			err = errors.Wrap(err)
+			return
 		}
 
-		err = CmdInstall(c)
+	case "install":
+		if err = c.Read(); err != nil {
+			err = errors.Wrap(err)
+			return
+		}
+
+		if err = CmdInstall(c); err != nil {
+			err = errors.Wrap(err)
+			return
+		}
 
 	case "demo":
-		var c config.Config
-
 		if err = c.Read(); err != nil {
-			break
+			err = errors.Wrap(err)
+			return
 		}
 
 		// TODO
 		// err = CmdDemo(c)
 	}
 
-	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
-	}
+	return
 }

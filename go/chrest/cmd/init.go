@@ -1,22 +1,40 @@
 package main
 
 import (
+	"flag"
+
 	"code.linenisgreat.com/chrest/go/chrest/src/bravo/config"
 	"code.linenisgreat.com/zit/go/zit/src/alfa/errors"
 )
 
+var InitConfig config.Config
+
+func InitAddFlags() {
+	flag.Var(
+		&InitConfig.Browser,
+		"browser",
+		"the browser to use by default",
+	)
+}
+
 func CmdInit() (err error) {
-	var c config.Config
-
-	if c, err = config.ConfigDefault(); err != nil {
+	if InitConfig, err = config.Default(); err != nil {
 		err = errors.Wrap(err)
 		return
 	}
 
-	if err = c.Write(); err != nil {
+	addFlagsOnce.Do(InitAddFlags)
+	flag.Parse()
+
+	if err = InitConfig.Write(); err != nil {
 		err = errors.Wrap(err)
 		return
 	}
 
-	return CmdInstall(c)
+	if err = CmdInstall(InitConfig); err != nil {
+		err = errors.Wrap(err)
+		return
+	}
+
+	return
 }
