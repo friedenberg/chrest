@@ -21,12 +21,15 @@ endif
 build: dist/main.js dist/chrest.zip;
 
 dist/manifest.json: manifest.json
+>mkdir -p $(dir $@)
 >cp $< $@
 
 dist/chrest_icon_128.png: chrest_icon_128.png
+>mkdir -p $(dir $@)
 >cp $< $@
 
 dist/chrest_icon_128.png: chrest_icon_128.png
+>mkdir -p $(dir $@)
 >cp $< $@
 
 files_js := $(shell find src -iname '*.js')
