@@ -18,15 +18,22 @@ endif
 
 .PHONY: build watch exclude graph_dependencies
 
-build: dist/main.js;
+build: dist/main.js dist/chrest.zip;
 
 dist/manifest.json: manifest.json
->mkdir -p dist/
+>cp $< $@
+
+dist/chrest_icon_128.png: chrest_icon_128.png
+>cp $< $@
+
+dist/chrest_icon_128.png: chrest_icon_128.png
 >cp $< $@
 
 files_js := $(shell find src -iname '*.js')
 
-dist/main.js: $(files_js) dist/manifest.json
+dist/main.js: $(files_js) dist/manifest.json dist/chrest_icon_128.png
 >mkdir -p $(dir $@)
->eval "$$(direnv hook bash)"
 >npx rollup --config
+
+dist/chrest.zip: dist/main.js
+>zip -r "$@" dist/* -x "$@"
