@@ -79,8 +79,18 @@ if (typeof process === "object") {
   tryConnect(null);
 }
 
-chrome.runtime.onStartup.addListener(() => {
-  tryConnect({ reason: "startup" });
-});
+if (typeof browser == "undefined") {
+  // Chrome does not support the browser namespace yet.
+  globalThis.browser = chrome;
+
+  browser.runtime.onStartup.addListener(() => {
+    tryConnect({ reason: "startup" });
+  });
+} else {
+  browser.runtime.onInstalled.addListener(() => {
+    tryConnect({ reason: "install" });
+  });
+}
+
 
 // chrome.runtime.onInstalled.addListener(tryConnect);

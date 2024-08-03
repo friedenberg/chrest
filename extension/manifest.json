@@ -8,11 +8,11 @@
   },
   "permissions": [
     "background",
+    "idle",
     "history",
     "bookmarks",
     "tabs",
-    "tabCapture",
-    "debugger",
+    "devtools",
     "nativeMessaging",
     "management",
     "unlimitedStorage"
@@ -21,7 +21,13 @@
     "extension_pages": "script-src 'self'; object-src 'self'"
   },
   "background": {
+    "scripts": [ "main.js" ],
     "service_worker": "main.js",
     "type": "module"
+  },
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "chrest@code.linenisgreat.com"
+    }
   }
 }

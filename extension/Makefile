@@ -16,15 +16,14 @@ ifeq ($(origin .RECIPEPREFIX), undefined)
 endif
 .RECIPEPREFIX = >
 
-.PHONY: build watch exclude graph_dependencies
+.PHONY: build local_deploy
 
 build: dist/main.js dist/chrest.zip;
 
-dist/manifest.json: manifest.json
->mkdir -p $(dir $@)
->cp $< $@
+local_deploy: build
+>npx web-ext run -s dist/
 
-dist/chrest_icon_128.png: chrest_icon_128.png
+dist/manifest.json: manifest.json
 >mkdir -p $(dir $@)
 >cp $< $@
 
@@ -40,3 +39,4 @@ dist/main.js: $(files_js) dist/manifest.json dist/chrest_icon_128.png
 
 dist/chrest.zip: dist/main.js
 >zip -r "$@" dist/* -x "$@"
+

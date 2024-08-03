@@ -9,7 +9,7 @@ import (
 
 func Default() (c Config, err error) {
 	c.Port = "3001"
-	c.Browser = browser.Chrome
+	c.Browser = browser.Firefox
 
 	if c.Home, err = os.UserHomeDir(); err != nil {
 		err = errors.Wrap(err)
