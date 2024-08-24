@@ -36,6 +36,7 @@ files_js := $(shell find src -iname '*.js')
 dist/main.js: $(files_js) dist/manifest.json dist/chrest_icon_128.png
 >mkdir -p $(dir $@)
 >npx rollup --config
+>npx web-ext lint -s dist/
 
 dist/chrest.zip: dist/main.js
 >zip -r "$@" dist/* -x "$@"

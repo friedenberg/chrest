@@ -44,7 +44,7 @@ func CmdReloadExtension(c config.Config) (err error) {
 				time.Sleep(1e8)
 				continue
 			} else if errors.IsErrno(err, syscall.ECONNREFUSED) {
-				ui.Err().Print("Browswer failed to restart extension. It will need to be restarted manually.")
+				ui.Err().Print("Browser failed to restart extension. It will need to be restarted manually.")
 				err = nil
 				return
 			} else {

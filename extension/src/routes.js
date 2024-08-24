@@ -1,50 +1,24 @@
 import * as lib from "./lib.js";
+import * as items from "./items.js";
 
 export let Routes = {};
 
-Routes["/urls"] = {
+Routes["/items"] = {
   async get(req) {
     return {
       status: 200,
       body: [
-        (await lib.tabsFromWindows(await lib.getNonAppWindows())).map((o) => ({
-          title: o.title,
-          type: "tab",
-          id: parseInt(o.id),
-          windowId: parseInt(o.windowId),
-          url: o.url,
-          date: new Date(o.lastAccessed),
-        })),
-        (await chrome.bookmarks.search({})).map((o) => ({
-          title: o.title,
-          type: "bookmark",
-          id: parseInt(o.id),
-          url: o.url,
-          date: new Date(o.dateAdded),
-        })),
-        (await chrome.history.search({ text: "" })).map((o) => ({
-          title: o.title,
-          type: "history",
-          id: parseInt(o.id),
-          url: o.url,
-          date: new Date(o.lastVisitTime),
-        })),
+        (await items.allTabItems()),
+        (await items.allBookmarkItems()),
+        // (await lib.allHistoryItems()),
       ].flat(),
     };
   },
   async put(req) {
-    const added = lib.makeTabs(req.body.added);
-
-    await Promise.all(
-      [
-        lib.removeTabs(req.body.deleted),
-        lib.removeBookmarks(req.body.deleted),
-      ],
-    );
-
     return {
       body: {
-        added: await added,
+        added: await items.makeUrlItems(req.body.added),
+        deleted: await items.removeUrlItems(req.body.deleted),
       },
       status: 200,
     };
@@ -59,7 +33,8 @@ Routes["/urls"] = {
 //
 
 Routes["/state"] = {
-  description: "Save, restore, or clear chrome windows and tabs with to a state",
+  description:
+    "Save, restore, or clear chrome windows and tabs with to a state",
   async get(req) {
     const windows = await chrome.windows.getAll();
     return {
@@ -221,7 +196,9 @@ Routes["/windows/#WINDOW_ID"] = {
 
     return {
       status: 200,
-      body: await lib.windowsWithTabs(await chrome.windows.update(wid, req.body)),
+      body: await lib.windowsWithTabs(
+        await chrome.windows.update(wid, req.body)
+      ),
     };
   },
   async delete({ windowId }) {
@@ -246,7 +223,9 @@ Routes["/windows/#WINDOW_ID/tabs"] = {
     if (Array.isArray(req.body)) {
       return {
         status: 201,
-        body: await Promise.all(req.body.map(b => (lib.makeTabWithWindowId(b, wid)))),
+        body: await Promise.all(
+          req.body.map((b) => lib.makeTabWithWindowId(b, wid))
+        ),
       };
     } else {
       return {
@@ -502,4 +481,3 @@ for (let key in Routes) {
 export const sortedRoutes = Object.values(Routes).sort(
   (a, b) => a.__matchVarCount - b.__matchVarCount
 );
-

@@ -1,6 +1,7 @@
 {
   "dependencies": {
     "error-stack-parser": "^2.1.4",
+    "error-stack-parser-es": "^0.1.5",
     "stack-trace": "^1.0.0-pre2"
   },
   "name": "extension",

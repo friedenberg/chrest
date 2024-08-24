@@ -43,7 +43,7 @@ func (b BrowserProxy) Request(
 		return
 	}
 
-	if resp, err = b.HTTPRequest(httpReq); err != nil {
+	if resp, err = b.HTTPRequest(httpReq, req); err != nil {
 		err = errors.Wrap(err)
 		return
 	}
@@ -52,7 +52,8 @@ func (b BrowserProxy) Request(
 }
 
 func (b BrowserProxy) HTTPRequest(
-	req *http.Request,
+	httpReq *http.Request,
+	req BrowserRequest,
 ) (resp ResponseWithParsedJSONBody, err error) {
 	ctx, cancel := context.WithDeadline(
 		context.Background(),
@@ -62,10 +63,7 @@ func (b BrowserProxy) HTTPRequest(
 
 	defer cancel()
 
-	if resp, err = b.HTTPRequestWithContext(
-		ctx,
-		req,
-	); err != nil {
+	if resp, err = b.HTTPRequestWithContext(ctx, httpReq, req); err != nil {
 		err = errors.Wrap(err)
 		return
 	}
@@ -76,7 +74,8 @@ func (b BrowserProxy) HTTPRequest(
 // TODO figure out which method retunrs err == io.EOF and set err to nil
 func (b BrowserProxy) HTTPRequestWithContext(
 	ctx context.Context,
-	req *http.Request,
+	httpReq *http.Request,
+	req BrowserRequest,
 ) (resp ResponseWithParsedJSONBody, err error) {
 	var sock string
 
@@ -94,12 +93,12 @@ func (b BrowserProxy) HTTPRequestWithContext(
 		return
 	}
 
-	if err = req.Write(conn); err != nil {
+	if err = httpReq.Write(conn); err != nil {
 		err = errors.Wrap(err)
 		return
 	}
 
-	if resp.Response, err = http.ReadResponse(bufio.NewReader(conn), req); err != nil {
+	if resp.Response, err = http.ReadResponse(bufio.NewReader(conn), httpReq); err != nil {
 		err = errors.Wrap(err)
 		return
 	}
@@ -112,16 +111,34 @@ func (b BrowserProxy) HTTPRequestWithContext(
 
 	dec := json.NewDecoder(bufio.NewReader(resp.Body))
 
-	if err = dec.Decode(&resp.ParsedJSONBody); err != nil {
-		err = errors.Wrapf(
-			err,
-			"Url: %s, Request: %#v, Response: %#v",
-			req.URL,
-			req,
-			resp.Response,
-		)
+	if req.Path == "/items" {
+		var items []BrowserItem
 
-		return
+		if err = dec.Decode(&items); err != nil {
+			err = errors.Wrapf(
+				err,
+				"Url: %s, Request: %#v, Response: %#v",
+				httpReq.URL,
+				httpReq,
+				resp.Response,
+			)
+
+			return
+		}
+
+		resp.ParsedJSONBody = items
+	} else {
+		if err = dec.Decode(&resp.ParsedJSONBody); err != nil {
+			err = errors.Wrapf(
+				err,
+				"Url: %s, Request: %#v, Response: %#v",
+				httpReq.URL,
+				httpReq,
+				resp.Response,
+			)
+
+			return
+		}
 	}
 
 	return

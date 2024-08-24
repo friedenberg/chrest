@@ -13,9 +13,10 @@ import (
 )
 
 type Config struct {
-	Home            string `json:"-"`
 	browser.Browser `json:"browser"`
-	Port            string `json:"port"`
+
+	Home string `json:"-"`
+	Port string `json:"port"`
 }
 
 func (c Config) ServerPath() string {

@@ -229,9 +229,9 @@ export async function removeTabs(urls) {
   let tabs = await tabsFromWindows(await chrome.windows.getAll());
 
   await chrome.tabs.remove(
-    tabs.reduce((acc, o) => {
-      if (urls.includes(o.url)) {
-        acc.push(o.id);
+    tabs.reduce((acc, tab) => {
+      if (urls.includes(tab.url)) {
+        acc.push(tab.id);
       }
 
       return acc;

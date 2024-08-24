@@ -1,5 +1,5 @@
 import * as routes from "./routes.js";
-import { parse } from 'stack-trace';
+import {parse} from 'error-stack-parser-es';
 
 async function tryMatchRoute(req) {
   for (let route of routes.sortedRoutes) {
@@ -56,6 +56,7 @@ async function onMessage(req) {
     clearTimeout(timeout);
     response.headers = {
       "X-Chrest-Startup-Time": now.toISOString(), 
+      "X-Chrest-UserAgent": Navigator.userAgent, 
     };
     port.postMessage(response);
   }
