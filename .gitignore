@@ -1,0 +1,4 @@
+.gitsecret/keys/random_seed
+!*.secret
+extension/secrets/jwt_issuer
+extension/secrets/jwt_secret

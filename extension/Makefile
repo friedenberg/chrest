@@ -16,14 +16,29 @@ ifeq ($(origin .RECIPEPREFIX), undefined)
 endif
 .RECIPEPREFIX = >
 
-.PHONY: build local_deploy
+.PHONY: build local_deploy sign
 
 build: dist/main.js dist/chrest.zip;
+
+FILE_SECRET_ISSUER := $(realpath secrets/jwt_issuer)
+FILE_SECRET_SECRET := $(realpath secrets/jwt_secret)
+
+sign: build
+> pushd dist/
+> npx web-ext sign \
+	--channel=listed \
+	--amo-metadata=amo-metadata.json \
+	--api-key="$(shell cat $(FILE_SECRET_ISSUER))" \
+	--api-secret="$(shell cat $(FILE_SECRET_SECRET))"
 
 local_deploy: build
 >npx web-ext run -s dist/
 
 dist/manifest.json: manifest.json
+>mkdir -p $(dir $@)
+>cp $< $@
+
+dist/amo-metadata.json: amo-metadata.json
 >mkdir -p $(dir $@)
 >cp $< $@
 
@@ -33,11 +48,15 @@ dist/chrest_icon_128.png: chrest_icon_128.png
 
 files_js := $(shell find src -iname '*.js')
 
-dist/main.js: $(files_js) dist/manifest.json dist/chrest_icon_128.png
+files_dist := dist/manifest.json dist/amo-metadata.json dist/chrest_icon_128.png
+
+dist/main.js: $(files_js) $(files_dist)
+>npm i
 >mkdir -p $(dir $@)
 >npx rollup --config
 >npx web-ext lint -s dist/
 
 dist/chrest.zip: dist/main.js
 >zip -r "$@" dist/* -x "$@"
+
 
