@@ -59,7 +59,7 @@ func ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 	if errors.IsEOF(err) {
 		flushError(
-			errors.Errorf("extension service working may be offline"),
+			errors.Errorf("extension service ffline"),
 			enc,
 			w,
 			req,
@@ -73,19 +73,21 @@ func ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	headers, ok := res["headers"].(map[string]interface{})
 
 	if !ok {
-		flushError(
+		flushServerError(
 			errors.Errorf("expected %T but got %T", headers, res["headers"]),
 			enc,
 			w,
 			req,
 		)
+
+		return
 	}
 
 	for k, v := range headers {
 		vs, ok := v.(string)
 
 		if !ok {
-			flushError(
+			flushServerError(
 				errors.Errorf("expected %T but got %T", vs, v),
 				enc,
 				w,
@@ -117,13 +119,19 @@ func ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	}
 
 	err = enc.Encode(b)
-
 	if err != nil {
 		flushError(err, enc, w, req)
 	}
 }
 
-const StatusBadBoy = http.StatusBadRequest
+func flushServerError(
+	err error,
+	enc *json.Encoder,
+	w http.ResponseWriter,
+	req *http.Request,
+) {
+	flushErrorGeneric(err, enc, w, req, http.StatusInternalServerError)
+}
 
 func flushError(
 	err error,
@@ -131,7 +139,17 @@ func flushError(
 	w http.ResponseWriter,
 	req *http.Request,
 ) {
-	w.WriteHeader(StatusBadBoy)
+	flushErrorGeneric(err, enc, w, req, http.StatusBadRequest)
+}
+
+func flushErrorGeneric(
+	err error,
+	enc *json.Encoder,
+	w http.ResponseWriter,
+	req *http.Request,
+	statusCode int,
+) {
+	w.WriteHeader(statusCode)
 
 	type errResponse struct {
 		Error string `json:"error"`
@@ -142,7 +160,6 @@ func flushError(
 	}
 
 	err = enc.Encode(res)
-
 	if err != nil {
 		panic(err)
 	}

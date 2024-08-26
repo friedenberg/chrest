@@ -1,5 +1,5 @@
 import * as routes from "./routes.js";
-import {parse} from 'error-stack-parser-es';
+import { parse } from 'error-stack-parser-es';
 
 async function tryMatchRoute(req) {
   for (let route of routes.sortedRoutes) {
@@ -25,73 +25,68 @@ let port;
 const now = new Date();
 
 async function onMessage(req) {
-  let response = {};
-  let didTimeout = false,
-    timeout = setTimeout(() => {
-      // timeout is very useful because some operations just hang
-      // (like trying to take a screenshot, until the tab is focused)
-      didTimeout = true;
-      console.error("timeout");
-      port.postMessage({ status: 500, body: { error: "timeout" } });
-    }, 10000);
+  let response = await Promise.race([
+    timeout(1000),
+    runRoute(req),
+  ]);
 
-  try {
-    response = await tryMatchRoute(req);
+  response.headers = {
+    "X-Chrest-Startup-Time": now.toISOString(),
+    "X-Chrest-UserAgent": Navigator.userAgent,
+  };
 
-    if (response == null) {
-      response = { status: 204 };
-    }
-  } catch (e) {
+  console.log(response);
+  port.postMessage(response);
+}
+
+async function runRoute(req) {
+  return tryMatchRoute(req).catch((e) => {
     console.error(e);
-    response.status = 500;
-    response.body = {
-      error: {
-        message: e.message,
-        stack: parse(e),
+    return {
+      status: 500,
+      body: {
+        error: {
+          message: e.message,
+          stack: parse(e),
+        },
       },
     };
-  }
+  });
+}
 
-  if (!didTimeout) {
-    clearTimeout(timeout);
-    response.headers = {
-      "X-Chrest-Startup-Time": now.toISOString(), 
-      "X-Chrest-UserAgent": Navigator.userAgent, 
-    };
-    port.postMessage(response);
-  }
+async function timeout(delay) {
+  let timeoutResponse = {
+    status: 500,
+    body: {
+      error: {
+        message: "timeout",
+      },
+    },
+  };
+
+  return new Promise(resolve => {
+    setTimeout(resolve, delay, timeoutResponse);
+  });
 }
 
 function tryConnect(e) {
   console.log(`try connect: ${e}`);
-  port = chrome.runtime.connectNative("com.linenisgreat.code.chrest");
+  port = browser.runtime.connectNative("com.linenisgreat.code.chrest");
   port.onMessage.addListener(onMessage);
   port.onDisconnect.addListener((p) => {
     console.log("disconnect", p);
-    tryConnect();
   });
-}
-
-if (typeof process === "object") {
-  // we're running in node (as part of a test)
-  // return everything they might want to test
-  module.exports = { Routes, tryMatchRoute };
-} else {
-  tryConnect(null);
 }
 
 if (typeof browser == "undefined") {
   // Chrome does not support the browser namespace yet.
   globalThis.browser = chrome;
-
-  browser.runtime.onStartup.addListener(() => {
-    tryConnect({ reason: "startup" });
-  });
-} else {
-  browser.runtime.onInstalled.addListener(() => {
-    tryConnect({ reason: "install" });
-  });
 }
 
+browser.runtime.onStartup.addListener(() => {
+  tryConnect({ reason: "startup" });
+});
 
-// chrome.runtime.onInstalled.addListener(tryConnect);
+browser.runtime.onInstalled.addListener(() => {
+  tryConnect({ reason: "install" });
+});

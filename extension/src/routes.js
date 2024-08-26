@@ -10,7 +10,7 @@ Routes["/items"] = {
       body: [
         (await items.allTabItems()),
         (await items.allBookmarkItems()),
-        // (await lib.allHistoryItems()),
+        (await items.allHistoryItems()),
       ].flat(),
     };
   },

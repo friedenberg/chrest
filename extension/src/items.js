@@ -6,23 +6,39 @@ export async function makeUrlItems(items) {
     return [];
   }
 
+  try {
+    await chrome.windows.getLastFocused();
+  } catch (e) {
+    await chrome.windows.create();
+  }
+
   return await Promise.all(items.map(makeUrlItem));
 };
 
 export async function makeUrlItem(item) {
   let result = item;
 
-  if (item.id.type == "bookmark") {
-    Object.assign(result, urlItemForBookmark(await browser.bookmarks.create({
-      title: item.title,
-      url: item.url,
-    })));
-  } else if (item.id.type == "tab") {
-    Object.assign(result, urlItemForTab(await browser.tabs.create({
-      url: item.url,
-    })));
-  } else {
-    throw `unsupported type: ${item.id.type}`;
+  let itemType = "tab";
+
+  if (item.id !== undefined && item.id.type !== undefined) {
+    itemType = item.id.type;
+  }
+
+  try {
+    if (itemType == "bookmark") {
+      Object.assign(result, urlItemForBookmark(await browser.bookmarks.create({
+        title: item.title,
+        url: item.url,
+      })));
+    } else if (itemType == "tab") {
+      Object.assign(result, urlItemForTab(await browser.tabs.create({
+        url: item.url,
+      })));
+    } else {
+      throw `unsupported type: ${item.id.type}`;
+    }
+  } catch (e) {
+    result.error = e.message;
   }
 
   return result;
