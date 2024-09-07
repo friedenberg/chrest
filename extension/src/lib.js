@@ -1,10 +1,9 @@
-
 export async function windowsWithTabs(windowOrWindowList) {
   if (Array.isArray(windowOrWindowList)) {
     const windows = windowOrWindowList;
 
     return await Promise.all(
-      windows.map(async function(w) {
+      windows.map(async function (w) {
         w["tabs"] = await chrome.tabs.query({ windowId: w["id"] });
         return w;
       })
@@ -22,7 +21,7 @@ export async function tabsFromWindows(windowOrWindowList) {
 
     return (
       await Promise.all(
-        windows.map(async function(w) {
+        windows.map(async function (w) {
           return await chrome.tabs.query({ windowId: w["id"] });
         })
       )
@@ -52,7 +51,7 @@ export async function removeBookmarks(urls) {
   );
 }
 
-export const cleanWindowForSave = function(w) {
+export const cleanWindowForSave = function (w) {
   delete w["alwaysOnTop"];
   delete w["id"];
   delete w["left"];
@@ -75,7 +74,7 @@ export async function normalizeWindowID(windowID) {
 }
 
 export async function getNonAppWindows() {
-  return (await chrome.windows.getAll()).filter(w => w["type"] !== "app");
+  return (await chrome.windows.getAll()).filter((w) => w["type"] !== "app");
 }
 
 export async function getWindowWithID(windowID) {
@@ -90,19 +89,17 @@ export async function getWindowWithID(windowID) {
   return await windowsWithTabs(await w);
 }
 
-export const makeTabs = async function(bodies) {
+export const makeTabs = async function (bodies) {
   const ws = await chrome.windows.getAll();
 
   if (ws.length == 0) {
-    return chrome.windows.create(bodies.map(b => b.url));
+    return chrome.windows.create(bodies.map((b) => b.url));
   } else {
-    return Promise.all(
-      bodies.map(b => chrome.tabs.create(b)),
-    );
+    return Promise.all(bodies.map((b) => chrome.tabs.create(b)));
   }
 };
 
-export const makeTab = async function(body) {
+export const makeTab = async function (body) {
   try {
     const ws = await chrome.windows.getAll();
 
@@ -116,12 +113,12 @@ export const makeTab = async function(body) {
   }
 };
 
-export const makeTabWithWindowId = async function(body, wid) {
+export const makeTabWithWindowId = async function (body, wid) {
   body.windowId = wid;
   return makeTab(body);
 };
 
-export const cleanTabForSave = function(t) {
+export const cleanTabForSave = function (t) {
   delete t["audible"];
   delete t["autoDiscardable"];
   delete t["discarded"];
@@ -239,8 +236,7 @@ export async function removeTabs(urls) {
   );
 }
 
-export const stringToUtf8Array = (function() {
+export const stringToUtf8Array = (function () {
   const encoder = new TextEncoder("utf-8");
   return (str) => encoder.encode(str);
 })();
-

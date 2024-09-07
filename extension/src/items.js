@@ -1,4 +1,3 @@
-
 import * as lib from "./lib.js";
 
 export async function makeUrlItems(items) {
@@ -13,7 +12,7 @@ export async function makeUrlItems(items) {
   }
 
   return await Promise.all(items.map(makeUrlItem));
-};
+}
 
 export async function makeUrlItem(item) {
   let result = item;
@@ -26,14 +25,24 @@ export async function makeUrlItem(item) {
 
   try {
     if (itemType == "bookmark") {
-      Object.assign(result, urlItemForBookmark(await browser.bookmarks.create({
-        title: item.title,
-        url: item.url,
-      })));
+      Object.assign(
+        result,
+        urlItemForBookmark(
+          await browser.bookmarks.create({
+            title: item.title,
+            url: item.url,
+          })
+        )
+      );
     } else if (itemType == "tab") {
-      Object.assign(result, urlItemForTab(await browser.tabs.create({
-        url: item.url,
-      })));
+      Object.assign(
+        result,
+        urlItemForTab(
+          await browser.tabs.create({
+            url: item.url,
+          })
+        )
+      );
     } else {
       throw `unsupported type: ${item.id.type}`;
     }
@@ -42,7 +51,7 @@ export async function makeUrlItem(item) {
   }
 
   return result;
-};
+}
 
 export function urlItemForTab(t) {
   return {
@@ -70,11 +79,15 @@ export function urlItemForBookmark(o) {
 }
 
 export async function allTabItems() {
-  return (await lib.tabsFromWindows(await lib.getNonAppWindows())).map(urlItemForTab);
+  return (await lib.tabsFromWindows(await lib.getNonAppWindows())).map(
+    urlItemForTab
+  );
 }
 
 export async function allBookmarkItems() {
-  return (await chrome.bookmarks.search({})).map(urlItemForBookmark);
+  return (await chrome.bookmarks.search({}))
+    .filter((b) => b.children === undefined)
+    .map(urlItemForBookmark);
 }
 
 export async function allHistoryItems() {
@@ -98,24 +111,21 @@ export async function removeUrlItems(items) {
 
   let promises = [];
 
-  let results = items.filter(
-    (item) => {
-      if (item.id.type == "bookmark") {
-        promises.push(browser.bookmarks.remove(item.id.id));
-        return true
-      } else if (item.id.type == "tab") {
-        promises.push(browser.tabs.remove(parseInt(item.id.id)));
-        return true
-      } else {
-        // TODO find in all urls
-        console.log(item)
-        return false;
-      }
-    },
-  );
+  let results = items.filter((item) => {
+    if (item.id.type == "bookmark") {
+      promises.push(browser.bookmarks.remove(item.id.id));
+      return true;
+    } else if (item.id.type == "tab") {
+      promises.push(browser.tabs.remove(parseInt(item.id.id)));
+      return true;
+    } else {
+      // TODO find in all urls
+      console.log(item);
+      return false;
+    }
+  });
 
   await Promise.all(promises);
 
-  return results
+  return results;
 }
-

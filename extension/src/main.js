@@ -1,5 +1,5 @@
 import * as routes from "./routes.js";
-import { parse } from 'error-stack-parser-es';
+import { parse } from "error-stack-parser-es";
 
 async function tryMatchRoute(req) {
   for (let route of routes.sortedRoutes) {
@@ -30,14 +30,10 @@ async function onMessage(req, messageSender) {
 }
 
 async function onMessageHTTP(req) {
-  let response = await Promise.race([
-    timeout(1000),
-    runRoute(req),
-  ]);
+  let response = await Promise.race([timeout(1000), runRoute(req)]);
 
   response.headers = {
     "X-Chrest-Startup-Time": now.toISOString(),
-    "X-Chrest-UserAgent": Navigator.userAgent,
   };
 
   response.type = "http";
@@ -71,7 +67,7 @@ async function timeout(delay) {
     },
   };
 
-  return new Promise(resolve => {
+  return new Promise((resolve) => {
     setTimeout(resolve, delay, timeoutResponse);
   });
 }
@@ -82,12 +78,12 @@ if (typeof browser == "undefined") {
 }
 
 async function initialize(e) {
-  browser.storage.sync.onChanged.addListener(changes => {
+  browser.storage.sync.onChanged.addListener((changes) => {
     console.log(changes);
     let browser_id = changes["browser_id"];
 
     if (browser_id == undefined) {
-      return
+      return;
     }
 
     port.postMessage({ type: "who-am-i", browser_id: browser_id.newValue });
@@ -106,10 +102,9 @@ async function initialize(e) {
     browser.runtime.openOptionsPage();
   } else {
     let browser_id = results["browser_id"];
-    port.postMessage({ type: "who-am-i", browser_id: browser_id, });
+    port.postMessage({ type: "who-am-i", browser_id: browser_id });
   }
 }
-
 
 browser.runtime.onStartup.addListener(() => {
   initialize({ reason: "startup" });
