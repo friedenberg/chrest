@@ -18,23 +18,30 @@ endif
 
 .PHONY: build local_deploy sign
 
-build: dist/main.js dist/chrest.zip;
+build: dist/options.html dist/options.js dist/main.js dist/chrest.zip;
 
 FILE_SECRET_ISSUER := $(realpath secrets/jwt_issuer)
 FILE_SECRET_SECRET := $(realpath secrets/jwt_secret)
 
 sign: build
-> pushd dist/
-> npx web-ext sign \
-	--channel=listed \
-	--amo-metadata=amo-metadata.json \
-	--api-key="$(shell cat $(FILE_SECRET_ISSUER))" \
-	--api-secret="$(shell cat $(FILE_SECRET_SECRET))"
+>pushd git rev-parse --show-toplevel
+>git secret reveal $(FILE_SECRET_SECRET) $(FILE_SECRET_ISSUER)
+>popd
+>pushd dist/
+>npx web-ext sign --channel=listed --amo-metadata=amo-metadata.json --api-key="$(shell cat $(FILE_SECRET_ISSUER))" --api-secret="$(shell cat $(FILE_SECRET_SECRET))"
 
 local_deploy: build
 >npx web-ext run -s dist/
 
+dist/options.js: options.js
+>mkdir -p $(dir $@)
+>cp $< $@
+
 dist/manifest.json: manifest.json
+>mkdir -p $(dir $@)
+>cp $< $@
+
+dist/options.html: options.html
 >mkdir -p $(dir $@)
 >cp $< $@
 
@@ -56,7 +63,7 @@ dist/main.js: $(files_js) $(files_dist)
 >npx rollup --config
 >npx web-ext lint -s dist/
 
-dist/chrest.zip: dist/main.js
+dist/chrest.zip: dist/main.js dist/options.js dist/options.html
 >zip -r "$@" dist/* -x "$@"
 
 

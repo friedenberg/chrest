@@ -11,7 +11,7 @@ var InitConfig config.Config
 
 func InitAddFlags() {
 	flag.Var(
-		&InitConfig.Browser,
+		&InitConfig.DefaultBrowser,
 		"browser",
 		"the browser to use by default",
 	)

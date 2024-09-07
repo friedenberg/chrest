@@ -1,8 +1,10 @@
 module code.linenisgreat.com/chrest/go/chrest
 
-go 1.22.4
+go 1.23
 
-require code.linenisgreat.com/zit/go/zit v0.0.0-20240720113128-2e6fbfa2bb61
+toolchain go1.23.0
+
+require code.linenisgreat.com/zit/go/zit v0.0.0-20240904115524-be1939db9106
 
 require (
 	filippo.io/age v1.1.1 // indirect

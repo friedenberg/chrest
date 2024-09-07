@@ -4,8 +4,10 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"os"
 
 	"code.linenisgreat.com/zit/go/zit/src/alfa/errors"
+	"code.linenisgreat.com/zit/go/zit/src/bravo/ui"
 )
 
 type (
@@ -17,6 +19,7 @@ type (
 
 func NewRequest(in *http.Request, body JSONAnything) (out ServerRequestJSONBody) {
 	out = map[string]interface{}{
+		"type":   "http",
 		"path":   in.URL.Path,
 		"method": in.Method,
 		"body":   body,
@@ -25,7 +28,9 @@ func NewRequest(in *http.Request, body JSONAnything) (out ServerRequestJSONBody)
 	return
 }
 
-func ServeHTTP(w http.ResponseWriter, req *http.Request) {
+func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	ui.Err().Printf("received request: %q", req)
+
 	enc := json.NewEncoder(w)
 
 	dec := json.NewDecoder(req.Body)
@@ -46,8 +51,10 @@ func ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		flushError(err, enc, w, req)
 	}
 
-	_, err = WriteToBrowser(NewRequest(req, m))
-
+	var n int64
+	ui.Err().Print("will write to chrome")
+	n, err = WriteToBrowser(NewRequest(req, m))
+	ui.Err().Printf("wrote %d bytes to chrome", n)
 	if err != nil {
 		flushError(err, enc, w, req)
 	}
@@ -55,7 +62,9 @@ func ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	var res JSONObject
 
 	// TODO handle case when extension is offline
-	_, err = ReadFromBrowser(&res)
+	ui.Err().Print("will read from chrome")
+	n, err = ReadFromBrowser(&res)
+	ui.Err().Printf("read %d bytes from chrome", n)
 
 	if errors.IsEOF(err) {
 		flushError(
@@ -70,32 +79,78 @@ func ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		flushError(err, enc, w, req)
 	}
 
-	headers, ok := res["headers"].(map[string]interface{})
-
-	if !ok {
-		flushServerError(
-			errors.Errorf("expected %T but got %T", headers, res["headers"]),
-			enc,
-			w,
-			req,
-		)
-
-		return
-	}
-
-	for k, v := range headers {
-		vs, ok := v.(string)
+	{
+		msgType, ok := res["type"].(string)
 
 		if !ok {
 			flushServerError(
-				errors.Errorf("expected %T but got %T", vs, v),
+				errors.Errorf("expected response to have `type` key. Response: %q", res),
 				enc,
 				w,
 				req,
 			)
+
+			return
 		}
 
-		w.Header().Add(k, vs)
+		switch msgType {
+		case "http":
+			break
+
+		case "who-am-i":
+			flushServerError(
+				errors.Errorf("Received a request to restart with new browser id."),
+				enc,
+				w,
+				req,
+			)
+
+			close(s.chDone)
+
+			return
+
+		default:
+			flushServerError(
+				errors.Errorf("unsupported message type: %q", msgType),
+				enc,
+				w,
+				req,
+			)
+
+			close(s.chDone)
+
+			return
+		}
+	}
+
+	{
+		headers, ok := res["headers"].(map[string]interface{})
+
+		if !ok {
+			flushServerError(
+				errors.Errorf("expected %T but got %T", headers, res["headers"]),
+				enc,
+				w,
+				req,
+			)
+
+			return
+		}
+
+		for k, v := range headers {
+			vs, ok := v.(string)
+
+			if !ok {
+				flushServerError(
+					errors.Errorf("expected %T but got %T", vs, v),
+					enc,
+					w,
+					req,
+				)
+			}
+
+			w.Header().Add(k, vs)
+		}
 	}
 
 	w.WriteHeader(int(res["status"].(float64)))
@@ -119,6 +174,20 @@ func ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	}
 
 	err = enc.Encode(b)
+	if err != nil {
+		flushError(err, enc, w, req)
+	}
+}
+
+func ServeHTTPDebug(w http.ResponseWriter, req *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	w.WriteHeader(http.StatusOK)
+
+	enc := json.NewEncoder(w)
+	env := os.Environ()
+
+	err := enc.Encode(env)
 	if err != nil {
 		flushError(err, enc, w, req)
 	}

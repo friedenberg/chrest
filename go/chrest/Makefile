@@ -21,9 +21,9 @@ endif
 build: build/chrest;
 
 files_go_cmd := $(shell find cmd -iname '*.go')
-files_go_src := $(shell find . -iname '*.go')
+files_go_src := $(shell find . -iname '*.go') go.mod go.sum
 
-build/chrest: $(files_go_cmd) $(files_go_src)
+build/chrest: $(files_go_cmd) $(files_go_src) Makefile
 >mkdir -p build
 >eval "$$(direnv hook bash)"
 >go build -o $@ $(files_go_cmd)

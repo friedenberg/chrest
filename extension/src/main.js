@@ -24,7 +24,12 @@ async function tryMatchRoute(req) {
 let port;
 const now = new Date();
 
-async function onMessage(req) {
+async function onMessage(req, messageSender) {
+  req.message_sender = messageSender;
+  await onMessageHTTP(req);
+}
+
+async function onMessageHTTP(req) {
   let response = await Promise.race([
     timeout(1000),
     runRoute(req),
@@ -34,6 +39,8 @@ async function onMessage(req) {
     "X-Chrest-Startup-Time": now.toISOString(),
     "X-Chrest-UserAgent": Navigator.userAgent,
   };
+
+  response.type = "http";
 
   console.log(response);
   port.postMessage(response);
@@ -69,24 +76,45 @@ async function timeout(delay) {
   });
 }
 
-function tryConnect(e) {
-  console.log(`try connect: ${e}`);
-  port = browser.runtime.connectNative("com.linenisgreat.code.chrest");
-  port.onMessage.addListener(onMessage);
-  port.onDisconnect.addListener((p) => {
-    console.log("disconnect", p);
-  });
-}
-
 if (typeof browser == "undefined") {
   // Chrome does not support the browser namespace yet.
   globalThis.browser = chrome;
 }
 
+async function initialize(e) {
+  browser.storage.sync.onChanged.addListener(changes => {
+    console.log(changes);
+    let browser_id = changes["browser_id"];
+
+    if (browser_id == undefined) {
+      return
+    }
+
+    port.postMessage({ type: "who-am-i", browser_id: browser_id.newValue });
+  });
+
+  console.log(`try connect: ${e}`);
+  port = browser.runtime.connectNative("com.linenisgreat.code.chrest");
+  port.onMessage.addListener(onMessage);
+  port.onDisconnect.addListener((p) => {
+    initialize({ reason: "disconnected" });
+  });
+
+  let results = await browser.storage.sync.get("browser_id");
+
+  if (results === undefined || results["browser_id"] === undefined) {
+    browser.runtime.openOptionsPage();
+  } else {
+    let browser_id = results["browser_id"];
+    port.postMessage({ type: "who-am-i", browser_id: browser_id, });
+  }
+}
+
+
 browser.runtime.onStartup.addListener(() => {
-  tryConnect({ reason: "startup" });
+  initialize({ reason: "startup" });
 });
 
 browser.runtime.onInstalled.addListener(() => {
-  tryConnect({ reason: "install" });
+  initialize({ reason: "install" });
 });

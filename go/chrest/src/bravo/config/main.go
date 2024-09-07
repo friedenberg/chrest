@@ -3,20 +3,18 @@ package config
 import (
 	"bufio"
 	"encoding/json"
+	"fmt"
 	"log"
 	"os"
 	"path"
 	"path/filepath"
 
-	"code.linenisgreat.com/chrest/go/chrest/src/alfa/browser"
 	"code.linenisgreat.com/zit/go/zit/src/alfa/errors"
 )
 
 type Config struct {
-	browser.Browser `json:"browser"`
-
-	Home string `json:"-"`
-	Port string `json:"port"`
+	DefaultBrowser BrowserId `json:"default-browser"`
+	Home           string    `json:"-"`
 }
 
 func (c Config) ServerPath() string {
@@ -31,7 +29,18 @@ func (c Config) SocketPath() (v string, err error) {
 		return
 	}
 
-	v = path.Join(dir, "chrest.sock")
+	v = path.Join(dir, "chrest2.sock")
+
+	return
+}
+
+func (c Config) SocketPathDebug() (v string, err error) {
+	if v, err = c.SocketPath(); err != nil {
+		err = errors.Wrap(err)
+		return
+	}
+
+	v = fmt.Sprintf("%s.debug", v)
 
 	return
 }

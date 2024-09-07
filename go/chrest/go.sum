@@ -2,6 +2,8 @@ code.linenisgreat.com/zit/go/zit v0.0.0-20240719155502-4c892fdfcd5d h1:YAjkWDsd7
 code.linenisgreat.com/zit/go/zit v0.0.0-20240719155502-4c892fdfcd5d/go.mod h1:zqCGcQFRwfAzFzauR0n40xl0Ts6WIiosnkG8sfD/eg4=
 code.linenisgreat.com/zit/go/zit v0.0.0-20240720113128-2e6fbfa2bb61 h1:8+imfelrWanMjViOO/wul0mDQ0iD5SqE5bFVfvlNIpo=
 code.linenisgreat.com/zit/go/zit v0.0.0-20240720113128-2e6fbfa2bb61/go.mod h1:zqCGcQFRwfAzFzauR0n40xl0Ts6WIiosnkG8sfD/eg4=
+code.linenisgreat.com/zit/go/zit v0.0.0-20240904115524-be1939db9106 h1:AyPyEzgDBeqUgO8dCnySnzWK5ccqPU5bZra3auz5jrw=
+code.linenisgreat.com/zit/go/zit v0.0.0-20240904115524-be1939db9106/go.mod h1:t7dZX8GV7QDwARls1zwTiMTQL0Uy1knhUZ5UizcNtjY=
 filippo.io/age v1.1.1 h1:pIpO7l151hCnQ4BdyBujnGP2YlUo0uj6sAVNHGBvXHg=
 filippo.io/age v1.1.1/go.mod h1:l03SrzDUrBkdBx8+IILdnn2KZysqQdbEBUQ4p3sqEQE=
 github.com/DataDog/zstd v1.5.5 h1:oWf5W7GtOLgp6bciQYDmhHHjdhYkALu6S/5Ni9ZgSvQ=

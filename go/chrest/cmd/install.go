@@ -16,11 +16,6 @@ func CmdInstall(c config.Config) (err error) {
 	flag.Parse()
 	args := flag.Args()
 
-	if len(args) < 1 {
-		err = errors.Errorf("extension id(s) required")
-		return
-	}
-
 	var exe string
 	if exe, err = os.Executable(); err != nil {
 		err = errors.Wrap(err)
@@ -40,7 +35,7 @@ func CmdInstall(c config.Config) (err error) {
 
 	if ij, err = install.MakeJSON(
 		newPath,
-		c.Browser,
+		c.DefaultBrowser,
 		args...,
 	); err != nil {
 		err = errors.Wrap(err)
@@ -56,7 +51,7 @@ func CmdInstall(c config.Config) (err error) {
 
 	dir := path.Join(
 		c.Home,
-		install.GetUserPath(c.Browser),
+		install.GetUserPath(c.DefaultBrowser.Browser),
 	)
 
 	path := path.Join(

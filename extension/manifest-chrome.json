@@ -7,6 +7,7 @@
     "128": "chrest_icon_128.png"
   },
   "permissions": [
+    "background",
     "identity",
     "idle",
     "history",
@@ -18,20 +19,11 @@
     "storage",
     "unlimitedStorage"
   ],
-  "content_security_policy": {
-    "extension_pages": "script-src 'self'; object-src 'self'"
-  },
   "background": {
-    "scripts": [ "main.js" ],
     "service_worker": "main.js",
     "type": "module"
   },
   "options_ui": {
     "page": "options.html"
-  },
-  "browser_specific_settings": {
-    "gecko": {
-      "id": "chrest@code.linenisgreat.com"
-    }
   }
 }

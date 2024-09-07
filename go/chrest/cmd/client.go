@@ -8,7 +8,9 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
+	"syscall"
 
 	"code.linenisgreat.com/chrest/go/chrest/src/bravo/client"
 	"code.linenisgreat.com/chrest/go/chrest/src/bravo/config"
@@ -16,7 +18,10 @@ import (
 	"code.linenisgreat.com/zit/go/zit/src/charlie/files"
 )
 
-var printFullRequest *bool
+var (
+	printFullRequest *bool
+	browserId        config.BrowserId
+)
 
 func ClientAddFlags() {
 	printFullRequest = flag.Bool(
@@ -24,17 +29,47 @@ func ClientAddFlags() {
 		false,
 		"print the full request including headers",
 	)
+
+	flag.Var(
+		&browserId,
+		"browser",
+		"which browser to communicate with",
+	)
 }
 
 func CmdClient(c config.Config) (err error) {
 	addFlagsOnce.Do(ClientAddFlags)
 	flag.Parse()
 
-	var sock string
-	if sock, err = c.SocketPath(); err != nil {
+  if browserId.IsEmpty() {
+    browserId = c.DefaultBrowser
+  }
+
+	var stateDir string
+
+	if stateDir, err = config.StateDirectory(); err != nil {
+		err = errors.Wrap(err)
 		return
 	}
 
+	sock := path.Join(stateDir, fmt.Sprintf("%s.sock", browserId))
+
+	err = cmdClientOneSocket(sock)
+
+	if errors.IsErrno(err, syscall.ECONNREFUSED) {
+		if err = os.Remove(sock); err != nil {
+			err = errors.Wrap(err)
+			return
+		}
+	} else if err != nil {
+		err = errors.Wrap(err)
+		return
+	}
+
+	return
+}
+
+func cmdClientOneSocket(sock string) (err error) {
 	cmdHttpArgs := append([]string{"--offline"}, flag.Args()...)
 	cmdHttpArgs[2] = filepath.Join("localhost", cmdHttpArgs[2])
 	cmdHttp := exec.Command("http", cmdHttpArgs...)
@@ -58,15 +93,6 @@ func CmdClient(c config.Config) (err error) {
 		return
 	}
 
-	var resp *http.Response
-
-	var conn net.Conn
-
-	if conn, err = net.Dial("unix", sock); err != nil {
-		err = errors.Wrap(err)
-		return
-	}
-
 	if *printFullRequest {
 		if _, err = io.Copy(os.Stdout, httpieStdout); err != nil {
 			err = errors.Errorf("failed to write request to stdout: %w", err)
@@ -86,8 +112,17 @@ func CmdClient(c config.Config) (err error) {
 		return
 	}
 
-	if resp, err = client.ResponseFromReader(httpieStdout, conn); err != nil {
+	var resp *http.Response
+
+	var conn net.Conn
+
+	if conn, err = net.Dial("unix", sock); err != nil {
 		err = errors.Wrap(err)
+		return
+	}
+
+	if resp, err = client.ResponseFromReader(httpieStdout, conn); err != nil {
+		err = errors.Wrapf(err, "Socket: %q", sock)
 		return
 	}
 
@@ -112,7 +147,12 @@ func CmdClient(c config.Config) (err error) {
 
 	// TODO error message when jq is missing
 	if err = cmdJq.Run(); err != nil {
-		err = errors.Wrap(err)
+		if errors.IsBrokenPipe(err) {
+			err = nil
+		} else {
+			err = errors.Wrap(err)
+		}
+
 		return
 	}
 

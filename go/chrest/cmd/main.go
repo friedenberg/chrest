@@ -12,7 +12,6 @@ import (
 
 var addFlagsOnce sync.Once
 
-
 func init() {
 	log.SetPrefix("chrest ")
 }
@@ -75,6 +74,17 @@ func run() (err error) {
 		}
 
 		if err = CmdClient(c); err != nil {
+			err = errors.Wrap(err)
+			return
+		}
+
+	case "debug":
+		if err = c.Read(); err != nil {
+			err = errors.Wrap(err)
+			return
+		}
+
+		if err = CmdDebug(c); err != nil {
 			err = errors.Wrap(err)
 			return
 		}

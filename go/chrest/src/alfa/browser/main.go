@@ -33,3 +33,17 @@ func (b *Browser) Set(v string) (err error) {
 
 	return
 }
+
+func (b *Browser) MarshalText() (t []byte, err error) {
+	t = []byte(b.String())
+	return
+}
+
+func (b *Browser) UnmarshalText(t []byte) (err error) {
+	if err = b.Set(string(t)); err != nil {
+		err = errors.Wrap(err)
+		return
+	}
+
+	return
+}

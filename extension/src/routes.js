@@ -3,6 +3,19 @@ import * as items from "./items.js";
 
 export let Routes = {};
 
+Routes["/"] = {
+  async get(req) {
+    return {
+      status: 200,
+      body: {
+        browser: "firefox",
+        platform_info: browser.runtime.getPlatformInfo(),
+        request: req,
+      },
+    };
+  },
+};
+
 Routes["/items"] = {
   async get(req) {
     return {
