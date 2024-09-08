@@ -18,5 +18,8 @@
     "gecko": {
       "id": "chrest@code.linenisgreat.com"
     }
+  },
+  "options_ui": {
+    "page": "options.html"
   }
 }

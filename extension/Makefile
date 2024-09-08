@@ -20,14 +20,12 @@ endif
 
 build: dist/firefox.zip dist/chrome.zip;
 
-FILE_SECRET_ISSUER := $(realpath secrets/jwt_issuer)
-FILE_SECRET_SECRET := $(realpath secrets/jwt_secret)
+FILE_FIREFOX_SECRET_ISSUER := $(realpath firefox/secrets/jwt_issuer)
+FILE_FIREFOX_SECRET_SECRET := $(realpath firefox/secrets/jwt_secret)
 
-sign-firefox: dist-firefox.zip
->pushd dist-firefox/
->dir_art=dist-firefox-artifacts
->mkdir -p "$$dir_art"
->npx web-ext sign --artifacts-dir "$$dir_art" --channel=listed --amo-metadata=amo-metadata.json --api-key="$(shell cat $(FILE_SECRET_ISSUER))" --api-secret="$(shell cat $(FILE_SECRET_SECRET))"
+sign-firefox: dist/firefox.zip
+>pushd dist/firefox
+>npx web-ext sign --channel=listed --amo-metadata=amo-metadata.json --api-key="$(shell cat $(FILE_FIREFOX_SECRET_ISSUER))" --api-secret="$(shell cat $(FILE_FIREFOX_SECRET_SECRET))"
 
 files_js_copy_to_dist := $(shell find common/src -type f)
 
