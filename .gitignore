@@ -4,3 +4,5 @@ extension/secrets/jwt_issuer
 extension/secrets/jwt_secret
 extension/secrets/jwt_issuer.secret
 extension/secrets/jwt_secret.secret
+extension/firefox/secrets/jwt_issuer
+extension/firefox/secrets/jwt_secret

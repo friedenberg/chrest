@@ -1,9 +1,6 @@
 package install
 
 import (
-	"path/filepath"
-
-	"code.linenisgreat.com/chrest/go/chrest/src/alfa/browser"
 	"code.linenisgreat.com/chrest/go/chrest/src/bravo/config"
 	"code.linenisgreat.com/zit/go/zit/src/alfa/errors"
 )
@@ -15,30 +12,19 @@ type JSONCommon struct {
 	Type        string `json:"type"`
 }
 
-func MakeJSON(
-	p string,
-	b config.BrowserId,
-	ids ...string,
-) (ij any, err error) {
-	if p, err = filepath.Abs(p); err != nil {
-		err = errors.Wrap(err)
-		return
-	}
+func MakeJSON(c config.Config, ids ...IdSet) (ijs map[string]any, err error) {
+	ijs = make(map[string]any, len(ids))
 
-	if len(ids) == 0 {
-		ids = []string{GetId(b.Browser)}
-	}
+	for _, is := range ids {
+		var ij any
+		var loc string
 
-	switch b.Browser {
-	case browser.Chrome, browser.Chromium:
-		ij, err = makeJSONChromeOrChromium(p, ids...)
+		if loc, ij, err = is.MakeJSON(c); err != nil {
+			err = errors.Wrap(err)
+			return
+		}
 
-	case browser.Firefox:
-		ij, err = makeJSONFirefox(p, ids...)
-
-	default:
-		err = errors.Errorf("unsupported browser: %s", b)
-		return
+		ijs[loc] = ij
 	}
 
 	return

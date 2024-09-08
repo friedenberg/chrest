@@ -95,17 +95,6 @@ func run() (err error) {
 			return
 		}
 
-	case "install":
-		if err = c.Read(); err != nil {
-			err = errors.Wrap(err)
-			return
-		}
-
-		if err = CmdInstall(c); err != nil {
-			err = errors.Wrap(err)
-			return
-		}
-
 	case "demo":
 		if err = c.Read(); err != nil {
 			err = errors.Wrap(err)

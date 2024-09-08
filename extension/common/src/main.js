@@ -1,5 +1,6 @@
 import * as routes from "./routes.js";
 import { parse } from "error-stack-parser-es";
+import { browser_type } from "./browser.js";
 
 async function tryMatchRoute(req) {
   for (let route of routes.sortedRoutes) {
@@ -34,6 +35,7 @@ async function onMessageHTTP(req) {
 
   response.headers = {
     "X-Chrest-Startup-Time": now.toISOString(),
+    "X-Chrest-Browser-Type": browser_type,
   };
 
   response.type = "http";
@@ -77,6 +79,10 @@ if (typeof browser == "undefined") {
   globalThis.browser = chrome;
 }
 
+function browserIdFromSettingString(v) {
+  return `${browser_type}-${v}`;
+}
+
 async function initialize(e) {
   browser.storage.sync.onChanged.addListener((changes) => {
     console.log(changes);
@@ -86,23 +92,28 @@ async function initialize(e) {
       return;
     }
 
-    port.postMessage({ type: "who-am-i", browser_id: browser_id.newValue });
+    port.postMessage({
+      type: "who-am-i",
+      browser_id: browserIdFromSettingString(browser_id.newValue),
+    });
   });
 
-  console.log(`try connect: ${e}`);
+  console.log(`try connect: ${JSON.stringify(e)}`);
   port = browser.runtime.connectNative("com.linenisgreat.code.chrest");
   port.onMessage.addListener(onMessage);
   port.onDisconnect.addListener((p) => {
-    initialize({ reason: "disconnected" });
+    initialize({ reason: "disconnected", error: browser.runtime.lastError });
   });
 
   let results = await browser.storage.sync.get("browser_id");
 
   if (results === undefined || results["browser_id"] === undefined) {
-    browser.runtime.openOptionsPage();
+    // browser.runtime.openOptionsPage();
   } else {
-    let browser_id = results["browser_id"];
-    port.postMessage({ type: "who-am-i", browser_id: browser_id });
+    port.postMessage({
+      type: "who-am-i",
+      browser_id: browserIdFromSettingString(results["browser_id"]),
+    });
   }
 }
 

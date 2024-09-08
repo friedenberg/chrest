@@ -18,7 +18,7 @@ endif
 
 .PHONY: build local_deploy sign-firefox
 
-build: dist-firefox.zip;
+build: dist/firefox.zip dist/chrome.zip;
 
 FILE_SECRET_ISSUER := $(realpath secrets/jwt_issuer)
 FILE_SECRET_SECRET := $(realpath secrets/jwt_secret)
@@ -29,24 +29,46 @@ sign-firefox: dist-firefox.zip
 >mkdir -p "$$dir_art"
 >npx web-ext sign --artifacts-dir "$$dir_art" --channel=listed --amo-metadata=amo-metadata.json --api-key="$(shell cat $(FILE_SECRET_ISSUER))" --api-secret="$(shell cat $(FILE_SECRET_SECRET))"
 
-files_copy_to_dist := chrest_icon_128.png options.js options.html
-files_copy_to_dist_firefox := amo-metadata.json manifest.json
-files_js_copy_to_dist := $(shell find src -iname '*.js')
+files_js_copy_to_dist := $(shell find common/src -type f)
 
-dist-firefox.zip: dist-firefox/main.js $(addprefix dist-firefox/,$(files_copy_to_dist_firefox) $(files_copy_to_dist))
+dist/firefox.zip: dist/firefox/manifest.json dist/firefox/main.js $(shell find firefox common -type f)
+>mkdir -p $(dir $@)
 >dir="$(@:.zip=)"
+>find common -maxdepth 1 -type f ! -iname "*manifest.json" -exec cp {} "$$dir" \;
+>find firefox -maxdepth 1 -type f ! -iname "*manifest.json" -exec cp {} "$$dir" \;
 >npx web-ext lint -s "$$dir"
 >zip -r "$@" $$dir/*
 
-dist-firefox/%: %
->mkdir -p $(dir $@)
->cp $< $@
+files_js_copy_to_dist_firefox := $(shell find firefox/src -type f)
 
-dist-firefox/main.js: $(files_js_copy_to_dist) # TODO add firefox config file
->mkdir -p $(dir $@)
->npx rollup --config > "$@"
+dist/firefox/main.js: firefox/src/browser.js $(files_js_copy_to_dist_firefox) $(files_js_copy_to_dist)
+>src="$(dir $@)/src"
+>mkdir -p "$$src"
+>cp $^ "$$src"
+>pushd "$(dir $@)"
+>npx rollup --config ../../common/rollup.config.mjs > "$(abspath $@)"
 
-dist-firefox/manifest.json: manifest.json manifest-firefox.json
+dist/firefox/manifest.json: common/manifest.json firefox/manifest.json
+>mkdir -p $(dir $@)
+>cat $^ | jq -s 'reduce .[] as $$item ({}; . + $$item)' > "$@"
+
+dist/chrome.zip: dist/chrome/manifest.json dist/chrome/main.js $(shell find chrome common -type f)
+>mkdir -p $(dir $@)
+>dir="$(@:.zip=)"
+>find common -maxdepth 1 -type f ! -iname "*manifest.json" -exec cp {} "$$dir" \;
+>find chrome -maxdepth 1 -type f ! -iname "*manifest.json" -exec cp {} "$$dir" \;
+>zip -r "$@" $$dir/*
+
+files_js_copy_to_dist_chrome := $(shell find chrome/src -type f)
+
+dist/chrome/main.js: chrome/src/browser.js $(files_js_copy_to_dist_chrome) $(files_js_copy_to_dist)
+>src="$(dir $@)/src"
+>mkdir -p "$$src"
+>cp $^ "$$src"
+>pushd "$(dir $@)"
+>npx rollup --config ../../common/rollup.config.mjs > "$(abspath $@)"
+
+dist/chrome/manifest.json: common/manifest.json chrome/manifest.json
 >mkdir -p $(dir $@)
 >cat $^ | jq -s 'reduce .[] as $$item ({}; . + $$item)' > "$@"
 

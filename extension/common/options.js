@@ -1,4 +1,9 @@
 
+if (typeof browser == "undefined") {
+  // Chrome does not support the browser namespace yet.
+  globalThis.browser = chrome;
+}
+
 function saveOptions(e) {
   e.preventDefault();
   browser.storage.sync.set({
