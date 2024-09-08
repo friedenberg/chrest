@@ -16,54 +16,40 @@ ifeq ($(origin .RECIPEPREFIX), undefined)
 endif
 .RECIPEPREFIX = >
 
-.PHONY: build local_deploy sign
+.PHONY: build local_deploy sign-firefox
 
-build: dist/options.html dist/options.js dist/main.js dist/chrest.zip;
+build: dist-firefox.zip;
 
 FILE_SECRET_ISSUER := $(realpath secrets/jwt_issuer)
 FILE_SECRET_SECRET := $(realpath secrets/jwt_secret)
 
-sign: build
->pushd git rev-parse --show-toplevel
->git secret reveal $(FILE_SECRET_SECRET) $(FILE_SECRET_ISSUER)
->popd
->pushd dist/
->npx web-ext sign --channel=listed --amo-metadata=amo-metadata.json --api-key="$(shell cat $(FILE_SECRET_ISSUER))" --api-secret="$(shell cat $(FILE_SECRET_SECRET))"
+sign-firefox: dist-firefox.zip
+>pushd dist-firefox/
+>dir_art=dist-firefox-artifacts
+>mkdir -p "$$dir_art"
+>npx web-ext sign --artifacts-dir "$$dir_art" --channel=listed --amo-metadata=amo-metadata.json --api-key="$(shell cat $(FILE_SECRET_ISSUER))" --api-secret="$(shell cat $(FILE_SECRET_SECRET))"
+
+files_copy_to_dist := chrest_icon_128.png options.js options.html
+files_copy_to_dist_firefox := amo-metadata.json manifest.json
+files_js_copy_to_dist := $(shell find src -iname '*.js')
+
+dist-firefox.zip: dist-firefox/main.js $(addprefix dist-firefox/,$(files_copy_to_dist_firefox) $(files_copy_to_dist))
+>dir="$(@:.zip=)"
+>npx web-ext lint -s "$$dir"
+>zip -r "$@" $$dir/*
+
+dist-firefox/%: %
+>mkdir -p $(dir $@)
+>cp $< $@
+
+dist-firefox/main.js: $(files_js_copy_to_dist) # TODO add firefox config file
+>mkdir -p $(dir $@)
+>npx rollup --config > "$@"
+
+dist-firefox/manifest.json: manifest.json manifest-firefox.json
+>mkdir -p $(dir $@)
+>cat $^ | jq -s 'reduce .[] as $$item ({}; . + $$item)' > "$@"
 
 local_deploy: build
 >npx web-ext run -s dist/
-
-dist/options.js: options.js
->mkdir -p $(dir $@)
->cp $< $@
-
-dist/manifest.json: manifest.json
->mkdir -p $(dir $@)
->cp $< $@
-
-dist/options.html: options.html
->mkdir -p $(dir $@)
->cp $< $@
-
-dist/amo-metadata.json: amo-metadata.json
->mkdir -p $(dir $@)
->cp $< $@
-
-dist/chrest_icon_128.png: chrest_icon_128.png
->mkdir -p $(dir $@)
->cp $< $@
-
-files_js := $(shell find src -iname '*.js')
-
-files_dist := dist/manifest.json dist/amo-metadata.json dist/chrest_icon_128.png
-
-dist/main.js: $(files_js) $(files_dist)
->npm i
->mkdir -p $(dir $@)
->npx rollup --config
->npx web-ext lint -s dist/
-
-dist/chrest.zip: dist/main.js dist/options.js dist/options.html
->zip -r "$@" dist/* -x "$@"
-
 

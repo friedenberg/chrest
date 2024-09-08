@@ -1,6 +1,5 @@
 {
   "permissions": [
-    "background",
     "identity",
     "idle",
     "history",
@@ -13,7 +12,11 @@
     "unlimitedStorage"
   ],
   "background": {
-    "service_worker": "main.js",
-    "type": "module"
+    "scripts": [ "main.js" ]
+  },
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "chrest@code.linenisgreat.com"
+    }
   }
 }
