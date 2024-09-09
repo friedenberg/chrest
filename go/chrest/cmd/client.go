@@ -41,9 +41,9 @@ func CmdClient(c config.Config) (err error) {
 	addFlagsOnce.Do(ClientAddFlags)
 	flag.Parse()
 
-  if browserId.IsEmpty() {
-    browserId = c.DefaultBrowser
-  }
+	if browserId.IsEmpty() {
+		browserId = c.DefaultBrowser
+	}
 
 	var stateDir string
 
