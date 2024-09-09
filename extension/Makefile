@@ -24,12 +24,14 @@ FILE_FIREFOX_SECRET_ISSUER := $(realpath firefox/secrets/jwt_issuer)
 FILE_FIREFOX_SECRET_SECRET := $(realpath firefox/secrets/jwt_secret)
 
 sign-firefox: dist/firefox.zip
+>eval "$$(direnv hook bash)"
 >pushd dist/firefox
 >npx web-ext sign --channel=listed --amo-metadata=amo-metadata.json --api-key="$(shell cat $(FILE_FIREFOX_SECRET_ISSUER))" --api-secret="$(shell cat $(FILE_FIREFOX_SECRET_SECRET))"
 
 files_js_copy_to_dist := $(shell find common/src -type f)
 
 dist/firefox.zip: dist/firefox/manifest.json dist/firefox/main.js $(shell find firefox common -type f)
+>eval "$$(direnv hook bash)"
 >mkdir -p $(dir $@)
 >dir="$(@:.zip=)"
 >find common -maxdepth 1 -type f ! -iname "*manifest.json" -exec cp {} "$$dir" \;
@@ -40,6 +42,7 @@ dist/firefox.zip: dist/firefox/manifest.json dist/firefox/main.js $(shell find f
 files_js_copy_to_dist_firefox := $(shell find firefox/src -type f)
 
 dist/firefox/main.js: firefox/src/browser.js $(files_js_copy_to_dist_firefox) $(files_js_copy_to_dist)
+>eval "$$(direnv hook bash)"
 >src="$(dir $@)/src"
 >mkdir -p "$$src"
 >cp $^ "$$src"
@@ -60,6 +63,7 @@ dist/chrome.zip: dist/chrome/manifest.json dist/chrome/main.js $(shell find chro
 files_js_copy_to_dist_chrome := $(shell find chrome/src -type f)
 
 dist/chrome/main.js: chrome/src/browser.js $(files_js_copy_to_dist_chrome) $(files_js_copy_to_dist)
+>eval "$$(direnv hook bash)"
 >src="$(dir $@)/src"
 >mkdir -p "$$src"
 >cp $^ "$$src"
@@ -71,5 +75,6 @@ dist/chrome/manifest.json: common/manifest.json chrome/manifest.json
 >cat $^ | jq -s 'reduce .[] as $$item ({}; . + $$item)' > "$@"
 
 local_deploy: build
+>eval "$$(direnv hook bash)"
 >npx web-ext run -s dist/
 
