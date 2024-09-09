@@ -77,8 +77,7 @@ func (b BrowserProxy) httpRequest(
 	defer cancel()
 
 	var sock string
-
-	if sock, err = b.SocketPath(); err != nil {
+	if sock, err = b.GetSocketPathForBrowserId(b.DefaultBrowser); err != nil {
 		err = errors.Wrap(err)
 		return
 	}

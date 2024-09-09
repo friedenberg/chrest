@@ -23,7 +23,10 @@ build: build/chrest;
 files_go_cmd := $(shell find cmd -iname '*.go')
 files_go_src := $(shell find . -iname '*.go') go.mod go.sum
 
-build/chrest: $(files_go_cmd) $(files_go_src) Makefile
+build/chrest: build/tests_unit.sigil
 >mkdir -p build
 >eval "$$(direnv hook bash)"
 >go build -o $@ $(files_go_cmd)
+
+build/tests_unit.sigil: $(files_go_cmd) $(files_go_cmd) Makefile
+>go test ./...
