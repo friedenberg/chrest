@@ -19,6 +19,8 @@ type BrowserProxy struct {
 }
 
 type BrowserRequest struct {
+	config.BrowserId
+
 	Method string
 	Path   string
 	Body   io.ReadCloser
@@ -78,8 +80,7 @@ func (b BrowserProxy) HTTPRequestWithContext(
 	req BrowserRequest,
 ) (resp ResponseWithParsedJSONBody, err error) {
 	var sock string
-
-	if sock, err = b.SocketPath(); err != nil {
+	if sock, err = b.GetSocketPathForBrowserId(req.BrowserId); err != nil {
 		err = errors.Wrap(err)
 		return
 	}

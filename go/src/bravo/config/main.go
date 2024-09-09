@@ -10,39 +10,18 @@ import (
 	"path/filepath"
 
 	"code.linenisgreat.com/zit/go/zit/src/alfa/errors"
+	"code.linenisgreat.com/zit/go/zit/src/bravo/iter"
+	"code.linenisgreat.com/zit/go/zit/src/echo/fd"
 )
 
 type Config struct {
-	DefaultBrowser BrowserId `json:"default-browser"`
-	Home           string    `json:"-"`
+	DefaultBrowser BrowserId   `json:"default-browser"`
+	LoadedBrowsers []BrowserId `json:"-"`
+	Home           string      `json:"-"`
 }
 
 func (c Config) ServerPath() string {
 	return filepath.Join(c.Home, ".local", "bin", "chrest")
-}
-
-func (c Config) SocketPath() (v string, err error) {
-	var dir string
-
-	if dir, err = StateDirectory(); err != nil {
-		err = errors.Wrap(err)
-		return
-	}
-
-	v = path.Join(dir, "chrest2.sock")
-
-	return
-}
-
-func (c Config) SocketPathDebug() (v string, err error) {
-	if v, err = c.SocketPath(); err != nil {
-		err = errors.Wrap(err)
-		return
-	}
-
-	v = fmt.Sprintf("%s.debug", v)
-
-	return
 }
 
 func StateDirectory() (v string, err error) {
@@ -62,6 +41,23 @@ func StateDirectory() (v string, err error) {
 	return
 }
 
+func (c Config) GetSocketPathForBrowserId(id BrowserId) (sock string, err error) {
+	if id.IsEmpty() {
+		id = c.DefaultBrowser
+	}
+
+	var stateDir string
+
+	if stateDir, err = StateDirectory(); err != nil {
+		err = errors.Wrap(err)
+		return
+	}
+
+	sock = path.Join(stateDir, fmt.Sprintf("%s.sock", id))
+
+	return
+}
+
 func (c Config) Directory() (v string) {
 	v = os.Getenv("XDG_CONFIG_HOME")
 
@@ -75,6 +71,20 @@ func (c Config) Directory() (v string) {
 }
 
 func (c *Config) Read() (err error) {
+	wg := iter.MakeErrorWaitGroupParallel()
+
+	wg.Do(c.readConfig)
+	wg.Do(c.readLoadedBrowsers)
+
+	if err = wg.GetError(); err != nil {
+		err = errors.Wrap(err)
+		return
+	}
+
+	return
+}
+
+func (c *Config) readConfig() (err error) {
 	if c.Home, err = os.UserHomeDir(); err != nil {
 		err = errors.Wrap(err)
 		return
@@ -101,6 +111,35 @@ func (c *Config) Read() (err error) {
 	if err = dec.Decode(c); err != nil {
 		err = errors.Wrap(err)
 		return
+	}
+
+	return
+}
+
+func (c *Config) readLoadedBrowsers() (err error) {
+	var loadedBrowserPaths []string
+
+	var stateDir string
+
+	if stateDir, err = StateDirectory(); err != nil {
+		err = errors.Wrap(err)
+		return
+	}
+
+	if loadedBrowserPaths, err = filepath.Glob(filepath.Join(stateDir, "*.sock")); err != nil {
+		err = errors.Wrap(err)
+		return
+	}
+
+	for _, loadedBrowserPath := range loadedBrowserPaths {
+		var id BrowserId
+
+		if err = id.Set(fd.FileNameSansExt(loadedBrowserPath)); err != nil {
+			err = errors.Wrap(err)
+			return
+		}
+
+		c.LoadedBrowsers = append(c.LoadedBrowsers, id)
 	}
 
 	return

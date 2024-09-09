@@ -1,5 +1,7 @@
 code.linenisgreat.com/zit/go/zit v0.0.0-20240904115524-be1939db9106 h1:AyPyEzgDBeqUgO8dCnySnzWK5ccqPU5bZra3auz5jrw=
 code.linenisgreat.com/zit/go/zit v0.0.0-20240904115524-be1939db9106/go.mod h1:t7dZX8GV7QDwARls1zwTiMTQL0Uy1knhUZ5UizcNtjY=
+github.com/brandondube/tai v0.1.0 h1:psVhcG48XNq1LtQtvz6C5+6JU+n1UFjE9XeYLLDJ/cs=
+github.com/brandondube/tai v0.1.0/go.mod h1:Zx9tLMhTfJhSns4czs9WIs8wPR5oT2OuJNDhGR/GHgw=
 github.com/google/go-cmp v0.6.0 h1:ofyhxvXcZhMsU5ulbFiLKl/XBFqE1GSq7atu8tAmTRI=
 github.com/google/go-cmp v0.6.0/go.mod h1:17dUlkBOakJ0+DkrSSNjCkIjxS6bF9zb3elmeNGIjoY=
 golang.org/x/sys v0.21.0 h1:rF+pYz3DAGSQAxAu1CbC7catZg4ebC4UIeIhKxBZvws=

@@ -78,30 +78,19 @@ func run() (err error) {
 			return
 		}
 
-	case "debug":
-		if err = c.Read(); err != nil {
-			err = errors.Wrap(err)
-			return
-		}
-
-		if err = CmdDebug(c); err != nil {
-			err = errors.Wrap(err)
-			return
-		}
-
 	case "init":
 		if err = CmdInit(); err != nil {
 			err = errors.Wrap(err)
 			return
 		}
 
-	case "demo":
-		if err = c.Read(); err != nil {
-			err = errors.Wrap(err)
-			return
-		}
-
 		// TODO
+		// case "demo":
+		// 	if err = c.Read(); err != nil {
+		// 		err = errors.Wrap(err)
+		// 		return
+		// 	}
+
 		// err = CmdDemo(c)
 	}
 

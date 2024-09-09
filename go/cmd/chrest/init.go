@@ -48,6 +48,7 @@ func CmdInit() (err error) {
 
 	flag.Parse()
 
+  // TODO do not overwrite config if it exists
 	if err = initConfig.Write(); err != nil {
 		err = errors.Wrap(err)
 		return

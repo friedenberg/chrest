@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
-	"path"
 	"path/filepath"
 	"syscall"
 
@@ -41,18 +40,11 @@ func CmdClient(c config.Config) (err error) {
 	addFlagsOnce.Do(ClientAddFlags)
 	flag.Parse()
 
-	if browserId.IsEmpty() {
-		browserId = c.DefaultBrowser
-	}
-
-	var stateDir string
-
-	if stateDir, err = config.StateDirectory(); err != nil {
+	var sock string
+	if sock, err = c.GetSocketPathForBrowserId(browserId); err != nil {
 		err = errors.Wrap(err)
 		return
 	}
-
-	sock := path.Join(stateDir, fmt.Sprintf("%s.sock", browserId))
 
 	err = cmdClientOneSocket(sock)
 
