@@ -1,7 +1,7 @@
 package install
 
 import (
-	"code.linenisgreat.com/chrest/go/chrest/src/alfa/browser"
+	"code.linenisgreat.com/chrest/go/src/alfa/browser"
 	"code.linenisgreat.com/zit/go/zit/src/alfa/errors"
 )
 

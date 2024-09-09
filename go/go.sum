@@ -1,5 +1,3 @@
-code.linenisgreat.com/chrest/go/chrest v0.0.0-20240824132247-74aa7f1dc1b2 h1:e4flKKdmBuFOtmc25WDIux7pKlMhWFJkmOfVey+K060=
-code.linenisgreat.com/chrest/go/chrest v0.0.0-20240824132247-74aa7f1dc1b2/go.mod h1:o7t5frvzPwu67SuoT2Iykp1JF0z7vyoayIfZ0+/NyBA=
 code.linenisgreat.com/zit/go/zit v0.0.0-20240904115524-be1939db9106 h1:AyPyEzgDBeqUgO8dCnySnzWK5ccqPU5bZra3auz5jrw=
 code.linenisgreat.com/zit/go/zit v0.0.0-20240904115524-be1939db9106/go.mod h1:t7dZX8GV7QDwARls1zwTiMTQL0Uy1knhUZ5UizcNtjY=
 github.com/google/go-cmp v0.6.0 h1:ofyhxvXcZhMsU5ulbFiLKl/XBFqE1GSq7atu8tAmTRI=

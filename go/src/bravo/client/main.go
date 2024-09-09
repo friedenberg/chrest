@@ -9,8 +9,8 @@ import (
 	"net/http"
 	"time"
 
-	"code.linenisgreat.com/chrest/go/chrest/src/bravo/config"
-	"code.linenisgreat.com/chrest/go/chrest/src/bravo/server"
+	"code.linenisgreat.com/chrest/go/src/bravo/config"
+	"code.linenisgreat.com/chrest/go/src/bravo/server"
 	"code.linenisgreat.com/zit/go/zit/src/alfa/errors"
 )
 

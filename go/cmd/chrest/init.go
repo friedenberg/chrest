@@ -6,10 +6,10 @@ import (
 	"os"
 	"path/filepath"
 
-	"code.linenisgreat.com/chrest/go/chrest/src/alfa/browser"
-	"code.linenisgreat.com/chrest/go/chrest/src/alfa/symlink"
-	"code.linenisgreat.com/chrest/go/chrest/src/bravo/config"
-	"code.linenisgreat.com/chrest/go/chrest/src/bravo/install"
+	"code.linenisgreat.com/chrest/go/src/alfa/browser"
+	"code.linenisgreat.com/chrest/go/src/alfa/symlink"
+	"code.linenisgreat.com/chrest/go/src/bravo/config"
+	"code.linenisgreat.com/chrest/go/src/bravo/install"
 	"code.linenisgreat.com/zit/go/zit/src/alfa/errors"
 )
 

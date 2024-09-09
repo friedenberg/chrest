@@ -12,8 +12,8 @@ import (
 	"path/filepath"
 	"syscall"
 
-	"code.linenisgreat.com/chrest/go/chrest/src/bravo/client"
-	"code.linenisgreat.com/chrest/go/chrest/src/bravo/config"
+	"code.linenisgreat.com/chrest/go/src/bravo/client"
+	"code.linenisgreat.com/chrest/go/src/bravo/config"
 	"code.linenisgreat.com/zit/go/zit/src/alfa/errors"
 	"code.linenisgreat.com/zit/go/zit/src/charlie/files"
 )
