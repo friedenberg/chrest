@@ -1,4 +1,4 @@
-module main
+module code.linenisgreat.com/chrest/go/cmd
 
 go 1.23.0
 
