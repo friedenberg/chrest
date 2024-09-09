@@ -21,14 +21,14 @@ endif
 build: build/go build/extension;
 
 reload: build
-> pushd go/chrest
+> pushd go/
 > ./build/chrest install jbcogiaaaaikinoljmplilmcnicpfoek
 > popd
 > chrest reload-extension
 
 .PHONY: build/go
 build/go:
-> pushd go/chrest
+> pushd go/
 > $(MAKE)
 
 .PHONY: build/extension
