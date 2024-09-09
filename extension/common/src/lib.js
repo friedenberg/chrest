@@ -83,7 +83,7 @@ export async function getWindowWithID(windowID) {
   if (windowID === "last-focused") {
     w = chrome.windows.getLastFocused();
   } else {
-    w = chrome.windows.get(windowID);
+    w = chrome.windows.get(parseInt(windowID));
   }
 
   return await windowsWithTabs(await w);

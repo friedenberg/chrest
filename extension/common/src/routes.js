@@ -337,7 +337,7 @@ Routes["/tabs/#TAB_ID"] = {
   async get({ tabId }) {
     return {
       status: 200,
-      body: await chrome.tabs.get(tabId),
+      body: await chrome.tabs.get(parseInt(tabId)),
     };
   },
   async delete({ tabId }) {
