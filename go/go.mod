@@ -1,10 +1,13 @@
-module code.linenisgreat.com/chrest/go/chrest
+module code.linenisgreat.com/chrest/go
 
 go 1.23
 
 toolchain go1.23.0
 
-require code.linenisgreat.com/zit/go/zit v0.0.0-20240904115524-be1939db9106
+require (
+	code.linenisgreat.com/chrest/go/chrest v0.0.0-20240824132247-74aa7f1dc1b2
+	code.linenisgreat.com/zit/go/zit v0.0.0-20240904115524-be1939db9106
+)
 
 require (
 	golang.org/x/sys v0.21.0 // indirect
