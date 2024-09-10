@@ -33,7 +33,7 @@ func (i Item) GetUrl() (u *url.URL, err error) {
 }
 
 type ItemId struct {
-	config.BrowserId `json:"browser_id"`
+	config.BrowserId `json:"browser"`
 	Id               string `json:"id"`
 	Type             string `json:"type"`
 }
