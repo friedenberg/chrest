@@ -1,4 +1,5 @@
 import * as lib from "./lib.js";
+import { parse } from "error-stack-parser-es";
 
 export async function makeUrlItems(bid, items) {
   if (items === undefined || items === null) {
@@ -14,7 +15,7 @@ export async function makeUrlItems(bid, items) {
   return await Promise.all(items.map(o => makeUrlItem(bid, o)));
 }
 
-export async function makeUrlItem(item) {
+export async function makeUrlItem(bid, item) {
   let result = item;
 
   let itemType = "tab";
@@ -28,6 +29,7 @@ export async function makeUrlItem(item) {
       Object.assign(
         result,
         urlItemForBookmark(
+          bid,
           await browser.bookmarks.create({
             title: item.title,
             url: item.url,
@@ -38,6 +40,7 @@ export async function makeUrlItem(item) {
       Object.assign(
         result,
         urlItemForTab(
+          bid,
           await browser.tabs.create({
             url: item.url,
           })
@@ -47,7 +50,11 @@ export async function makeUrlItem(item) {
       throw `unsupported type: ${item.id.type}`;
     }
   } catch (e) {
-    result.error = e.message;
+    console.log(e);
+    result.error = {
+      message: e.message,
+      stack: parse(e),
+    };
   }
 
   return result;
@@ -115,7 +122,9 @@ export async function removeUrlItems(bid, items) {
   let promises = [];
 
   let results = items.filter((item) => {
-    if (item.browser !== bid) {
+    let theirBid = item.id.browser;
+
+    if (theirBid.browser != bid.browser || theirBid.id != bid.id) {
       return false;
     }
 
@@ -133,6 +142,7 @@ export async function removeUrlItems(bid, items) {
   });
 
   await Promise.all(promises);
+  console.log(promises, results);
 
   return results;
 }
