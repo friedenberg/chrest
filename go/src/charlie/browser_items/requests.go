@@ -65,7 +65,7 @@ func (resp *HTTPResponseWithRequestPayloadPut) parseResponse() (err error) {
 	dec := json.NewDecoder(resp.Response.Body)
 
 	if err = dec.Decode(&resp.RequestPayloadPut); err != nil {
-		err = errors.Wrap(err)
+		err = errors.Wrapf(err, "Response: %#v", resp)
 		return
 	}
 
@@ -81,7 +81,7 @@ func (resp *HTTPResponseWithRequestPayloadGet) parseResponse() (err error) {
 	dec := json.NewDecoder(resp.Response.Body)
 
 	if err = dec.Decode(&resp.RequestPayloadGet); err != nil {
-		err = errors.Wrap(err)
+		err = errors.Wrapf(err, "Response: %#v", resp)
 		return
 	}
 
