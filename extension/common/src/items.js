@@ -1,6 +1,6 @@
 import * as lib from "./lib.js";
 
-export async function makeUrlItems(items) {
+export async function makeUrlItems(bid, items) {
   if (items === undefined || items === null) {
     return [];
   }
@@ -11,7 +11,7 @@ export async function makeUrlItems(items) {
     await chrome.windows.create();
   }
 
-  return await Promise.all(items.map(makeUrlItem));
+  return await Promise.all(items.map(o => makeUrlItem(bid, o)));
 }
 
 export async function makeUrlItem(item) {
@@ -53,10 +53,11 @@ export async function makeUrlItem(item) {
   return result;
 }
 
-export function urlItemForTab(t) {
+export function urlItemForTab(bid, t) {
   return {
     title: t.title,
     id: {
+      browser: bid,
       id: t.id.toString(),
       type: "tab",
     },
@@ -66,10 +67,11 @@ export function urlItemForTab(t) {
   };
 }
 
-export function urlItemForBookmark(o) {
+export function urlItemForBookmark(bid, o) {
   return {
     title: o.title,
     id: {
+      browser: bid,
       id: o.id.toString(),
       type: "bookmark",
     },
@@ -78,24 +80,25 @@ export function urlItemForBookmark(o) {
   };
 }
 
-export async function allTabItems() {
+export async function allTabItems(bid) {
   return (await lib.tabsFromWindows(await lib.getNonAppWindows())).map(
-    urlItemForTab
+    o => urlItemForTab(bid, o)
   );
 }
 
-export async function allBookmarkItems() {
+export async function allBookmarkItems(bid) {
   return (await chrome.bookmarks.search({}))
     .filter((b) => b.children === undefined)
-    .map(urlItemForBookmark);
+    .map(o => urlItemForBookmark(bid, o));
 }
 
-export async function allHistoryItems() {
+export async function allHistoryItems(bid) {
   let history = await chrome.history.search({ text: "" });
 
   return history.map((o) => ({
     title: o.title,
     id: {
+      browser: bid,
       id: o.id.toString(),
       type: "history",
     },
@@ -104,7 +107,7 @@ export async function allHistoryItems() {
   }));
 }
 
-export async function removeUrlItems(items) {
+export async function removeUrlItems(bid, items) {
   if (items === undefined) {
     return [];
   }
@@ -112,6 +115,10 @@ export async function removeUrlItems(items) {
   let promises = [];
 
   let results = items.filter((item) => {
+    if (item.browser !== bid) {
+      return false;
+    }
+
     if (item.id.type == "bookmark") {
       promises.push(browser.bookmarks.remove(item.id.id));
       return true;

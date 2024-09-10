@@ -21,17 +21,17 @@ Routes["/items"] = {
     return {
       status: 200,
       body: [
-        await items.allTabItems(),
-        await items.allBookmarkItems(),
-        await items.allHistoryItems(),
+        await items.allTabItems(req.browser_id),
+        await items.allBookmarkItems(req.browser_id),
+        await items.allHistoryItems(req.browser_id),
       ].flat(),
     };
   },
   async put(req) {
     return {
       body: {
-        added: await items.makeUrlItems(req.body.added),
-        deleted: await items.removeUrlItems(req.body.deleted),
+        added: await items.makeUrlItems(req.browser_id, req.body.added),
+        deleted: await items.removeUrlItems(req.browser_id, req.body.deleted),
       },
       status: 200,
     };

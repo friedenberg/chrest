@@ -13,7 +13,7 @@ type Item struct {
 	Url        string `json:"url"`
 	Date       string `json:"date"`
 	Title      string `json:"title"`
-	ExternalId string `json:"external-id"` // external to the browser, so for us, it's actually our id
+	ExternalId string `json:"external_id"` // external to the browser, so for us, it's actually our id
 }
 
 func (i Item) GetUrl() (u *url.URL, err error) {
@@ -33,7 +33,7 @@ func (i Item) GetUrl() (u *url.URL, err error) {
 }
 
 type ItemId struct {
-	config.BrowserId `json:"browser-id"`
+	config.BrowserId `json:"browser_id"`
 	Id               string `json:"id"`
 	Type             string `json:"type"`
 }

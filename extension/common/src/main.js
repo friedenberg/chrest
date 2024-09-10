@@ -31,6 +31,17 @@ async function onMessage(req, messageSender) {
 }
 
 async function onMessageHTTP(req) {
+  let results = await browser.storage.sync.get("browser_id");
+
+  if (results === undefined || results["browser_id"] === undefined) {
+    // TODO ERROR
+  } else {
+    req.browser_id = {
+      browser: browser_type,
+      id: results["browser_id"],
+    }
+  }
+
   let response = await Promise.race([timeout(1000), runRoute(req)]);
 
   response.headers = {
