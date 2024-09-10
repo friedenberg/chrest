@@ -1,0 +1,18 @@
+schema = 3
+
+[mod]
+  [mod."code.linenisgreat.com/zit/go/zit"]
+    version = "v0.0.0-20240904115524-be1939db9106"
+    hash = "sha256-2AQlR6ioMH63YiEcmDv/N3fGzJGghJwTXt9FANI5J94="
+  [mod."github.com/brandondube/tai"]
+    version = "v0.1.0"
+    hash = "sha256-o32wvMW6waT/vJJkpjiCGxBNBUsqeAvnARhbsikRk50="
+  [mod."golang.org/x/sys"]
+    version = "v0.21.0"
+    hash = "sha256-gapzPWuEqY36V6W2YhIDYR49sEvjJRd7bSuf9K1f4JY="
+  [mod."golang.org/x/term"]
+    version = "v0.21.0"
+    hash = "sha256-zRm7uPBM1+TJkODYHkk/BtN3la5QAaSgslE2hSTm27Y="
+  [mod."golang.org/x/xerrors"]
+    version = "v0.0.0-20231012003039-104605ab7028"
+    hash = "sha256-IsFTm5WZQ6W1ZDF8WOP+6xiOAc7pIq8r9Afvkjp3PRQ="

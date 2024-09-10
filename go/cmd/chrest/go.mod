@@ -1,10 +1,11 @@
-module code.linenisgreat.com/chrest/go
+module chrest
 
-go 1.23
+go 1.22.0
 
-toolchain go1.23.1
-
-require code.linenisgreat.com/zit/go/zit v0.0.0-20240904115524-be1939db9106
+require (
+	code.linenisgreat.com/chrest/go v0.0.0-20240909122209-fd9c19fb1fd9
+	code.linenisgreat.com/zit/go/zit v0.0.0-20240909124420-f6257184e084
+)
 
 require (
 	github.com/brandondube/tai v0.1.0 // indirect

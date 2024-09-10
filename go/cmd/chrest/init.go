@@ -1,15 +1,13 @@
 package main
 
 import (
-	"encoding/json"
 	"flag"
 	"os"
-	"path/filepath"
 
 	"code.linenisgreat.com/chrest/go/src/alfa/browser"
 	"code.linenisgreat.com/chrest/go/src/alfa/symlink"
 	"code.linenisgreat.com/chrest/go/src/bravo/config"
-	"code.linenisgreat.com/chrest/go/src/bravo/install"
+	"code.linenisgreat.com/chrest/go/src/charlie/install"
 	"code.linenisgreat.com/zit/go/zit/src/alfa/errors"
 )
 
@@ -48,7 +46,7 @@ func CmdInit() (err error) {
 
 	flag.Parse()
 
-  // TODO do not overwrite config if it exists
+	// TODO do not overwrite config if it exists
 	if err = initConfig.Write(); err != nil {
 		err = errors.Wrap(err)
 		return
@@ -69,31 +67,10 @@ func CmdInit() (err error) {
 		return
 	}
 
-	var ijs map[string]any
-
-	if ijs, err = install.MakeJSON(
-		initConfig,
-		idsChrome,
-		idsFirefox,
-	); err != nil {
-		err = errors.Wrap(err)
-		return
-	}
-
-	for loc, ij := range ijs {
-		var b []byte
-
-		if b, err = json.Marshal(ij); err != nil {
-			err = errors.Wrap(err)
-			return
-		}
-
-		if err = os.MkdirAll(filepath.Dir(loc), 0o700); err != nil {
-			err = errors.Wrap(err)
-			return
-		}
-
-		if err = os.WriteFile(loc, b, 0o666); err != nil {
+	for _, is := range []install.IdSet{idsChrome, idsFirefox} {
+		if _, _, err = is.Install(
+			initConfig,
+		); err != nil {
 			err = errors.Wrap(err)
 			return
 		}

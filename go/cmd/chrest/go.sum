@@ -1,0 +1,14 @@
+code.linenisgreat.com/chrest/go v0.0.0-20240909122209-fd9c19fb1fd9 h1:xp4vh+/57sEqrBFaS/Ig0QoBV4LEbfzvOCl0SXKCOEY=
+code.linenisgreat.com/chrest/go v0.0.0-20240909122209-fd9c19fb1fd9/go.mod h1:/BEi6QoxOEE9EW3sDALWwWs6wJZXAvv+KMD8y9FJAZs=
+code.linenisgreat.com/zit/go/zit v0.0.0-20240909124420-f6257184e084 h1:ULzt4KD9/DURZQCFM5bm2gPGB8Ma3F7s+lXXstSgVt8=
+code.linenisgreat.com/zit/go/zit v0.0.0-20240909124420-f6257184e084/go.mod h1:pPk47zg+IUkm7qsYsBhrep+u+a2HqQ7IyzI/WS2JUT4=
+github.com/brandondube/tai v0.1.0 h1:psVhcG48XNq1LtQtvz6C5+6JU+n1UFjE9XeYLLDJ/cs=
+github.com/brandondube/tai v0.1.0/go.mod h1:Zx9tLMhTfJhSns4czs9WIs8wPR5oT2OuJNDhGR/GHgw=
+github.com/google/go-cmp v0.6.0 h1:ofyhxvXcZhMsU5ulbFiLKl/XBFqE1GSq7atu8tAmTRI=
+github.com/google/go-cmp v0.6.0/go.mod h1:17dUlkBOakJ0+DkrSSNjCkIjxS6bF9zb3elmeNGIjoY=
+golang.org/x/sys v0.21.0 h1:rF+pYz3DAGSQAxAu1CbC7catZg4ebC4UIeIhKxBZvws=
+golang.org/x/sys v0.21.0/go.mod h1:/VUhepiaJMQUp4+oa/7Zr1D23ma6VTLIYjOOTFZPUcA=
+golang.org/x/term v0.21.0 h1:WVXCp+/EBEHOj53Rvu+7KiT/iElMrO8ACK16SMZ3jaA=
+golang.org/x/term v0.21.0/go.mod h1:ooXLefLobQVslOqselCNF4SxFAaoS6KujMbsGzSDmX0=
+golang.org/x/xerrors v0.0.0-20231012003039-104605ab7028 h1:+cNy6SZtPcJQH3LJVLOSmiC7MMxXNOb3PU/VUEz+EhU=
+golang.org/x/xerrors v0.0.0-20231012003039-104605ab7028/go.mod h1:NDW/Ps6MPRej6fsCIbMTohpP40sJ/P/vI1MoTEGwX90=
