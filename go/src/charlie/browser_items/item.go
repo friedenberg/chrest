@@ -2,17 +2,16 @@ package browser_items
 
 import (
 	"fmt"
-	"net/url"
 
 	"code.linenisgreat.com/chrest/go/src/bravo/config"
 )
 
 type Item struct {
-	Id         ItemId  `json:"id"`
-	Url        url.URL `json:"url"`
-	Date       string  `json:"date"`
-	Title      string  `json:"title"`
-	ExternalId string  `json:"external_id"` // external to the browser, so for us, it's actually our id
+	Id         ItemId `json:"id"`
+	Url        Url    `json:"url"`
+	Date       string `json:"date"`
+	Title      string `json:"title"`
+	ExternalId string `json:"external_id"` // external to the browser, so for us, it's actually our id
 }
 
 type ItemId struct {
