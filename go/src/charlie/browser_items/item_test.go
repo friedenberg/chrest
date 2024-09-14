@@ -38,7 +38,7 @@ func TestJSONMarshalUnmarshal(t1 *testing.T) {
 	t.AssertNoError(err)
 	actual := sb.String()
 
-	expected := "{\"id\":{\"browser\":{\"browser\":\"firefox\",\"id\":\"ddog\"},\"id\":\"jBlIt0RX6whu\",\"type\":\"history\"},\"url\":\"https://wallaby.com\",\"date\":\"2024-09-11T20:51:31.655Z\",\"title\":\"wallaby\",\"external_id\":\"\"}\n"
+	expected := "{\"id\":{\"browser\":{\"browser\":\"firefox\",\"id\":\"ddog\"},\"type\":\"history\",\"id\":\"jBlIt0RX6whu\"},\"url\":\"https://wallaby.com\",\"date\":\"2024-09-11T20:51:31.655Z\",\"title\":\"wallaby\",\"external_id\":\"\"}\n"
 
 	if expected != actual {
 		t.Errorf("expected %q but got %q", expected, actual)
