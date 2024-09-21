@@ -23,6 +23,7 @@ type ItemId struct {
 }
 
 func (ii *ItemId) Set(v string) (err error) {
+	v0 := v
 	v = strings.TrimPrefix(v, "/")
 	head, tail, ok := strings.Cut(v, "/")
 
@@ -36,20 +37,11 @@ func (ii *ItemId) Set(v string) (err error) {
 	}
 
 	if err = ii.BrowserId.Set(head); err != nil {
-		err = errors.Wrap(err)
+		err = errors.Wrapf(err, "Raw Id: %q", v0)
 		return
 	}
 
-	head, tail, ok = strings.Cut(tail, "-")
-
-	if !ok {
-		err = errors.Errorf(
-			"expected format like `<tab|history|bookmark>-<id>` but got %q",
-			head,
-		)
-
-		return
-	}
+	head, tail, _ = strings.Cut(tail, "-")
 
 	ii.Type = head
 	ii.Id = tail

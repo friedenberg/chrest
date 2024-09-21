@@ -1,6 +1,6 @@
 import * as routes from "./routes.js";
 import { parse } from "error-stack-parser-es";
-import { browser_type } from "./browser.js";
+import browser_type from 'consts:browser_type';
 
 async function tryMatchRoute(req) {
   for (let route of routes.sortedRoutes) {
@@ -103,29 +103,35 @@ async function initialize(e) {
       return;
     }
 
-    port.postMessage({
-      type: "who-am-i",
-      browser_id: browserIdFromSettingString(browser_id.newValue),
-    });
-  });
-
-  console.log(`try connect: ${JSON.stringify(e)}`);
-  port = browser.runtime.connectNative("com.linenisgreat.code.chrest");
-  port.onMessage.addListener(onMessage);
-  port.onDisconnect.addListener((p) => {
-    initialize({ reason: "disconnected", error: browser.runtime.lastError });
+    initializePort(browser_id.newValue);
   });
 
   let results = await browser.storage.sync.get("browser_id");
 
   if (results === undefined || results["browser_id"] === undefined) {
-    // browser.runtime.openOptionsPage();
+    if (e.reason == "install") {
+      browser.runtime.openOptionsPage();
+    }
   } else {
-    port.postMessage({
-      type: "who-am-i",
-      browser_id: browserIdFromSettingString(results["browser_id"]),
-    });
+    await initializePort(results["browser_id"]);
   }
+}
+
+async function initializePort(browser_id) {
+  if (port != undefined) {
+    port.disconnect();
+  }
+
+  console.log(`try connect: ${JSON.stringify(browser_id)}`);
+  port = browser.runtime.connectNative("com.linenisgreat.code.chrest");
+  port.onMessage.addListener(onMessage);
+  // port.onDisconnect.addListener((p) => {
+  //   initialize({ reason: "disconnected", error: browser.runtime.lastError });
+  // });
+  port.postMessage({
+    type: "who-am-i",
+    browser_id: browserIdFromSettingString(browser_id),
+  });
 }
 
 browser.runtime.onStartup.addListener(() => {

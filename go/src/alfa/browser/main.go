@@ -19,17 +19,24 @@ func (b *Browser) String() string {
 }
 
 func (b *Browser) Set(v string) (err error) {
-	*b = Browser(strings.TrimSpace(strings.ToLower(v)))
+	v0 := v
 
-	switch *b {
+  b1 := Browser(strings.TrimSpace(strings.ToLower(v)))
+
+	switch b1 {
 	case Chrome:
 	case Chromium:
 	case Firefox:
 
+	case "":
+		return
+
 	default:
-		err = errors.Errorf("unsupported browser: %q", b)
+		err = errors.Errorf("unsupported browser: %q", v0)
 		return
 	}
+
+  *b = b1
 
 	return
 }

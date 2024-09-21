@@ -11,6 +11,11 @@ type Url struct {
 }
 
 func (u *Url) Set(v string) (err error) {
+  if err = u.URL.UnmarshalBinary([]byte(v)); err != nil {
+		err = errors.Wrap(err)
+		return
+	}
+
 	return
 }
 

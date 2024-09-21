@@ -26,21 +26,24 @@ func (s *Server) Serve() (err error) {
 	var msgIAm JSONObject
 	var browserId string
 
-	for {
-		ui.Err().Printf("waiting for id from browser")
+	ui.Err().Printf("waiting for id from browser")
 
-		if _, err = ReadFromBrowser(&msgIAm); err != nil {
-			err = errors.Wrap(err)
-			return
-		}
+	if _, err = ReadFromBrowser(&msgIAm); err != nil {
+		err = errors.Wrap(err)
+		return
+	}
 
-		ui.Err().Printf("read from browser: %q", msgIAm)
+	ui.Err().Printf("read from browser: %q", msgIAm)
 
-		var ok bool
+	var ok bool
 
-		if browserId, ok = msgIAm["browser_id"].(string); ok {
-			break
-		}
+	if browserId, ok = msgIAm["browser_id"].(string); !ok {
+		err = errors.Errorf(
+			"expected string `browser_id` but got %T",
+			msgIAm["browser_id"],
+		)
+
+		return
 	}
 
 	var dir string
@@ -60,6 +63,8 @@ func (s *Server) Serve() (err error) {
 	os.Remove(pathSock)
 
 	ui.Err().Printf("starting server on %q", pathSock)
+
+	defer os.Remove(pathSock)
 
 	if s.Address, err = net.ResolveUnixAddr("unix", pathSock); err != nil {
 		err = errors.Wrap(err)

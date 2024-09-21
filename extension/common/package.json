@@ -7,7 +7,9 @@
   "main": "main.js",
   "devDependencies": {
     "@rollup/plugin-node-resolve": "^15.2.3",
-    "web-ext": "^8.2.0",
+    "rollup": "^3.29.5",
+    "rollup-plugin-consts": "^1.2.0",
+    "web-ext": "^8.3.0",
     "webpack": "^5.92.1",
     "webpack-cli": "^5.1.4"
   },

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"strings"
 
 	"code.linenisgreat.com/zit/go/zit/src/alfa/errors"
 )
@@ -62,10 +63,11 @@ type HTTPResponseWithRequestPayloadPut struct {
 }
 
 func (resp *HTTPResponseWithRequestPayloadPut) parseResponse() (err error) {
-	dec := json.NewDecoder(resp.Response.Body)
+  var sb strings.Builder
+	dec := json.NewDecoder(io.TeeReader(resp.Response.Body, &sb))
 
 	if err = dec.Decode(&resp.RequestPayloadPut); err != nil {
-		err = errors.Wrapf(err, "Response: %#v", resp.Response.Body)
+		err = errors.Wrapf(err, "Response: %q", sb.String())
 		return
 	}
 

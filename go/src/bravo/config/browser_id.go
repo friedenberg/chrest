@@ -18,19 +18,15 @@ func (bi BrowserId) IsEmpty() bool {
 }
 
 func (bi *BrowserId) Set(v string) (err error) {
+  v0 := v
 	v = strings.TrimSpace(strings.ToLower(v))
 
-	head, tail, ok := strings.Cut(v, "-")
-
-	if !ok {
-		err = errors.Errorf("unsupported id: %q", v)
-		return
-	}
+	head, tail, _ := strings.Cut(v, "-")
 
 	bi.Id = tail
 
 	if err = bi.Browser.Set(head); err != nil {
-		err = errors.Wrap(err)
+    err = errors.Wrapf(err, "Raw Id: %q", v0)
 		return
 	}
 

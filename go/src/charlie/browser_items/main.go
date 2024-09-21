@@ -58,7 +58,8 @@ func (b BrowserProxy) Put(
 	defer errors.DeferredCloser(&err, resp.Response.Body)
 
 	if err = resp.parseResponse(); err != nil {
-		err = errors.Wrap(err)
+    err = errors.Wrapf(err, "Request: %#v", httpReq)
+    err = errors.Wrapf(err, "Request Payload: %#v", req)
 		return
 	}
 
