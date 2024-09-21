@@ -20,20 +20,8 @@ endif
 
 build: dist.zip
 
-FILE_FIREFOX_SECRET_ISSUER := $(realpath secrets/jwt_issuer)
-FILE_FIREFOX_SECRET_SECRET := $(realpath secrets/jwt_secret)
-
-sign: dist.zip
->eval "$$(direnv hook bash)"
->pushd dist/
->npx --no web-ext sign --channel=listed --amo-metadata=amo-metadata.json --api-key="$(shell cat $(FILE_FIREFOX_SECRET_ISSUER))" --api-secret="$(shell cat $(FILE_FIREFOX_SECRET_SECRET))"
-
-
 dist.zip: dist/manifest.json dist/main.js $(shell find common -type f)
 >cp common/*.png options* dist/
->pushd common
->npx --no web-ext lint -s "$(dir $@)"
->popd common
 >zip -r "$@" dist
 
 files_js_copy_to_dist := $(shell find src common/src -type f)
@@ -42,13 +30,9 @@ dist/main.js: $(files_js_copy_to_dist)
 >cp $(files_js_copy_to_dist) dist/
 >eval "$$(direnv hook bash)"
 >pushd common/
->npx --no -- rollup --config -p "rollup-plugin-consts={browser_type: 'firefox'}" -o "$(abspath $@)"
+>npx --no -- rollup --config -p "rollup-plugin-consts={browser_type: 'chrome'}" -o "$(abspath $@)"
 
 dist/manifest.json: common/manifest.json manifest.json
 >mkdir -p $(dir $@)
 >cat $^ | jq -s 'reduce .[] as $$item ({}; . + $$item)' > "$@"
-
-local_deploy: build
->eval "$$(direnv hook bash)"
->npx --no web-ext run -s dist/
 
