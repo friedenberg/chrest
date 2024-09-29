@@ -29,11 +29,8 @@ sign: dist.zip
 >npx --no web-ext sign --channel=listed --amo-metadata=amo-metadata.json --api-key="$(shell cat $(FILE_FIREFOX_SECRET_ISSUER))" --api-secret="$(shell cat $(FILE_FIREFOX_SECRET_SECRET))"
 
 
-dist.zip: dist/manifest.json dist/main.js $(shell find common -type f)
->cp common/*.png options* dist/
->pushd common
->npx --no web-ext lint -s "$(dir $@)"
->popd common
+dist.zip: dist/manifest.json dist/main.js $(shell find common -type f) amo-metadata.json
+>cp amo-metadata.json common/*.png options* dist/
 >zip -r "$@" dist
 
 files_js_copy_to_dist := $(shell find src common/src -type f)
