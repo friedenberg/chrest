@@ -1,6 +1,7 @@
 {
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-24.05";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
+    nixpkgs-stable.url = "github:NixOS/nixpkgs/nixos-24.05";
     utils.url = "github:numtide/flake-utils";
 
     go = {
@@ -14,7 +15,7 @@
     };
   };
 
-  outputs = { self, nixpkgs, utils, go, js }:
+  outputs = { self, nixpkgs, nixpkgs-stable, utils, go, js }:
     (utils.lib.eachDefaultSystem
       (system:
         let
