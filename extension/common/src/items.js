@@ -37,14 +37,11 @@ export async function makeUrlItem(bid, item) {
         )
       );
     } else if (itemType == "tab") {
+      let tab = await browser.tabs.create({ url: item.url });
+
       Object.assign(
         result,
-        urlItemForTab(
-          bid,
-          await browser.tabs.create({
-            url: item.url,
-          })
-        )
+        urlItemForTab(bid, tab,)
       );
     } else {
       throw `unsupported type: ${item.id.type}`;

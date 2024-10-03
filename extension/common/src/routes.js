@@ -28,11 +28,26 @@ Routes["/items"] = {
     };
   },
   async put(req) {
+    let body = {
+      added: await items.makeUrlItems(req.browser_id, req.body.added),
+      deleted: await items.removeUrlItems(req.browser_id, req.body.deleted),
+    };
+
+    let addedWindowIds = {}
+
+    for (let item of body.added) {
+      if (item.id.type === "tab") {
+        addedWindowIds[item.windowId] = true;
+        break;
+      }
+    }
+
+    await Promise.all(Object.keys(addedWindowIds).map(
+      windowId => browser.windows.update(parseInt(windowId), { focused: true, drawAttention: true })),
+    );
+
     return {
-      body: {
-        added: await items.makeUrlItems(req.browser_id, req.body.added),
-        deleted: await items.removeUrlItems(req.browser_id, req.body.deleted),
-      },
+      body: body,
       status: 200,
     };
   },
@@ -69,7 +84,7 @@ Routes["/state"] = {
     };
   },
   async post(req) {
-    const makePromise = async function (body) {
+    const makePromise = async function(body) {
       let tabs = body["tabs"];
       delete body["tabs"];
 
@@ -110,7 +125,7 @@ Routes["/windows"] = {
   description: "Create a new window.",
   usage: 'echo "https://www.google.com" > $0',
   async post(req) {
-    const makePromise = async function (body) {
+    const makePromise = async function(body) {
       return await chrome.windows.create(body);
     };
 
@@ -127,7 +142,7 @@ Routes["/windows"] = {
     }
   },
   async put(req) {
-    const makePromise = async function (body) {
+    const makePromise = async function(body) {
       const id = body.id;
       delete body.id;
       return await chrome.windows.update(id, body);
@@ -452,26 +467,26 @@ for (let key in Routes) {
   Routes[key].__matchVarCount = 0;
   Routes[key].__regex = new RegExp(
     "^" +
-      key
-        .split("/")
-        .map((keySegment) =>
-          keySegment
-            .replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
-            .replace(/([#:])([A-Z_]+)/g, (_, sigil, varName) => {
-              console.log(key, sigil, varName);
-              Routes[key].__matchVarCount++;
-              return (
-                `(?<${sigil === "#" ? "int$" : "string$"}${varName}>` +
-                (sigil === "#" ? "[^/]+" : "[^/]+") +
-                `)`
-              );
-            })
-        )
-        .join("/") +
-      "$"
+    key
+      .split("/")
+      .map((keySegment) =>
+        keySegment
+          .replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+          .replace(/([#:])([A-Z_]+)/g, (_, sigil, varName) => {
+            console.log(key, sigil, varName);
+            Routes[key].__matchVarCount++;
+            return (
+              `(?<${sigil === "#" ? "int$" : "string$"}${varName}>` +
+              (sigil === "#" ? "[^/]+" : "[^/]+") +
+              `)`
+            );
+          })
+      )
+      .join("/") +
+    "$"
   );
 
-  Routes[key].__match = function (path) {
+  Routes[key].__match = function(path) {
     const result = Routes[key].__regex.exec(path);
     if (!result) {
       return;
