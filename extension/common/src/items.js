@@ -7,9 +7,9 @@ export async function makeUrlItems(bid, items) {
   }
 
   try {
-    await chrome.windows.getLastFocused();
+    await browser.windows.getLastFocused();
   } catch (e) {
-    await chrome.windows.create();
+    await browser.windows.create();
   }
 
   return await Promise.all(items.map(o => makeUrlItem(bid, o)));
@@ -91,13 +91,13 @@ export async function allTabItems(bid) {
 }
 
 export async function allBookmarkItems(bid) {
-  return (await chrome.bookmarks.search({}))
-    .filter((b) => b.children === undefined)
+  return (await browser.bookmarks.search({}))
+    .filter((b) => b.type === "bookmark")
     .map(o => urlItemForBookmark(bid, o));
 }
 
 export async function allHistoryItems(bid) {
-  let history = await chrome.history.search({ text: "" });
+  let history = await browser.history.search({ text: "" });
 
   return history.map((o) => ({
     title: o.title,
@@ -125,15 +125,20 @@ export async function removeUrlItems(bid, items) {
       return false;
     }
 
-    if (item.id.type == "bookmark") {
-      promises.push(browser.bookmarks.remove(item.id.id));
-      return true;
-    } else if (item.id.type == "tab") {
-      promises.push(browser.tabs.remove(parseInt(item.id.id)));
-      return true;
-    } else {
-      // TODO find in all urls
-      console.log(item);
+    try {
+      if (item.id.type == "bookmark") {
+        promises.push(browser.bookmarks.remove(item.id.id));
+        return true;
+      } else if (item.id.type == "tab") {
+        promises.push(browser.tabs.remove(parseInt(item.id.id)));
+        return true;
+      } else {
+        // TODO find in all urls
+        console.log(item);
+        return false;
+      }
+    } catch (e) {
+      console.log("failed to remove item", item);
       return false;
     }
   });
