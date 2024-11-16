@@ -41,7 +41,9 @@ func StateDirectory() (v string, err error) {
 	return
 }
 
-func (c Config) GetSocketPathForBrowserId(id BrowserId) (sock string, err error) {
+func (c Config) GetSocketPathForBrowserId(
+	id BrowserId,
+) (sock string, err error) {
 	if id.IsEmpty() {
 		id = c.DefaultBrowser
 	}
@@ -54,6 +56,22 @@ func (c Config) GetSocketPathForBrowserId(id BrowserId) (sock string, err error)
 	}
 
 	sock = path.Join(stateDir, fmt.Sprintf("%s.sock", id))
+
+	return
+}
+
+func (c Config) GetAllSockets() (socks []string, err error) {
+	var stateDir string
+
+	if stateDir, err = StateDirectory(); err != nil {
+		err = errors.Wrap(err)
+		return
+	}
+
+	if socks, err = filepath.Glob(filepath.Join(stateDir, "*.sock")); err != nil {
+		err = errors.Wrap(err)
+		return
+	}
 
 	return
 }

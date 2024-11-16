@@ -156,6 +156,21 @@ func ResponseFromReader(
 		return
 	}
 
+	if resp, err = ResponseFromRequest(
+		req,
+		conn,
+	); err != nil {
+		err = errors.Wrap(err)
+		return
+	}
+
+	return
+}
+
+func ResponseFromRequest(
+	req *http.Request,
+	conn net.Conn,
+) (resp *http.Response, err error) {
 	if err = req.Write(conn); err != nil {
 		err = errors.Errorf("failed to write to socket: %w", err)
 		return

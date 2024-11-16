@@ -46,16 +46,16 @@ func CmdClient(c config.Config) (err error) {
 		return
 	}
 
-	err = cmdClientOneSocket(sock)
-
-	if errors.IsErrno(err, syscall.ECONNREFUSED) {
-		if err = os.Remove(sock); err != nil {
+	if err = cmdClientOneSocket(sock); err != nil {
+		if errors.IsErrno(err, syscall.ECONNREFUSED) {
+			if err = os.Remove(sock); err != nil {
+				err = errors.Wrap(err)
+				return
+			}
+		} else {
 			err = errors.Wrap(err)
 			return
 		}
-	} else if err != nil {
-		err = errors.Wrap(err)
-		return
 	}
 
 	return
