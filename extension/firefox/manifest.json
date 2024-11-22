@@ -12,7 +12,9 @@
     "unlimitedStorage"
   ],
   "background": {
-    "scripts": [ "main.js" ]
+    "scripts": [
+      "main.js"
+    ]
   },
   "browser_specific_settings": {
     "gecko": {
