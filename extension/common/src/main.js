@@ -1,5 +1,6 @@
 import * as routes from "./routes.js";
 import { parse } from "error-stack-parser-es";
+import { Mutex } from "async-mutex";
 import browser_type from 'consts:browser_type';
 
 async function tryMatchRoute(req) {
@@ -24,10 +25,11 @@ async function tryMatchRoute(req) {
 
 let port;
 const now = new Date();
+const mutex = new Mutex();
 
 async function onMessage(req, messageSender) {
   req.message_sender = messageSender;
-  await onMessageHTTP(req);
+  await mutex.runExclusive(async () => onMessageHTTP(req));
 }
 
 async function onMessageHTTP(req) {
@@ -109,35 +111,36 @@ async function initialize(e) {
   let results = await browser.storage.sync.get("browser_id");
 
   if (results === undefined || results["browser_id"] === undefined) {
-    if (e.reason == "install") {
-      browser.runtime.openOptionsPage();
-    }
+    browser.runtime.openOptionsPage();
   } else {
     await initializePort(results["browser_id"]);
   }
 }
 
-async function initializePort(browser_id) {
+async function deinitializePort() {
   if (port != undefined) {
     port.disconnect();
   }
+}
+
+async function initializePort(browser_id) {
+  await deinitializePort();
 
   console.log(`try connect: ${JSON.stringify(browser_id)}`);
   port = browser.runtime.connectNative("com.linenisgreat.code.chrest");
   port.onMessage.addListener(onMessage);
-  // port.onDisconnect.addListener((p) => {
-  //   initialize({ reason: "disconnected", error: browser.runtime.lastError });
-  // });
   port.postMessage({
     type: "who-am-i",
     browser_id: browserIdFromSettingString(browser_id),
   });
 }
 
-browser.runtime.onStartup.addListener(() => {
-  initialize({ reason: "startup" });
-});
+// browser.runtime.onStartup.addListener(() => {
+//   initialize({ reason: "startup" });
+// });
 
-browser.runtime.onInstalled.addListener(() => {
-  initialize({ reason: "install" });
-});
+// browser.runtime.onInstalled.addListener(() => {
+//   initialize({ reason: "install" });
+// });
+
+initialize({ reason: "startup" });

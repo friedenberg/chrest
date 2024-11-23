@@ -6,7 +6,6 @@ import (
 	"net"
 	"net/http"
 	"sync"
-	"time"
 
 	"code.linenisgreat.com/chrest/go/src/bravo/config"
 	"code.linenisgreat.com/zit/go/zit/src/alfa/errors"
@@ -24,7 +23,7 @@ func (b BrowserProxy) Get(
 ) (resp HTTPResponseWithRequestPayloadGet, err error) {
 	var httpReq *http.Request
 
-	if httpReq, err = req.MakeHTTPRequest(); err != nil {
+	if httpReq, err = req.MakeHTTPRequest(ctx); err != nil {
 		err = errors.Wrap(err)
 		return
 	}
@@ -52,13 +51,6 @@ func (b BrowserProxy) GetAll(
 	ctx context.Context,
 	req BrowserRequestGet,
 ) (resp HTTPResponseWithRequestPayloadGet, err error) {
-	var httpReq *http.Request
-
-	if httpReq, err = req.MakeHTTPRequest(); err != nil {
-		err = errors.Wrap(err)
-		return
-	}
-
 	var socks []string
 
 	if socks, err = b.GetAllSockets(); err != nil {
@@ -73,6 +65,13 @@ func (b BrowserProxy) GetAll(
 	for _, sock := range socks {
 		wg.Do(
 			func() (err error) {
+				var httpReq *http.Request
+
+				if httpReq, err = req.MakeHTTPRequest(ctx); err != nil {
+					err = errors.Wrap(err)
+					return
+				}
+
 				var oneResponse HTTPResponseWithRequestPayloadGet
 
 				if oneResponse.Response, err = b.httpRequestFor(
@@ -119,7 +118,7 @@ func (b BrowserProxy) Put(
 ) (resp HTTPResponseWithRequestPayloadPut, err error) {
 	var httpReq *http.Request
 
-	if httpReq, err = req.MakeHTTPRequest(); err != nil {
+	if httpReq, err = req.MakeHTTPRequest(ctx); err != nil {
 		err = errors.Wrap(err)
 		return
 	}
@@ -148,13 +147,6 @@ func (b BrowserProxy) PutAll(
 	ctx context.Context,
 	req BrowserRequestPut,
 ) (resp HTTPResponseWithRequestPayloadPut, err error) {
-	var httpReq *http.Request
-
-	if httpReq, err = req.MakeHTTPRequest(); err != nil {
-		err = errors.Wrap(err)
-		return
-	}
-
 	var socks []string
 
 	if socks, err = b.GetAllSockets(); err != nil {
@@ -169,6 +161,13 @@ func (b BrowserProxy) PutAll(
 	for _, sock := range socks {
 		wg.Do(
 			func() (err error) {
+				var httpReq *http.Request
+
+				if httpReq, err = req.MakeHTTPRequest(ctx); err != nil {
+					err = errors.Wrap(err)
+					return
+				}
+
 				var oneResponse HTTPResponseWithRequestPayloadPut
 
 				if oneResponse.Response, err = b.httpRequestFor(
@@ -236,13 +235,7 @@ func (b BrowserProxy) httpRequestFor(
 	httpReq *http.Request,
 	sock string,
 ) (resp *http.Response, err error) {
-	ctx, cancel := context.WithDeadline(
-		ctx,
-		// TODO add default timeout to Config
-		time.Now().Add(time.Duration(1e9)),
-	)
-
-	defer cancel()
+	httpReq = httpReq.WithContext(ctx)
 
 	var dialer net.Dialer
 
@@ -253,14 +246,44 @@ func (b BrowserProxy) httpRequestFor(
 		return
 	}
 
-	if err = httpReq.Write(conn); err != nil {
-		err = errors.Wrap(err)
-		return
+	{
+		chDone := make(chan struct{})
+
+		go func() {
+			defer close(chDone)
+
+			if err = httpReq.Write(conn); err != nil {
+				err = errors.Wrap(err)
+				return
+			}
+		}()
+
+		select {
+		case <-ctx.Done():
+			err = errors.Errorf("timed out writing to socket: %q", sock)
+
+		case <-chDone:
+		}
 	}
 
-	if resp, err = http.ReadResponse(bufio.NewReader(conn), httpReq); err != nil {
-		err = errors.Wrap(err)
-		return
+	{
+		chDone := make(chan struct{})
+
+		go func() {
+			defer close(chDone)
+
+			if resp, err = http.ReadResponse(bufio.NewReader(conn), httpReq); err != nil {
+				err = errors.Wrap(err)
+				return
+			}
+		}()
+
+		select {
+		case <-ctx.Done():
+			err = errors.Errorf("timed out reading from socket: %q", sock)
+
+		case <-chDone:
+		}
 	}
 
 	return

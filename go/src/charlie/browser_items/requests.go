@@ -2,6 +2,7 @@ package browser_items
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -22,8 +23,11 @@ type (
 	BrowserRequestPut RequestPayloadPut
 )
 
-func (BrowserRequestGet) MakeHTTPRequest() (req *http.Request, err error) {
-	if req, err = http.NewRequest(
+func (BrowserRequestGet) MakeHTTPRequest(
+	ctx context.Context,
+) (req *http.Request, err error) {
+	if req, err = http.NewRequestWithContext(
+    ctx,
 		"GET",
 		"/items",
 		nil,
@@ -35,10 +39,13 @@ func (BrowserRequestGet) MakeHTTPRequest() (req *http.Request, err error) {
 	return
 }
 
-func (br BrowserRequestPut) MakeHTTPRequest() (req *http.Request, err error) {
+func (br BrowserRequestPut) MakeHTTPRequest(
+	ctx context.Context,
+) (req *http.Request, err error) {
 	b := bytes.NewBuffer(nil)
 
-	if req, err = http.NewRequest(
+	if req, err = http.NewRequestWithContext(
+		ctx,
 		"PUT",
 		"/items",
 		io.NopCloser(b),
@@ -63,7 +70,7 @@ type HTTPResponseWithRequestPayloadPut struct {
 }
 
 func (resp *HTTPResponseWithRequestPayloadPut) parseResponse() (err error) {
-  var sb strings.Builder
+	var sb strings.Builder
 	dec := json.NewDecoder(io.TeeReader(resp.Response.Body, &sb))
 
 	if err = dec.Decode(&resp.RequestPayloadPut); err != nil {

@@ -47,5 +47,5 @@ dist/manifest.json: common/manifest.json manifest.json
 
 local_deploy: build
 >eval "$$(direnv hook bash)"
->npx --no web-ext run -s dist/
+>npx --no web-ext run -s dist/ --browser-console
 

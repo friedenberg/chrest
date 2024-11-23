@@ -16,13 +16,12 @@ type Server struct {
 	Address         *net.UnixAddr
 	Listener        *net.UnixListener
 	HTTPHandlerFunc http.HandlerFunc
-
-	chDone chan struct{}
+	Cancel          context.CancelCauseFunc
 }
 
-func (s *Server) Serve() (err error) {
-	s.chDone = make(chan struct{})
-
+func (s *Server) Initialize(
+	ctx context.Context,
+) (err error) {
 	var msgIAm JSONObject
 	var browserId string
 
@@ -59,12 +58,8 @@ func (s *Server) Serve() (err error) {
 	}
 
 	pathSock := fmt.Sprintf("%s/%s.sock", dir, browserId)
-	ui.Err().Printf("removing old socket: %s", pathSock)
-	os.Remove(pathSock)
 
 	ui.Err().Printf("starting server on %q", pathSock)
-
-	defer os.Remove(pathSock)
 
 	if s.Address, err = net.ResolveUnixAddr("unix", pathSock); err != nil {
 		err = errors.Wrap(err)
@@ -79,22 +74,42 @@ func (s *Server) Serve() (err error) {
 
 	ui.Err().Printf("listening: %s", pathSock)
 
+	return
+}
+
+func (s *Server) Serve(
+	ctx context.Context,
+) (err error) {
 	handler := s.HTTPHandlerFunc
 
 	if handler == nil {
 		handler = http.HandlerFunc(s.ServeHTTP)
 	}
 
-	server := http.Server{Handler: handler}
+	httpServer := http.Server{Handler: handler}
 
 	go func() {
-		<-s.chDone
+		<-ctx.Done()
 		ui.Err().Print("shutting down")
-		server.Shutdown(context.Background())
+
+		ctx, cancel := context.WithTimeoutCause(
+			context.Background(),
+			1e9, // 1 second
+			errors.Errorf("shut down timeout"),
+		)
+
+		defer cancel()
+
+		httpServer.Shutdown(ctx)
 	}()
 
-	if err = server.Serve(s.Listener); err != nil {
-		err = errors.Wrap(err)
+	if err = httpServer.Serve(s.Listener); err != nil {
+		if errors.Is(err, http.ErrServerClosed) {
+			err = nil
+		} else {
+			err = errors.Wrap(err)
+		}
+
 		return
 	}
 

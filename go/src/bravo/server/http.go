@@ -29,7 +29,7 @@ func NewRequest(in *http.Request, body JSONAnything) (out ServerRequestJSONBody)
 }
 
 func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	ui.Err().Printf("received request: %q", req)
+	ui.Err().Printf("received request: %s", req)
 
 	enc := json.NewEncoder(w)
 
@@ -52,9 +52,9 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	}
 
 	var n int64
-	ui.Err().Print("will write to chrome")
+	ui.Err().Print("will write to browser")
 	n, err = WriteToBrowser(NewRequest(req, m))
-	ui.Err().Printf("wrote %d bytes to chrome", n)
+	ui.Err().Printf("wrote %d bytes to browser", n)
 	if err != nil {
 		flushError(err, enc, w, req)
 	}
@@ -62,9 +62,9 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	var res JSONObject
 
 	// TODO handle case when extension is offline
-	ui.Err().Print("will read from chrome")
+	ui.Err().Print("will read from browser")
 	n, err = ReadFromBrowser(&res)
-	ui.Err().Printf("read %d bytes from chrome", n)
+	ui.Err().Printf("read %d bytes from browser", n)
 
 	if errors.IsEOF(err) {
 		flushError(
@@ -98,26 +98,18 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 			break
 
 		case "who-am-i":
-			flushServerError(
-				errors.Errorf("Received a request to restart with new browser id."),
-				enc,
-				w,
-				req,
-			)
+			err := errors.Errorf("Received a request to restart with new browser id.")
+			flushServerError(err, enc, w, req)
 
-			close(s.chDone)
+			s.Cancel(err)
 
 			return
 
 		default:
-			flushServerError(
-				errors.Errorf("unsupported message type: %q", msgType),
-				enc,
-				w,
-				req,
-			)
+			err := errors.Errorf("unsupported message type: %q", msgType)
+			flushServerError(err, enc, w, req)
 
-			close(s.chDone)
+			s.Cancel(err)
 
 			return
 		}
