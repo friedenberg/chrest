@@ -21,7 +21,7 @@ endif
 build: dist.zip
 
 dist.zip: dist/manifest.json dist/main.js $(shell find common -type f)
->cp common/*.png options* dist/
+>cp common/*.png common/*.js options* dist/
 >zip -r "$@" dist
 
 files_js_copy_to_dist := $(shell find src common/src -type f)
