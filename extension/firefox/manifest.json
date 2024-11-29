@@ -9,7 +9,8 @@
     "nativeMessaging",
     "management",
     "storage",
-    "unlimitedStorage"
+    "unlimitedStorage",
+    "notifications"
   ],
   "background": {
     "scripts": [

@@ -28,23 +28,40 @@ Routes["/items"] = {
     };
   },
   async put(req) {
-    let body = {
-      added: await items.makeUrlItems(req.browser_id, req.body.added),
-      deleted: await items.removeUrlItems(req.browser_id, req.body.deleted),
+    let isOurBid = function(item) {
+      return lib.isOurBid(req.browser_id, item);
     };
 
-    let addedWindowIds = {}
-
-    for (let item of body.added) {
-      if (item.id.type === "tab") {
-        addedWindowIds[item.windowId] = true;
-        break;
-      }
+    if (req.body.added == undefined) {
+      req.body.added = [];
     }
 
-    await Promise.all(Object.keys(addedWindowIds).map(
-      windowId => browser.windows.update(parseInt(windowId), { focused: true, drawAttention: true })),
-    );
+    if (req.body.deleted == undefined) {
+      req.body.deleted = [];
+    }
+
+    if (req.body.focused == undefined) {
+      req.body.focused = [];
+    }
+
+    let body = {
+      added: await items.makeUrlItems(req.browser_id, req.body.added.filter(isOurBid)),
+      deleted: await items.removeUrlItems(req.browser_id, req.body.deleted.filter(isOurBid)),
+      focused: await items.focusUrlItems(req.browser_id, req.body.focused.filter(isOurBid)),
+    };
+
+    // let addedWindowIds = {}
+
+    // for (let item of body.added) {
+    //   if (item.id.type === "tab") {
+    //     addedWindowIds[item.windowId] = true;
+    //     break;
+    //   }
+    // }
+
+    // await Promise.all(Object.keys(addedWindowIds).map(
+    //   windowId => browser.windows.update(parseInt(windowId), { focused: true, drawAttention: true })),
+    // );
 
     return {
       body: body,
@@ -62,9 +79,9 @@ Routes["/items"] = {
 
 Routes["/state"] = {
   description:
-    "Save, restore, or clear chrome windows and tabs with to a state",
+    "Save, restore, or clear browser windows and tabs with to a state",
   async get(req) {
-    const windows = await chrome.windows.getAll();
+    const windows = await browser.windows.getAll();
     return {
       status: 200,
       body: (await lib.windowsWithTabs(windows)).map(lib.cleanWindowForSave),
@@ -73,9 +90,9 @@ Routes["/state"] = {
   async delete(req) {
     await Promise.all(
       (
-        await chrome.windows.getAll()
+        await browser.windows.getAll()
       ).map((w) => {
-        return chrome.windows.remove(w.id);
+        return browser.windows.remove(w.id);
       })
     );
 
@@ -94,7 +111,7 @@ Routes["/state"] = {
 
       delete body.type;
 
-      let w = await chrome.windows.create(body);
+      let w = await browser.windows.create(body);
 
       tabs = tabs.map((t) => {
         t = lib.cleanTabForSave(t);
@@ -126,7 +143,7 @@ Routes["/windows"] = {
   usage: 'echo "https://www.google.com" > $0',
   async post(req) {
     const makePromise = async function(body) {
-      return await chrome.windows.create(body);
+      return await browser.windows.create(body);
     };
 
     if (Array.isArray(req.body)) {
@@ -145,7 +162,7 @@ Routes["/windows"] = {
     const makePromise = async function(body) {
       const id = body.id;
       delete body.id;
-      return await chrome.windows.update(id, body);
+      return await browser.windows.update(id, body);
     };
 
     if (Array.isArray(req.body)) {
@@ -161,7 +178,7 @@ Routes["/windows"] = {
     }
   },
   async get(req) {
-    const windows = await chrome.windows.getAll();
+    const windows = await browser.windows.getAll();
     return {
       status: 200,
       body: await lib.windowsWithTabs(windows),
@@ -174,7 +191,7 @@ Routes["/windows/current"] = {
   async get() {
     return {
       status: 200,
-      body: await lib.windowsWithTabs(await chrome.windows.getCurrent()),
+      body: await lib.windowsWithTabs(await browser.windows.getCurrent()),
     };
   },
 };
@@ -184,7 +201,7 @@ Routes["/windows/current"] = {
 //   async get() {
 //     return {
 //       status: 200,
-//       body: await windowsWithTabs(await chrome.windows.getLastFocused()),
+//       body: await windowsWithTabs(await browser.windows.getLastFocused()),
 //     };
 //   },
 // };
@@ -194,11 +211,11 @@ Routes["/windows/current"] = {
 //   async get(req) {
 //     return {
 //       status: 200,
-//       body: await chrome.tabs.query({ windowId }),
+//       body: await browser.tabs.query({ windowId }),
 //     };
 //   },
 //   async post(req) {
-//     let w = await windowsWithTabs(await chrome.windows.getLastFocused());
+//     let w = await windowsWithTabs(await browser.windows.getLastFocused());
 
 //     let added_tabs = await Promise.all(
 //       req.body.map((url) => makeTab({ url: url, windowId: w.id }))
@@ -220,17 +237,17 @@ Routes["/windows/#WINDOW_ID"] = {
     };
   },
   async put(req) {
-    let wid = await lib.normalizeWindowID(req.windowId);
+    let wid = await lib.normalizeWindowId(req.windowId);
 
     return {
       status: 200,
       body: await lib.windowsWithTabs(
-        await chrome.windows.update(wid, req.body)
+        await browser.windows.update(wid, req.body)
       ),
     };
   },
   async delete({ windowId }) {
-    await chrome.windows.remove(windowId);
+    await browser.windows.remove(windowId);
 
     return {
       status: 204,
@@ -242,11 +259,11 @@ Routes["/windows/#WINDOW_ID/tabs"] = {
   async get({ windowId }) {
     return {
       status: 200,
-      body: await chrome.tabs.query({ windowId }),
+      body: await browser.tabs.query({ windowId }),
     };
   },
   async post(req) {
-    let wid = await lib.normalizeWindowID(req.windowId);
+    let wid = await lib.normalizeWindowId(req.windowId);
 
     if (Array.isArray(req.body)) {
       return {
@@ -268,15 +285,15 @@ Routes["/windows/#WINDOW_ID/tab-urls"] = {
   async get({ windowId }) {
     return {
       status: 200,
-      body: (await chrome.tabs.query({ windowId })).map((t) => t.url),
+      body: (await browser.tabs.query({ windowId })).map((t) => t.url),
     };
   },
   async post(req) {
-    let wid = await lib.normalizeWindowID(req.windowId);
+    let wid = await lib.normalizeWindowId(req.windowId);
 
     await Promise.all(
       req.body.map((url) => {
-        return chrome.tabs.create({ windowId: wid, url: url });
+        return browser.tabs.create({ windowId: wid, url: url });
       })
     );
 
@@ -285,11 +302,11 @@ Routes["/windows/#WINDOW_ID/tab-urls"] = {
     };
   },
   async post(req) {
-    let wid = await lib.normalizeWindowID(req.windowId);
+    let wid = await lib.normalizeWindowId(req.windowId);
 
     await Promise.all(
       req.body.map((url) => {
-        return chrome.tabs.create({ windowId: wid, url: url });
+        return browser.tabs.create({ windowId: wid, url: url });
       })
     );
 
@@ -343,7 +360,7 @@ Routes["/tabs"] = {
   async get(req) {
     return {
       status: 200,
-      body: await lib.tabsFromWindows(await chrome.windows.getAll()),
+      body: await lib.tabsFromWindows(await browser.windows.getAll()),
     };
   },
 };
@@ -352,11 +369,11 @@ Routes["/tabs/#TAB_ID"] = {
   async get({ tabId }) {
     return {
       status: 200,
-      body: await chrome.tabs.get(parseInt(tabId)),
+      body: await browser.tabs.get(parseInt(tabId)),
     };
   },
   async delete({ tabId }) {
-    await chrome.tabs.remove(tabId);
+    await browser.tabs.remove(tabId);
 
     return {
       status: 204,
@@ -375,7 +392,7 @@ Routes["/tabs/#TAB_ID"] = {
       };
     } else {
       // req.body.id = req.tabId;
-      let res = await chrome.tabs.update(parseInt(req.tabId), req.body);
+      let res = await browser.tabs.update(parseInt(req.tabId), req.body);
 
       return {
         status: 200,
@@ -399,7 +416,7 @@ Routes["/extensions"] = {
   async get() {
     return {
       status: 200,
-      body: await chrome.management.getAll(),
+      body: await browser.management.getAll(),
     };
   },
 };
@@ -408,11 +425,11 @@ Routes["/runtime/reload"] = {
   async get() {
     return {
       status: 200,
-      body: await chrome.runtime.getManifest(),
+      body: await browser.runtime.getManifest(),
     };
   },
   async post() {
-    await chrome.runtime.reload();
+    await browser.runtime.reload();
     return { status: 204 };
   },
 };
@@ -422,7 +439,7 @@ Routes["/tabs/last-focused"] = {
 It's a symbolic link to the folder /tabs/by-id/[ID of most recently focused tab].`,
   async readlink() {
     const id = (
-      await chrome.tabs.query({ active: true, lastFocusedWindow: true })
+      await browser.tabs.query({ active: true, lastFocusedWindow: true })
     )[0].id;
     return { buf: "by-id/" + id };
   },
@@ -440,7 +457,7 @@ Routes["/bookmarks"] = {
   async get() {
     return {
       status: 200,
-      body: await chrome.bookmarks.getTree(),
+      body: await browser.bookmarks.getTree(),
     };
   },
 };
@@ -457,7 +474,7 @@ Routes["/history"] = {
   async get() {
     return {
       status: 200,
-      body: await chrome.history.search({ text: "" }),
+      body: await browser.history.search({ text: "" }),
     };
   },
 };

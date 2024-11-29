@@ -89,6 +89,17 @@ func run() (err error) {
 			return
 		}
 
+	case "items-put":
+		if err = c.Read(); err != nil {
+			err = errors.Wrap(err)
+			return
+		}
+
+		if err = CmdItemsPut(c); err != nil {
+			err = errors.Wrap(err)
+			return
+		}
+
 	case "init":
 		if err = CmdInit(); err != nil {
 			err = errors.Wrap(err)

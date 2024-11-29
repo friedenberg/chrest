@@ -1,16 +1,25 @@
+export async function isOurBid(ourBid, item) {
+  let theirBid = item.id.browser;
+
+  if (theirBid.browser != ourBid.browser || theirBid.id != ourBid.id) {
+    return false;
+  }
+
+  return true;
+}
 export async function windowsWithTabs(windowOrWindowList) {
   if (Array.isArray(windowOrWindowList)) {
     const windows = windowOrWindowList;
 
     return await Promise.all(
-      windows.map(async function (w) {
-        w["tabs"] = await chrome.tabs.query({ windowId: w["id"] });
+      windows.map(async function(w) {
+        w["tabs"] = await browser.tabs.query({ windowId: w["id"] });
         return w;
       })
     );
   } else {
     const w = windowOrWindowList;
-    w["tabs"] = await chrome.tabs.query({ windowId: w["id"] });
+    w["tabs"] = await browser.tabs.query({ windowId: w["id"] });
     return w;
   }
 }
@@ -21,14 +30,14 @@ export async function tabsFromWindows(windowOrWindowList) {
 
     return (
       await Promise.all(
-        windows.map(async function (w) {
-          return await chrome.tabs.query({ windowId: w["id"] });
+        windows.map(async function(w) {
+          return await browser.tabs.query({ windowId: w["id"] });
         })
       )
     ).flat();
   } else {
     const w = windowOrWindowList;
-    return await chrome.tabs.query({ windowId: w["id"] });
+    return await browser.tabs.query({ windowId: w["id"] });
   }
 }
 
@@ -37,13 +46,13 @@ export async function removeBookmarks(urls) {
     return;
   }
 
-  let bookmarks = await chrome.bookmarks.search({});
+  let bookmarks = await browser.bookmarks.search({});
   let removeBookmarks = [];
 
   await Promise.all(
     bookmarks.reduce((acc, bm) => {
       if (urls.includes(bm.url)) {
-        acc.push(chrome.bookmarks.remove(bm.id));
+        acc.push(browser.bookmarks.remove(bm.id));
       }
 
       return acc;
@@ -51,7 +60,7 @@ export async function removeBookmarks(urls) {
   );
 }
 
-export const cleanWindowForSave = function (w) {
+export const cleanWindowForSave = function(w) {
   delete w["alwaysOnTop"];
   delete w["id"];
   delete w["left"];
@@ -64,61 +73,92 @@ export const cleanWindowForSave = function (w) {
   return w;
 };
 
-export async function normalizeWindowID(windowID) {
-  if (windowID === "last-focused") {
-    let w = await chrome.windows.getLastFocused();
-    windowID = w.id;
-  }
+export async function getTabFromTabId(tabId) {
+  if (tabId === "last-focused") {
+    let w = await browser.windows.getLastFocused();
+    let tabs = await browser.tabs.query({ active: true, windowId: w.id });
 
-  return windowID;
+    if (tabs.length != 1) {
+      throw new Error("must have at least one tab focused");
+    }
+
+    return tabs[0];
+  } else {
+    tabId = parseInt(tabId);
+    return await browser.tabs.get(tabId);
+  }
+}
+
+export async function normalizeTabId(tabId) {
+  if (tabId === "last-focused") {
+    let w = await browser.windows.getLastFocused();
+    let tabs = await browser.tabs.query({ active: true, windowId: w.id });
+
+    if (tabs.length != 1) {
+      throw new Error("must have at least one tab focused");
+    }
+
+    return tabs[0].id;
+  } else {
+    return parseInt(tabId);
+  }
+}
+
+export async function normalizeWindowId(windowId) {
+  if (windowId === "last-focused") {
+    let w = await browser.windows.getLastFocused();
+    return w.id;
+  } else {
+    return parseInt(windowId);
+  }
 }
 
 export async function getNonAppWindows() {
-  return (await chrome.windows.getAll()).filter((w) => w["type"] !== "app");
+  return (await browser.windows.getAll()).filter((w) => w["type"] !== "app");
 }
 
 export async function getWindowWithID(windowID) {
   var w;
 
   if (windowID === "last-focused") {
-    w = chrome.windows.getLastFocused();
+    w = browser.windows.getLastFocused();
   } else {
-    w = chrome.windows.get(parseInt(windowID));
+    w = browser.windows.get(parseInt(windowID));
   }
 
   return await windowsWithTabs(await w);
 }
 
-export const makeTabs = async function (bodies) {
-  const ws = await chrome.windows.getAll();
+export const makeTabs = async function(bodies) {
+  const ws = await browser.windows.getAll();
 
   if (ws.length == 0) {
-    return chrome.windows.create(bodies.map((b) => b.url));
+    return browser.windows.create(bodies.map((b) => b.url));
   } else {
-    return Promise.all(bodies.map((b) => chrome.tabs.create(b)));
+    return Promise.all(bodies.map((b) => browser.tabs.create(b)));
   }
 };
 
-export const makeTab = async function (body) {
+export const makeTab = async function(body) {
   try {
-    const ws = await chrome.windows.getAll();
+    const ws = await browser.windows.getAll();
 
     if (ws.length == 0) {
-      return await chrome.windows.create(body);
+      return await browser.windows.create(body);
     } else {
-      return await chrome.tabs.create(body);
+      return await browser.tabs.create(body);
     }
   } catch {
-    return await chrome.windows.create(body);
+    return await browser.windows.create(body);
   }
 };
 
-export const makeTabWithWindowId = async function (body, wid) {
+export const makeTabWithWindowId = async function(body, wid) {
   body.windowId = wid;
   return makeTab(body);
 };
 
-export const cleanTabForSave = function (t) {
+export const cleanTabForSave = function(t) {
   delete t["audible"];
   delete t["autoDiscardable"];
   delete t["discarded"];
@@ -150,13 +190,13 @@ export async function updateTab(body, groupCache, windowCache) {
     }
 
     if (windowId == -1) {
-      await chrome.tabs.remove(id);
+      await browser.tabs.remove(id);
     } else {
       if (!windowId) {
-        const w = await chrome.windows.create({ tabId: id });
+        const w = await browser.windows.create({ tabId: id });
         windowId = w.id;
       } else {
-        await chrome.tabs.move(id, {
+        await browser.tabs.move(id, {
           index: -1,
           windowId: windowId,
         });
@@ -183,11 +223,11 @@ export async function updateTab(body, groupCache, windowCache) {
     }
 
     if (groupId == -1) {
-      groupId = await chrome.tabs.ungroup(id);
+      groupId = await browser.tabs.ungroup(id);
 
       groupCache[body.groupIdOrName] = groupId;
     } else {
-      groupId = await chrome.tabs.group({
+      groupId = await browser.tabs.group({
         tabIds: id,
         groupId: groupId,
       });
@@ -206,15 +246,16 @@ export async function updateTab(body, groupCache, windowCache) {
 
   delete body.open;
 
-  return await chrome.tabs.update(id, body);
+  return await browser.tabs.update(id, body);
 }
 
-export async function openTab(id) {
-  let tab = await chrome.tabs.get(id);
+export async function openTab(tabId) {
+  tabId = await normalizeTabId(tabId);
+  let tab = await browser.tabs.get(tabId);
   let windowId = tab.windowId;
   await Promise.all([
-    chrome.windows.update(windowId, { focused: true }),
-    chrome.tabs.update(id, { active: true }),
+    browser.windows.update(windowId, { focused: true }),
+    browser.tabs.update(tabId, { active: true }),
   ]);
 }
 
@@ -223,9 +264,9 @@ export async function removeTabs(urls) {
     return;
   }
 
-  let tabs = await tabsFromWindows(await chrome.windows.getAll());
+  let tabs = await tabsFromWindows(await browser.windows.getAll());
 
-  await chrome.tabs.remove(
+  await browser.tabs.remove(
     tabs.reduce((acc, tab) => {
       if (urls.includes(tab.url)) {
         acc.push(tab.id);
@@ -236,7 +277,7 @@ export async function removeTabs(urls) {
   );
 }
 
-export const stringToUtf8Array = (function () {
+export const stringToUtf8Array = (function() {
   const encoder = new TextEncoder("utf-8");
   return (str) => encoder.encode(str);
 })();

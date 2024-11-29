@@ -96,6 +96,17 @@ function browserIdFromSettingString(v) {
   return `${browser_type}-${v}`;
 }
 
+async function notifyMe(title, message) {
+  let opt = {
+    type: "basic",
+    title: title,
+    message: message,
+    iconUrl: "chrest_icon_128.png",
+  };
+
+  await browser.notifications.create(null, opt);
+}
+
 async function initialize(e) {
   browser.storage.sync.onChanged.addListener((changes) => {
     console.log(changes);
@@ -114,11 +125,20 @@ async function initialize(e) {
     browser.runtime.openOptionsPage();
   } else {
     await initializePort(results["browser_id"]);
+    
+    if (browser.runtime.lastError === undefined) {
+      console.log("socket started");
+      await notifyMe("Chrest", "Native host socket started");
+    } else {
+      console.log("socket failed to start");
+      await notifyMe("Chrest", "Native host socket failed");
+    }
   }
 }
 
 async function deinitializePort() {
   if (port != undefined) {
+    console.log("disconnecting from native host");
     port.disconnect();
   }
 }
@@ -135,12 +155,16 @@ async function initializePort(browser_id) {
   });
 }
 
-// browser.runtime.onStartup.addListener(() => {
-//   initialize({ reason: "startup" });
-// });
+browser.runtime.onStartup.addListener(() => {
+  console.log("on startup");
+});
 
-// browser.runtime.onInstalled.addListener(() => {
-//   initialize({ reason: "install" });
-// });
+browser.runtime.onInstalled.addListener(() => {
+  console.log("on installed");
+});
+
+console.log("main");
 
 initialize({ reason: "startup" });
+
+

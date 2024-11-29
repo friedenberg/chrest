@@ -7,32 +7,45 @@ import (
 )
 
 type Url struct {
-	url.URL
+	String string  `json:"string"`
+	Parts  url.URL `json:"parts"`
 }
 
 func (u *Url) Set(v string) (err error) {
-  if err = u.URL.UnmarshalBinary([]byte(v)); err != nil {
+	if err = u.Parts.UnmarshalBinary([]byte(v)); err != nil {
 		err = errors.Wrap(err)
 		return
 	}
 
-	return
-}
-
-func (u *Url) MarshalText() (b []byte, err error) {
-	if b, err = u.URL.MarshalBinary(); err != nil {
-		err = errors.Wrap(err)
-		return
-	}
+	u.String = v
 
 	return
 }
 
-func (u *Url) UnmarshalText(b []byte) (err error) {
-	if err = u.URL.UnmarshalBinary(b); err != nil {
-		err = errors.Wrap(err)
-		return
-	}
+// func (u *Url) UnmarshalJSON(b []byte) (err error) {
+// 	return
+// }
 
-	return
-}
+// func (u *Url) MarshalJSON() (b []byte, err error) {
+// 	return
+// }
+
+// func (u *Url) MarshalText() (b []byte, err error) {
+// 	if b, err = u.Parts.MarshalBinary(); err != nil {
+// 		err = errors.Wrap(err)
+// 		return
+// 	}
+
+// 	return
+// }
+
+// func (u *Url) UnmarshalText(b []byte) (err error) {
+// 	if err = u.Parts.UnmarshalBinary(b); err != nil {
+// 		err = errors.Wrap(err)
+// 		return
+// 	}
+
+// 	u.String = u.Parts.String()
+
+// 	return
+// }

@@ -14,6 +14,7 @@ import (
 type RequestPayloadPut struct {
 	Deleted []Item `json:"deleted"`
 	Added   []Item `json:"added"`
+	Focused []Item `json:"focused"`
 }
 
 type RequestPayloadGet []Item
@@ -27,7 +28,7 @@ func (BrowserRequestGet) MakeHTTPRequest(
 	ctx context.Context,
 ) (req *http.Request, err error) {
 	if req, err = http.NewRequestWithContext(
-    ctx,
+		ctx,
 		"GET",
 		"/items",
 		nil,

@@ -1,73 +1,166 @@
 import * as lib from "./lib.js";
-import { parse } from "error-stack-parser-es";
+
+export async function focusUrlItems(bid, items) {
+  if (items === undefined || items === null) {
+    return null;
+  }
+
+  return await Promise.all(
+    items.map(item => focusUrlItem(bid, item)),
+  );
+}
+
+export async function focusUrlItem(bid, item) {
+  if (item === undefined || item === null) {
+    return null;
+  }
+
+  if (getItemType(item) !== "tab") {
+    throw new Error("cannot focus non-tab item");
+  }
+
+  //TODO filter other BID's
+
+  let tab = await lib.getTabFromTabId(item.id.id);
+
+  await Promise.all(
+    [
+      await browser.tabs.update(tab.id, { active: true }),
+      await browser.windows.update(tab.windowId, { focused: true, drawAttention: true }),
+    ],
+  );
+
+  return item;
+}
 
 export async function makeUrlItems(bid, items) {
   if (items === undefined || items === null) {
     return [];
   }
 
-  try {
-    await browser.windows.getLastFocused();
-  } catch (e) {
-    await browser.windows.create();
+  let groupedItems = Object.groupBy(items, getItemType);
+
+  if (groupedItems.history !== undefined) {
+    throw new Error("cannot add history items");
   }
 
-  return await Promise.all(items.map(o => makeUrlItem(bid, o)));
+  let results = await Promise.all(
+    [
+      makeUrlItemTabs(bid, groupedItems.tab),
+      makeUrlItemBookmarks(bid, groupedItems.bookmark),
+    ],
+  );
+
+  return results.flat();
 }
 
-export async function makeUrlItem(bid, item) {
-  let result = item;
-
+export function getItemType(item) {
   let itemType = "tab";
 
   if (item.id !== undefined && item.id.type !== undefined) {
     itemType = item.id.type;
   }
 
-  try {
-    if (itemType == "bookmark") {
-      Object.assign(
-        result,
-        urlItemForBookmark(
-          bid,
-          await browser.bookmarks.create({
-            title: item.title,
-            url: item.url,
-          })
-        )
-      );
-    } else if (itemType == "tab") {
-      let tab = await browser.tabs.create({ url: item.url });
-
-      Object.assign(
-        result,
-        urlItemForTab(bid, tab,)
-      );
-    } else {
-      throw `unsupported type: ${item.id.type}`;
-    }
-  } catch (e) {
-    console.log(e);
-    result.error = {
-      message: e.message,
-      stack: parse(e),
-    };
-  }
-
-  return result;
+  return itemType;
 }
 
-export function urlItemForTab(bid, t) {
+export async function makeUrlItemBookmarks(bid, items) {
+  if (items == undefined) {
+    return [];
+  }
+
+  return items.map(item => {
+    Object.assign(
+      result,
+      urlItemForBookmark(
+        bid,
+        browser.bookmarks.create({
+          title: item.title,
+          url: item.url,
+        })
+      )
+    )
+  });
+}
+
+export async function makeUrlItemTabs(bid, items) {
+  if (items == undefined) {
+    return [];
+  }
+
+  let groupedTabs = Object.groupBy(items, item => item.windowId);
+  let windowPromises = {};
+
+  for (let windowId in groupedTabs) {
+    let windowItems = groupedTabs[windowId];
+    windowId = await lib.normalizeWindowId(windowId);
+
+    windowPromises[windowId] = makeUrlItemTabsForWindowId(
+      windowId,
+      windowItems,
+    );
+  }
+
+  let windowItems = await Promise.all(
+    Object.keys(windowPromises).map(
+      async windowId => {
+        let windowTabs = await windowPromises[windowId];
+
+        return windowTabs.map(
+          (tab, idx) => {
+            let item = groupedTabs[windowId][idx];
+            let url = item.url.string;
+            return { ...urlItemForTabWithUrl(bid, tab, url) };
+          },
+        );
+      },
+    ),
+  );
+
+  return windowItems.flat();
+}
+
+export async function makeUrlItemTabsForWindowId(windowId, items) {
+  let window = null;
+
+  try {
+    window = browser.windows.get(windowId);
+
+    // TODO filter other BID's
+    return await Promise.all(
+      items.map(
+        item => {
+          let url = item.url.string;
+          return browser.tabs.create({ url: url, windowId: windowId });
+        }
+      ),
+    );
+  } catch (e) {
+    window = browser.windows.create({
+      url: items.map(item => item.url.string),
+    });
+
+    return (await window).tabs;
+  }
+}
+
+export function urlItemForTab(bid, tab) {
+  return urlItemForTabWithUrl(bid, tab, tab.url);
+}
+
+export function urlItemForTabWithUrl(bid, tab, url) {
   return {
-    title: t.title,
+    title: tab.title,
     id: {
       browser: bid,
-      id: t.id.toString(),
+      id: tab.id.toString(),
       type: "tab",
     },
-    windowId: t.windowId.toString(),
-    url: t.url,
-    date: new Date(t.lastAccessed),
+    windowId: tab.windowId.toString(),
+    url: {
+      string: url,
+    },
+    date: new Date(tab.lastAccessed),
   };
 }
 
@@ -79,7 +172,9 @@ export function urlItemForBookmark(bid, o) {
       id: o.id.toString(),
       type: "bookmark",
     },
-    url: o.url,
+    url: {
+      string: o.url,
+    },
     date: new Date(o.dateAdded),
   };
 }
@@ -106,7 +201,9 @@ export async function allHistoryItems(bid) {
       id: o.id.toString(),
       type: "history",
     },
-    url: o.url,
+    url: {
+      string: o.url,
+    },
     date: new Date(o.lastVisitTime),
   }));
 }
