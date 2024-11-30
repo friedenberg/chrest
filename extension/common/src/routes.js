@@ -44,6 +44,8 @@ Routes["/items"] = {
       req.body.focused = [];
     }
 
+    // TODO check existing tabs for "added" elements and switch them to
+    // "focused"
     let body = {
       added: await items.makeUrlItems(req.browser_id, req.body.added.filter(isOurBid)),
       deleted: await items.removeUrlItems(req.browser_id, req.body.deleted.filter(isOurBid)),
