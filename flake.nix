@@ -27,6 +27,17 @@
             ];
           };
 
+          chrest = pkgs.buildGoApplication {
+            name = "chrest";
+            pname = "chrest";
+            version = "0.0.1";
+            pwd = ./go/cmd;
+            src = ./go/cmd;
+            modules = ./go/cmd/gomod2nix.toml;
+            doCheck = false;
+            enableParallelBuilding = true;
+          };
+
         in
         {
           devShells.default = pkgs.mkShell {
@@ -40,6 +51,9 @@
               js.devShells.${system}.default
             ];
           };
+
+          pname = "chrest";
+          packages.default = chrest;
         })
     );
 }

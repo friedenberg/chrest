@@ -21,6 +21,7 @@ Routes["/items"] = {
     return {
       status: 200,
       body: [
+        // TODO return favicon data
         await items.allTabItems(req.browser_id),
         await items.allBookmarkItems(req.browser_id),
         await items.allHistoryItems(req.browser_id),
