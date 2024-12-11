@@ -30,9 +30,7 @@ func TestJSONMarshalUnmarshal(t1 *testing.T) {
       "type": "history"
     },
     "title": "wallaby",
-    "url": {
-      "string": "https://wallaby.com"
-    }
+    "url": "https://wallaby.com"
   }
   `
 

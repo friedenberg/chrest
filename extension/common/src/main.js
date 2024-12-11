@@ -53,7 +53,6 @@ async function onMessageHTTP(req) {
 
   response.type = "http";
 
-  console.log(response);
   port.postMessage(response);
 }
 
@@ -125,13 +124,15 @@ async function initialize(e) {
     browser.runtime.openOptionsPage();
   } else {
     await initializePort(results["browser_id"]);
+
+    let lastError = browser.runtime.lastError;
     
-    if (browser.runtime.lastError === undefined) {
+    if (lastError === undefined || lastError === null) {
       console.log("socket started");
       await notifyMe("Chrest", "Native host socket started");
     } else {
       console.log("socket failed to start");
-      await notifyMe("Chrest", "Native host socket failed");
+      await notifyMe("Chrest", `Native host socket failed: ${lastError}`);
     }
   }
 }

@@ -109,7 +109,7 @@ export async function makeUrlItemTabs(bid, items) {
         return windowTabs.map(
           (tab, idx) => {
             let item = groupedTabs[windowId][idx];
-            let url = item.url.string;
+            let url = item.url;
             return { ...urlItemForTabWithUrl(bid, tab, url) };
           },
         );
@@ -130,14 +130,14 @@ export async function makeUrlItemTabsForWindowId(windowId, items) {
     return await Promise.all(
       items.map(
         item => {
-          let url = item.url.string;
+          let url = item.url;
           return browser.tabs.create({ url: url, windowId: windowId });
         }
       ),
     );
   } catch (e) {
     window = browser.windows.create({
-      url: items.map(item => item.url.string),
+      url: items.map(item => item.url),
     });
 
     return (await window).tabs;
@@ -157,9 +157,7 @@ export function urlItemForTabWithUrl(bid, tab, url) {
       type: "tab",
     },
     windowId: tab.windowId.toString(),
-    url: {
-      string: url,
-    },
+    url: url,
     date: new Date(tab.lastAccessed),
   };
 }
@@ -172,9 +170,7 @@ export function urlItemForBookmark(bid, o) {
       id: o.id.toString(),
       type: "bookmark",
     },
-    url: {
-      string: o.url,
-    },
+    url: o.url,
     date: new Date(o.dateAdded),
   };
 }
@@ -187,12 +183,16 @@ export async function allTabItems(bid) {
 
 export async function allBookmarkItems(bid) {
   return (await browser.bookmarks.search({}))
-    .filter((b) => b.type === "bookmark")
+    .filter((b) => b.childre === undefined)
     .map(o => urlItemForBookmark(bid, o));
 }
 
 export async function allHistoryItems(bid) {
-  let history = await browser.history.search({ text: "" });
+  let history = await browser.history.search({
+    startTime: 0,
+    maxResults: 100_000,
+    text: "",
+  });
 
   return history.map((o) => ({
     title: o.title,
@@ -201,9 +201,7 @@ export async function allHistoryItems(bid) {
       id: o.id.toString(),
       type: "history",
     },
-    url: {
-      string: o.url,
-    },
+    url: o.url,
     date: new Date(o.lastVisitTime),
   }));
 }
