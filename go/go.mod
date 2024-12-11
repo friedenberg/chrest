@@ -4,10 +4,7 @@ go 1.23.0
 
 toolchain go1.23.3
 
-require (
-	code.linenisgreat.com/chrest/go v0.0.0-20241130155642-ba5156f42bcd
-	code.linenisgreat.com/zit/go/zit v0.0.0-20241207192532-9e0da0a8122c
-)
+require code.linenisgreat.com/zit/go/zit v0.0.0-20241207192532-9e0da0a8122c
 
 require (
 	github.com/brandondube/tai v0.1.0 // indirect
