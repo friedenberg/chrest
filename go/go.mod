@@ -1,4 +1,4 @@
-module example.com/gomod2nix-template
+module code.linenisgreat.com/chrest/go
 
 go 1.23.0
 
