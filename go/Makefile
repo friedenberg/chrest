@@ -18,10 +18,7 @@ endif
 
 .PHONY: build watch exclude graph_dependencies
 
-build: build/chrest gomod2nix.toml;
-
-gomod2nix.toml: go.mod go.sum
-> gomod2nix || true
+build: build/chrest;
 
 files_go_cmd := $(shell find cmd -iname '*.go')
 files_go_src := $(shell find src -iname '*.go') go.mod go.sum

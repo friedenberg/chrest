@@ -1,7 +1,7 @@
 {
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
-    nixpkgs-stable.url = "github:NixOS/nixpkgs/nixos-24.05";
+    nixpkgs-stable.url = "github:NixOS/nixpkgs/nixos-24.11";
     utils.url = "github:numtide/flake-utils";
 
     go = {
@@ -44,6 +44,10 @@
             packages = (with pkgs; [
               fish
               gnumake
+              httpie
+              jq
+              just
+              web-ext
             ]);
 
             inputsFrom = [
