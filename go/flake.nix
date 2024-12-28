@@ -1,36 +1,49 @@
 {
-  description = "A basic gomod2nix flake";
-
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
+    nixpkgs-stable.url = "nixpkgs/release-24.11";
     utils.url = "github:numtide/flake-utils";
-    gomod2nix.url = "github:nix-community/gomod2nix";
-    gomod2nix.inputs.nixpkgs.follows = "nixpkgs";
-    gomod2nix.inputs.flake-utils.follows = "utils";
+
+    go = {
+      url = "github:friedenberg/dev-flake-templates?dir=go";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
+    shell = {
+      url = "github:friedenberg/dev-flake-templates?dir=shell";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
-  outputs = { self, nixpkgs, utils, gomod2nix }:
+  outputs = {
+    self,
+    nixpkgs,
+    nixpkgs-stable,
+    utils,
+    go,
+    shell,
+  }:
     (utils.lib.eachDefaultSystem
       (system:
         let
           pkgs = import nixpkgs {
             inherit system;
+
             overlays = [
-              gomod2nix.overlays.default
+              go.overlays.default
             ];
           };
 
-          # The current default sdk for macOS fails to compile go projects, so we use a newer one for now.
-          # This has no effect on other platforms.
-          callPackage = pkgs.darwin.apple_sdk_11_0.callPackage or pkgs.callPackage;
         in
         {
-          packages.default = pkgs.buildGoApplication {
+          packages.default = pkgs.buildGoModule rec {
+            doCheck = false;
+            enableParallelBuilding = true;
             pname = "chrest";
-            version = "0.1";
-            pwd = ./.;
+            version = "0.0.0";
             src = ./.;
-            modules = ./gomod2nix.toml;
+            vendorHash = "sha256-/YTx1dcoBWMRsoH5tK69hWAmMuIY6ZIH5mT+XCrDe0E=";
+            proxyVendor = true;
           };
 
           devShells.default = pkgs.mkShell {
@@ -42,7 +55,8 @@
             ]);
 
             inputsFrom = [
-              gomod2nix.devShells.${system}.default
+              go.devShells.${system}.default
+              shell.devShells.${system}.default
             ];
           };
         })
