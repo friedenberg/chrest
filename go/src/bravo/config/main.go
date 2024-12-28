@@ -10,7 +10,6 @@ import (
 	"path/filepath"
 
 	"code.linenisgreat.com/zit/go/zit/src/alfa/errors"
-	"code.linenisgreat.com/zit/go/zit/src/bravo/quiter"
 	"code.linenisgreat.com/zit/go/zit/src/echo/fd"
 )
 
@@ -89,7 +88,7 @@ func (c Config) Directory() (v string) {
 }
 
 func (c *Config) Read() (err error) {
-	wg := quiter.MakeErrorWaitGroupParallel()
+	wg := errors.MakeWaitGroupParallel()
 
 	wg.Do(c.readConfig)
 	wg.Do(c.readLoadedBrowsers)
