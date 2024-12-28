@@ -9,7 +9,6 @@ import (
 
 	"code.linenisgreat.com/chrest/go/src/bravo/config"
 	"code.linenisgreat.com/zit/go/zit/src/alfa/errors"
-	"code.linenisgreat.com/zit/go/zit/src/bravo/quiter"
 )
 
 type BrowserProxy struct {
@@ -58,7 +57,7 @@ func (b BrowserProxy) GetAll(
 		return
 	}
 
-	wg := quiter.MakeErrorWaitGroupParallel()
+	wg := errors.MakeWaitGroupParallel()
 
 	var l sync.Mutex
 
@@ -154,7 +153,7 @@ func (b BrowserProxy) PutAll(
 		return
 	}
 
-	wg := quiter.MakeErrorWaitGroupParallel()
+	wg := errors.MakeWaitGroupParallel()
 
 	var l sync.Mutex
 
