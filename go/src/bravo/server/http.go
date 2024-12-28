@@ -101,7 +101,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 			err := errors.Errorf("Received a request to restart with new browser id.")
 			flushServerError(err, enc, w, req)
 
-			s.Cancel(err)
+			s.CancelWithError(err)
 
 			return
 
@@ -109,7 +109,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 			err := errors.Errorf("unsupported message type: %q", msgType)
 			flushServerError(err, enc, w, req)
 
-			s.Cancel(err)
+			s.CancelWithError(err)
 
 			return
 		}

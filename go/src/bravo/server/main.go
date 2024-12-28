@@ -13,23 +13,20 @@ import (
 )
 
 type Server struct {
+	errors.Context
 	Address         *net.UnixAddr
 	Listener        *net.UnixListener
 	HTTPHandlerFunc http.HandlerFunc
-	Cancel          context.CancelCauseFunc
 }
 
-func (s *Server) Initialize(
-	ctx context.Context,
-) (err error) {
+func (s *Server) Initialize() {
 	var msgIAm JSONObject
 	var browserId string
 
 	ui.Err().Printf("waiting for id from browser")
 
-	if _, err = ReadFromBrowser(&msgIAm); err != nil {
-		err = errors.Wrap(err)
-		return
+	if _, err := ReadFromBrowser(&msgIAm); err != nil {
+		s.CancelWithError(err)
 	}
 
 	ui.Err().Printf("read from browser: %q", msgIAm)
@@ -37,7 +34,7 @@ func (s *Server) Initialize(
 	var ok bool
 
 	if browserId, ok = msgIAm["browser_id"].(string); !ok {
-		err = errors.Errorf(
+		s.CancelWithErrorf(
 			"expected string `browser_id` but got %T",
 			msgIAm["browser_id"],
 		)
@@ -47,29 +44,37 @@ func (s *Server) Initialize(
 
 	var dir string
 
-	if dir, err = config.StateDirectory(); err != nil {
-		err = errors.Wrap(err)
-		return
+	{
+		var err error
+
+		if dir, err = config.StateDirectory(); err != nil {
+			s.CancelWithError(err)
+		}
 	}
 
-	if err = os.MkdirAll(dir, 0o700); err != nil {
-		err = errors.Wrap(err)
-		return
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		s.CancelWithError(err)
 	}
 
 	pathSock := fmt.Sprintf("%s/%s.sock", dir, browserId)
 
 	ui.Err().Printf("starting server on %q", pathSock)
 
-	if s.Address, err = net.ResolveUnixAddr("unix", pathSock); err != nil {
-		err = errors.Wrap(err)
-		return
+	{
+		var err error
+
+		if s.Address, err = net.ResolveUnixAddr("unix", pathSock); err != nil {
+			s.CancelWithError(err)
+		}
 	}
 
-	if s.Listener, err = net.ListenUnix("unix", s.Address); err != nil {
-		// TODO add sigil error
-		err = errors.Wrap(err)
-		return
+	{
+		var err error
+
+		if s.Listener, err = net.ListenUnix("unix", s.Address); err != nil {
+			// TODO add sigil error
+			s.CancelWithError(err)
+		}
 	}
 
 	ui.Err().Printf("listening: %s", pathSock)
@@ -77,9 +82,7 @@ func (s *Server) Initialize(
 	return
 }
 
-func (s *Server) Serve(
-	ctx context.Context,
-) (err error) {
+func (s *Server) Serve() {
 	handler := s.HTTPHandlerFunc
 
 	if handler == nil {
@@ -89,7 +92,7 @@ func (s *Server) Serve(
 	httpServer := http.Server{Handler: handler}
 
 	go func() {
-		<-ctx.Done()
+		<-s.Done()
 		ui.Err().Print("shutting down")
 
 		ctx, cancel := context.WithTimeoutCause(
@@ -103,14 +106,13 @@ func (s *Server) Serve(
 		httpServer.Shutdown(ctx)
 	}()
 
-	if err = httpServer.Serve(s.Listener); err != nil {
+	if err := httpServer.Serve(s.Listener); err != nil {
 		if errors.Is(err, http.ErrServerClosed) {
 			err = nil
+			return
 		} else {
-			err = errors.Wrap(err)
+			s.CancelWithError(err)
 		}
-
-		return
 	}
 
 	return

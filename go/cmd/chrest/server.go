@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"os"
 	"syscall"
 
@@ -21,29 +20,19 @@ func CmdServer(c config.Config) (err error) {
 		return
 	}
 
-	ctx, cancel := context.WithCancelCause(context.Background())
-	defer cancel(nil)
+	ctx := errors.MakeContextDefault()
+	ctx.SetCancelOnSignals(syscall.SIGTERM)
 
-	srv := server.Server{
-		Cancel: cancel,
-	}
+	if err := ctx.Run(
+		func(ctx errors.Context) {
+			srv := server.Server{
+				Context: ctx,
+			}
 
-	if err = srv.Initialize(ctx); err != nil {
-		err = errors.Wrap(err)
-		return
-	}
-
-	errors.MakeSignalWatchChannelAndCancelContextIfNecessary(
-		cancel,
-		syscall.SIGTERM,
-	)
-
-	if err = srv.Serve(ctx); err != nil {
-		err = errors.Wrap(err)
-		return
-	}
-
-	if err := context.Cause(ctx); err != nil {
+			srv.Initialize()
+			srv.Serve()
+		},
+	); err != nil {
 		var normalError errors.StackTracer
 
 		if errors.As(err, &normalError) && !normalError.ShouldShowStackTrace() {
