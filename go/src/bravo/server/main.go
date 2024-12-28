@@ -13,7 +13,7 @@ import (
 )
 
 type Server struct {
-	errors.Context
+	*errors.Context
 	Address         *net.UnixAddr
 	Listener        *net.UnixListener
 	HTTPHandlerFunc http.HandlerFunc
@@ -78,8 +78,6 @@ func (s *Server) Initialize() {
 	}
 
 	ui.Err().Printf("listening: %s", pathSock)
-
-	return
 }
 
 func (s *Server) Serve() {

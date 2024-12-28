@@ -15,7 +15,6 @@ import (
 	"code.linenisgreat.com/chrest/go/src/bravo/config"
 	"code.linenisgreat.com/chrest/go/src/charlie/browser_items"
 	"code.linenisgreat.com/zit/go/zit/src/alfa/errors"
-	"code.linenisgreat.com/zit/go/zit/src/bravo/quiter"
 )
 
 func CmdItemsPut(c config.Config) (err error) {
@@ -36,7 +35,7 @@ func CmdItemsPut(c config.Config) (err error) {
 		return
 	}
 
-	wg := quiter.MakeErrorWaitGroupParallel()
+	wg := errors.MakeWaitGroupParallel()
 	responses := make(map[string]browser_items.RequestPayloadPut, len(socks))
 
 	var l sync.Mutex
