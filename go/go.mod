@@ -2,7 +2,7 @@ module code.linenisgreat.com/chrest/go
 
 go 1.23.0
 
-require code.linenisgreat.com/zit/go/zit v0.0.0-20250117135008-5b19f7e6c27a
+require code.linenisgreat.com/zit/go/zit v0.0.0-20250117135934-13cad81ec864
 
 require (
 	filippo.io/age v1.2.1 // indirect

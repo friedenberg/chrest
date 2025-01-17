@@ -24,9 +24,9 @@ func CmdServer(c config.Config) (err error) {
 	ctx.SetCancelOnSignals(syscall.SIGTERM)
 
 	if err := ctx.Run(
-		func(ctx errors.IContext) {
+		func(ctx errors.Context) {
 			srv := server.Server{
-				IContext: ctx,
+				Context: ctx,
 			}
 
 			srv.Initialize()
