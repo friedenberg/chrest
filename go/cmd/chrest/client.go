@@ -14,7 +14,7 @@ import (
 	"code.linenisgreat.com/chrest/go/src/bravo/client"
 	"code.linenisgreat.com/chrest/go/src/bravo/config"
 	"code.linenisgreat.com/zit/go/zit/src/alfa/errors"
-	"code.linenisgreat.com/zit/go/zit/src/charlie/files"
+	"code.linenisgreat.com/zit/go/zit/src/alfa/primordial"
 )
 
 var (
@@ -123,7 +123,7 @@ func cmdClientOneSocket(sock string) (err error) {
 		return
 	}
 
-	if files.IsTty(os.Stdout) {
+	if primordial.IsTty(os.Stdout) {
 		for k, vs := range resp.Header {
 			for _, v := range vs {
 				fmt.Printf("%s: %s\n", k, v)

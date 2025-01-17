@@ -13,7 +13,7 @@ import (
 )
 
 type Server struct {
-	*errors.Context
+	errors.IContext
 	Address         *net.UnixAddr
 	Listener        *net.UnixListener
 	HTTPHandlerFunc http.HandlerFunc
