@@ -1,7 +1,7 @@
 import * as routes from "./routes.js";
 import { parse } from "error-stack-parser-es";
 import { Mutex } from "async-mutex";
-import browser_type from 'consts:browser_type';
+import browser_type from "consts:browser_type";
 
 async function tryMatchRoute(req) {
   for (let route of routes.sortedRoutes) {
@@ -41,7 +41,7 @@ async function onMessageHTTP(req) {
     req.browser_id = {
       browser: browser_type,
       id: results["browser_id"],
-    }
+    };
   }
 
   let response = await Promise.race([timeout(1000), runRoute(req)]);
@@ -126,7 +126,7 @@ async function initialize(e) {
     await initializePort(results["browser_id"]);
 
     let lastError = browser.runtime.lastError;
-    
+
     if (lastError === undefined || lastError === null) {
       console.log("socket started");
       await notifyMe("Chrest", "Native host socket started");
@@ -150,9 +150,13 @@ async function initializePort(browser_id) {
   console.log(`try connect: ${JSON.stringify(browser_id)}`);
   port = browser.runtime.connectNative("com.linenisgreat.code.chrest");
   port.onMessage.addListener(onMessage);
+
+  let browserId = browserIdFromSettingString(browser_id);
+  console.log(browserId);
+
   port.postMessage({
     type: "who-am-i",
-    browser_id: browserIdFromSettingString(browser_id),
+    browser_id: browserId,
   });
 }
 
@@ -167,5 +171,3 @@ browser.runtime.onInstalled.addListener(() => {
 console.log("main");
 
 initialize({ reason: "startup" });
-
-

@@ -42,7 +42,7 @@
             pname = "chrest";
             version = "0.0.0";
             src = ./.;
-            vendorHash = "sha256-/YTx1dcoBWMRsoH5tK69hWAmMuIY6ZIH5mT+XCrDe0E=";
+            vendorHash = "sha256-BOwTBGeC8qTdslNsKVluMnZPBLxnEAPaotED5/mSgc8=";
             proxyVendor = true;
           };
 
