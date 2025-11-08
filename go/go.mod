@@ -5,6 +5,7 @@ go 1.23.0
 require code.linenisgreat.com/zit/go/zit v0.0.0-20250117135934-13cad81ec864
 
 require (
+	code.linenisgreat.com/chrest v0.0.0-20250124213147-950e0e72fc96 // indirect
 	filippo.io/age v1.2.1 // indirect
 	github.com/DataDog/zstd v1.5.6 // indirect
 	github.com/brandondube/tai v0.1.0 // indirect
