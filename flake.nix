@@ -8,49 +8,45 @@
     devenv-js.url = "github:friedenberg/eng?dir=pkgs/alfa/devenv-js";
   };
 
-  outputs = { self, nixpkgs, nixpkgs-stable, utils, devenv-go, devenv-js }:
-    (utils.lib.eachDefaultSystem
-      (system:
-        let
+  outputs =
+    {
+      self,
+      nixpkgs,
+      nixpkgs-stable,
+      utils,
+      devenv-go,
+      devenv-js,
+    }:
+    (utils.lib.eachDefaultSystem (
+      system:
+      let
 
-          pkgs = import nixpkgs {
-            inherit system;
-            overlays = [
-              devenv-go.overlays.default
-            ];
-          };
-
-          chrest = pkgs.buildGoApplication {
-            name = "chrest";
-            pname = "chrest";
-            version = "0.0.1";
-            pwd = ./go/cmd;
-            src = ./go/cmd;
-            modules = ./go/gomod2nix.toml;
-            doCheck = false;
-            enableParallelBuilding = true;
-          };
-
-        in
-        {
-          devShells.default = pkgs.mkShell {
-            packages = (with pkgs; [
+        pkgs = import nixpkgs {
+          inherit system;
+          overlays = [
+            devenv-go.overlays.default
+          ];
+        };
+      in
+      {
+        devShells.default = pkgs.mkShell {
+          packages = (
+            with pkgs;
+            [
               fish
               gnumake
               httpie
               jq
               just
               web-ext
-            ]);
+            ]
+          );
 
-            inputsFrom = [
-              devenv-go.devShells.${system}.default
-              devenv-js.devShells.${system}.default
-            ];
-          };
-
-          pname = "chrest";
-          packages.default = chrest;
-        })
-    );
+          inputsFrom = [
+            devenv-go.devShells.${system}.default
+            devenv-js.devShells.${system}.default
+          ];
+        };
+      }
+    ));
 }
