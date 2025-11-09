@@ -9,16 +9,16 @@
   };
 
   outputs =
-    { self
-    , nixpkgs
-    , nixpkgs-stable
-    , utils
-    , devenv-go
-    , devenv-shell
-    ,
+    {
+      self,
+      nixpkgs,
+      nixpkgs-stable,
+      utils,
+      devenv-go,
+      devenv-shell,
     }:
-    (utils.lib.eachDefaultSystem
-      (system:
+    (utils.lib.eachDefaultSystem (
+      system:
       let
         pkgs = import nixpkgs {
           inherit system;
@@ -28,31 +28,37 @@
           ];
         };
 
+        chrest = pkgs.buildGoApplication {
+          pname = "chrest";
+          version = "0.0.1";
+          src = ./.;
+          subPackages = [
+            "cmd/chrest"
+          ];
+          modules = ./gomod2nix.toml;
+        };
       in
       {
-        packages.default = pkgs.buildGoModule {
-          doCheck = false;
-          enableParallelBuilding = true;
-          pname = "chrest";
-          version = "0.0.0";
-          src = ./.;
-          vendorHash = "sha256-BOwTBGeC8qTdslNsKVluMnZPBLxnEAPaotED5/mSgc8=";
-          proxyVendor = true;
-        };
+
+        packages.chrest = chrest;
+        packages.default = chrest;
 
         devShells.default = pkgs.mkShell {
-          packages = (with pkgs; [
-            bats
-            fish
-            gnumake
-            just
-          ]);
+          packages = (
+            with pkgs;
+            [
+              bats
+              fish
+              gnumake
+              just
+            ]
+          );
 
           inputsFrom = [
             devenv-go.devShells.${system}.default
             devenv-shell.devShells.${system}.default
           ];
         };
-      })
-    );
+      }
+    ));
 }

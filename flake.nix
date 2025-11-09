@@ -26,7 +26,7 @@
             version = "0.0.1";
             pwd = ./go/cmd;
             src = ./go/cmd;
-            modules = ./go/cmd/gomod2nix.toml;
+            modules = ./go/gomod2nix.toml;
             doCheck = false;
             enableParallelBuilding = true;
           };
