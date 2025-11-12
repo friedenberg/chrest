@@ -6,8 +6,8 @@ import (
 	"net/http"
 	"os"
 
-	"code.linenisgreat.com/zit/go/zit/src/alfa/errors"
-	"code.linenisgreat.com/zit/go/zit/src/bravo/ui"
+	"code.linenisgreat.com/dodder/go/src/alfa/errors"
+	"code.linenisgreat.com/dodder/go/src/bravo/ui"
 )
 
 type (
@@ -17,7 +17,10 @@ type (
 	ServerRequestJSONBody JSONObject
 )
 
-func NewRequest(in *http.Request, body JSONAnything) (out ServerRequestJSONBody) {
+func NewRequest(
+	in *http.Request,
+	body JSONAnything,
+) (out ServerRequestJSONBody) {
 	out = map[string]interface{}{
 		"type":   "http",
 		"path":   in.URL.Path,
@@ -25,7 +28,7 @@ func NewRequest(in *http.Request, body JSONAnything) (out ServerRequestJSONBody)
 		"body":   body,
 	}
 
-	return
+	return out
 }
 
 func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
@@ -84,7 +87,10 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 		if !ok {
 			flushServerError(
-				errors.Errorf("expected response to have `type` key. Response: %q", res),
+				errors.Errorf(
+					"expected response to have `type` key. Response: %q",
+					res,
+				),
 				enc,
 				w,
 				req,
@@ -98,10 +104,12 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 			break
 
 		case "who-am-i":
-			err := errors.Errorf("Received a request to restart with new browser id.")
+			err := errors.Errorf(
+				"Received a request to restart with new browser id.",
+			)
 			flushServerError(err, enc, w, req)
 
-			s.CancelWithError(err)
+			s.Cancel(err)
 
 			return
 
@@ -109,7 +117,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 			err := errors.Errorf("unsupported message type: %q", msgType)
 			flushServerError(err, enc, w, req)
 
-			s.CancelWithError(err)
+			s.Cancel(err)
 
 			return
 		}
@@ -120,7 +128,11 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 		if !ok {
 			flushServerError(
-				errors.Errorf("expected %T but got %T", headers, res["headers"]),
+				errors.Errorf(
+					"expected %T but got %T",
+					headers,
+					res["headers"],
+				),
 				enc,
 				w,
 				req,

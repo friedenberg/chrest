@@ -1,3 +1,5 @@
+//go:build test
+
 package browser_items
 
 import (
@@ -5,18 +7,18 @@ import (
 	"strings"
 	"testing"
 
-	"code.linenisgreat.com/zit/go/zit/src/alfa/errors"
-	"code.linenisgreat.com/zit/go/zit/src/bravo/test_logz"
+	"code.linenisgreat.com/dodder/go/src/alfa/errors"
+	"code.linenisgreat.com/dodder/go/src/bravo/ui"
 )
 
 func TestMain(m *testing.M) {
-	errors.SetTesting()
+	ui.SetTesting()
 	m.Run()
 }
 
 // TODO fix this test
 func TestJSONMarshalUnmarshal(t1 *testing.T) {
-	t := test_logz.T{T: t1}
+	t := ui.T{T: t1}
 
 	jsonString := `
   {
@@ -45,7 +47,9 @@ func TestJSONMarshalUnmarshal(t1 *testing.T) {
 	t.AssertNoError(err)
 
 	// actual := sb.String()
-	// expected := "{\"id\":{\"browser\":{\"browser\":\"firefox\",\"id\":\"ddog\"},\"type\":\"history\",\"id\":\"jBlIt0RX6whu\"},\"url\":{\"string\":\"https://wallaby.com\",\"parts\":{\"Scheme\":\"\",\"Opaque\":\"\",\"User\":null,\"Host\":\"\",\"Path\":\"\",\"RawPath\":\"\",\"OmitHost\":false,\"ForceQuery\":false,\"RawQuery\":\"\",\"Fragment\":\"\",\"RawFragment\":\"\"}},\"date\":\"2024-09-11T20 31.655Z\",\"title\":\"wallaby\",\"external_id\":\"\"}\n"
+	// expected :=
+	// "{\"id\":{\"browser\":{\"browser\":\"firefox\",\"id\":\"ddog\"},\"type\":\"history\",\"id\":\"jBlIt0RX6whu\"},\"url\":{\"string\":\"https://wallaby.com\",\"parts\":{\"Scheme\":\"\",\"Opaque\":\"\",\"User\":null,\"Host\":\"\",\"Path\":\"\",\"RawPath\":\"\",\"OmitHost\":false,\"ForceQuery\":false,\"RawQuery\":\"\",\"Fragment\":\"\",\"RawFragment\":\"\"}},\"date\":\"2024-09-11T20
+	// 31.655Z\",\"title\":\"wallaby\",\"external_id\":\"\"}\n"
 
 	// t.AssertEqual(expected, actual)
 }

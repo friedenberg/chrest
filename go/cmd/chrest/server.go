@@ -6,8 +6,9 @@ import (
 
 	"code.linenisgreat.com/chrest/go/src/bravo/config"
 	"code.linenisgreat.com/chrest/go/src/bravo/server"
-	"code.linenisgreat.com/zit/go/zit/src/alfa/errors"
-	"code.linenisgreat.com/zit/go/zit/src/bravo/ui"
+	"code.linenisgreat.com/dodder/go/src/alfa/errors"
+	"code.linenisgreat.com/dodder/go/src/alfa/interfaces"
+	"code.linenisgreat.com/dodder/go/src/bravo/ui"
 )
 
 func CmdServer(c config.Config) (err error) {
@@ -17,23 +18,23 @@ func CmdServer(c config.Config) (err error) {
 
 	if err = c.Read(); err != nil {
 		err = errors.Wrap(err)
-		return
+		return err
 	}
 
 	ctx := errors.MakeContextDefault()
 	ctx.SetCancelOnSignals(syscall.SIGTERM)
 
 	if err := ctx.Run(
-		func(ctx errors.Context) {
+		func(ctx interfaces.Context) {
 			srv := server.Server{
-				Context: ctx,
+				ActiveContext: ctx,
 			}
 
 			srv.Initialize()
 			srv.Serve()
 		},
 	); err != nil {
-		var normalError errors.StackTracer
+		var normalError interfaces.ErrorStackTracer
 
 		if errors.As(err, &normalError) && !normalError.ShouldShowStackTrace() {
 			ui.Err().Printf("%s", normalError.Error())
@@ -44,5 +45,5 @@ func CmdServer(c config.Config) (err error) {
 		}
 	}
 
-	return
+	return err
 }

@@ -5,7 +5,7 @@ import (
 	"net/url"
 	"strings"
 
-	"code.linenisgreat.com/zit/go/zit/src/alfa/errors"
+	"code.linenisgreat.com/dodder/go/src/alfa/errors"
 )
 
 type BrowserItem struct {

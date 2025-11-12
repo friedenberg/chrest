@@ -9,11 +9,11 @@
       },
       "locked": {
         "dir": "pkgs/alfa/devenv-go",
-        "lastModified": 1762206616,
-        "narHash": "sha256-XlT1R9rC8Ifp2rNddFAWSWIp8k8y+8j3Z3wRRaBOBsk=",
+        "lastModified": 1762861367,
+        "narHash": "sha256-1X++ff4I7IFpOCmeTAKSy0wFQUqo/9zFfiUbmciLTO8=",
         "owner": "friedenberg",
         "repo": "eng",
-        "rev": "d2a2657a281c5fe442d5d7401b155631f5ff2716",
+        "rev": "fea3039bd11e9559138abc2335c9a17f214fa5a7",
         "type": "github"
       },
       "original": {
@@ -31,11 +31,11 @@
       },
       "locked": {
         "dir": "pkgs/alfa/devenv-js",
-        "lastModified": 1762206616,
-        "narHash": "sha256-XlT1R9rC8Ifp2rNddFAWSWIp8k8y+8j3Z3wRRaBOBsk=",
+        "lastModified": 1762861367,
+        "narHash": "sha256-1X++ff4I7IFpOCmeTAKSy0wFQUqo/9zFfiUbmciLTO8=",
         "owner": "friedenberg",
         "repo": "eng",
-        "rev": "d2a2657a281c5fe442d5d7401b155631f5ff2716",
+        "rev": "fea3039bd11e9559138abc2335c9a17f214fa5a7",
         "type": "github"
       },
       "original": {
@@ -263,9 +263,8 @@
         "url": "https://api.flakehub.com/f/pinned/numtide/flake-utils/0.1.102%2Brev-11707dc2f618dd54ca8739b309ec4fc024de578b/0193276d-5b8f-7dbc-acf1-41cb7b54ad2e/source.tar.gz"
       },
       "original": {
-        "owner": "numtide",
-        "repo": "flake-utils",
-        "type": "github"
+        "type": "tarball",
+        "url": "https://flakehub.com/f/numtide/flake-utils/0.1.102"
       }
     },
     "utils_2": {

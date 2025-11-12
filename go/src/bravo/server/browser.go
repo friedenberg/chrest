@@ -6,8 +6,8 @@ import (
 	"io"
 	"os"
 
-	"code.linenisgreat.com/zit/go/zit/src/alfa/errors"
-	"code.linenisgreat.com/zit/go/zit/src/charlie/ohio"
+	"code.linenisgreat.com/dodder/go/src/alfa/errors"
+	"code.linenisgreat.com/dodder/go/src/charlie/ohio"
 )
 
 func WriteToBrowser(m interface{}) (n int64, err error) {

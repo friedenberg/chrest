@@ -8,12 +8,13 @@ import (
 	"os"
 
 	"code.linenisgreat.com/chrest/go/src/bravo/config"
-	"code.linenisgreat.com/zit/go/zit/src/alfa/errors"
-	"code.linenisgreat.com/zit/go/zit/src/bravo/ui"
+	"code.linenisgreat.com/dodder/go/src/alfa/errors"
+	"code.linenisgreat.com/dodder/go/src/alfa/interfaces"
+	"code.linenisgreat.com/dodder/go/src/bravo/ui"
 )
 
 type Server struct {
-	errors.Context
+	interfaces.ActiveContext
 	Address         *net.UnixAddr
 	Listener        *net.UnixListener
 	HTTPHandlerFunc http.HandlerFunc
@@ -26,7 +27,7 @@ func (s *Server) Initialize() {
 	ui.Err().Printf("waiting for id from browser")
 
 	if _, err := ReadFromBrowser(&msgIAm); err != nil {
-		s.CancelWithError(err)
+		s.Cancel(err)
 	}
 
 	ui.Err().Printf("read from browser: %q", msgIAm)
@@ -34,7 +35,8 @@ func (s *Server) Initialize() {
 	var ok bool
 
 	if browserId, ok = msgIAm["browser_id"].(string); !ok {
-		s.CancelWithErrorf(
+		errors.ContextCancelWithErrorf(
+			s,
 			"expected string `browser_id` but got %T",
 			msgIAm["browser_id"],
 		)
@@ -48,12 +50,12 @@ func (s *Server) Initialize() {
 		var err error
 
 		if dir, err = config.StateDirectory(); err != nil {
-			s.CancelWithError(err)
+			s.Cancel(err)
 		}
 	}
 
 	if err := os.MkdirAll(dir, 0o700); err != nil {
-		s.CancelWithError(err)
+		s.Cancel(err)
 	}
 
 	pathSock := fmt.Sprintf("%s/%s.sock", dir, browserId)
@@ -64,7 +66,7 @@ func (s *Server) Initialize() {
 		var err error
 
 		if s.Address, err = net.ResolveUnixAddr("unix", pathSock); err != nil {
-			s.CancelWithError(err)
+			s.Cancel(err)
 		}
 	}
 
@@ -73,7 +75,7 @@ func (s *Server) Initialize() {
 
 		if s.Listener, err = net.ListenUnix("unix", s.Address); err != nil {
 			// TODO add sigil error
-			s.CancelWithError(err)
+			s.Cancel(err)
 		}
 	}
 
@@ -109,7 +111,7 @@ func (s *Server) Serve() {
 			err = nil
 			return
 		} else {
-			s.CancelWithError(err)
+			s.Cancel(err)
 		}
 	}
 

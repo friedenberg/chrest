@@ -8,8 +8,8 @@ import (
 	"time"
 
 	"code.linenisgreat.com/chrest/go/src/bravo/config"
-	"code.linenisgreat.com/zit/go/zit/src/alfa/errors"
-	"code.linenisgreat.com/zit/go/zit/src/bravo/ui"
+	"code.linenisgreat.com/dodder/go/src/alfa/errors"
+	"code.linenisgreat.com/dodder/go/src/bravo/ui"
 )
 
 func CmdReloadExtension(c config.Config) (err error) {
