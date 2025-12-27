@@ -14,7 +14,7 @@ import (
 	"code.linenisgreat.com/chrest/go/src/bravo/client"
 	"code.linenisgreat.com/chrest/go/src/bravo/config"
 	"code.linenisgreat.com/dodder/go/src/alfa/errors"
-	"code.linenisgreat.com/dodder/go/src/alfa/primordial"
+	"code.linenisgreat.com/dodder/go/src/_/primordial"
 )
 
 var (

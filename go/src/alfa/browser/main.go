@@ -21,7 +21,7 @@ func (b *Browser) String() string {
 func (b *Browser) Set(v string) (err error) {
 	v0 := v
 
-  b1 := Browser(strings.TrimSpace(strings.ToLower(v)))
+	b1 := Browser(strings.TrimSpace(strings.ToLower(v)))
 
 	switch b1 {
 	case Chrome:
@@ -36,7 +36,7 @@ func (b *Browser) Set(v string) (err error) {
 		return
 	}
 
-  *b = b1
+	*b = b1
 
 	return
 }

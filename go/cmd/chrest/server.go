@@ -6,8 +6,8 @@ import (
 
 	"code.linenisgreat.com/chrest/go/src/bravo/config"
 	"code.linenisgreat.com/chrest/go/src/bravo/server"
+	"code.linenisgreat.com/dodder/go/src/_/stack_frame"
 	"code.linenisgreat.com/dodder/go/src/alfa/errors"
-	"code.linenisgreat.com/dodder/go/src/alfa/interfaces"
 	"code.linenisgreat.com/dodder/go/src/bravo/ui"
 )
 
@@ -25,7 +25,7 @@ func CmdServer(c config.Config) (err error) {
 	ctx.SetCancelOnSignals(syscall.SIGTERM)
 
 	if err := ctx.Run(
-		func(ctx interfaces.Context) {
+		func(ctx errors.Context) {
 			srv := server.Server{
 				ActiveContext: ctx,
 			}
@@ -34,7 +34,7 @@ func CmdServer(c config.Config) (err error) {
 			srv.Serve()
 		},
 	); err != nil {
-		var normalError interfaces.ErrorStackTracer
+		var normalError stack_frame.ErrorStackTracer
 
 		if errors.As(err, &normalError) && !normalError.ShouldShowStackTrace() {
 			ui.Err().Printf("%s", normalError.Error())

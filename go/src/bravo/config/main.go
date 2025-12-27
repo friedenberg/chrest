@@ -10,7 +10,7 @@ import (
 	"path/filepath"
 
 	"code.linenisgreat.com/dodder/go/src/alfa/errors"
-	"code.linenisgreat.com/dodder/go/src/echo/fd"
+	"code.linenisgreat.com/dodder/go/src/golf/fd"
 )
 
 type Config struct {

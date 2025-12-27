@@ -7,5 +7,3 @@ type Item struct {
 	Title      string `json:"title"`
 	ExternalId string `json:"external_id"` // external to the browser, so for us, it's actually our id
 }
-
-

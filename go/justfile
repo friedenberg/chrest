@@ -1,0 +1,52 @@
+
+dir_build := absolute_path("build")
+files_go := "src/ cmd/"
+
+default: build
+
+build: build-nix-gomod build-go
+
+build-go-binary tags output:
+  mkdir -p '{{output}}'
+  go build -tags '{{tags}}' -o '{{output}}' ./cmd/*
+
+build-go: \
+    (build-go-binary "debug" "build/debug") \
+    (build-go-binary "" "build/release")
+
+build-nix-gomod:
+  gomod2nix
+
+build-nix: build-nix-gomod
+  nix build
+
+tests-go:
+  go test -v ./...
+
+check: check-go-vuln check-go-vet
+
+check-go-vuln:
+  govulncheck ./...
+
+check-go-vet:
+  go vet ./... || true
+
+clean: clean-go
+
+clean-go-cache:
+  go clean -cache
+
+clean-go-modcache:
+  go clean -modcache
+
+clean-go: clean-go-cache clean-go-modcache
+
+codemod-go-fmt:
+  goimports -w {{files_go}}
+  gofumpt -l -w src
+
+update: update-go
+
+update-go:
+  env GOPROXY=direct go get -u -t ./...
+  go mod tidy

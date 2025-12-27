@@ -8,8 +8,8 @@ import (
 	"os"
 
 	"code.linenisgreat.com/chrest/go/src/bravo/config"
+	"code.linenisgreat.com/dodder/go/src/_/interfaces"
 	"code.linenisgreat.com/dodder/go/src/alfa/errors"
-	"code.linenisgreat.com/dodder/go/src/alfa/interfaces"
 	"code.linenisgreat.com/dodder/go/src/bravo/ui"
 )
 

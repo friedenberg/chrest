@@ -18,7 +18,7 @@ func (bi BrowserId) IsEmpty() bool {
 }
 
 func (bi *BrowserId) Set(v string) (err error) {
-  v0 := v
+	v0 := v
 	v = strings.TrimSpace(strings.ToLower(v))
 
 	head, tail, _ := strings.Cut(v, "-")
@@ -26,7 +26,7 @@ func (bi *BrowserId) Set(v string) (err error) {
 	bi.Id = tail
 
 	if err = bi.Browser.Set(head); err != nil {
-    err = errors.Wrapf(err, "Raw Id: %q", v0)
+		err = errors.Wrapf(err, "Raw Id: %q", v0)
 		return
 	}
 
