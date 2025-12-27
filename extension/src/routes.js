@@ -1,5 +1,6 @@
 import * as lib from "./lib.js";
 import * as items from "./items.js";
+import browserType from 'consts:browserType';
 
 export let Routes = {};
 
@@ -8,7 +9,7 @@ Routes["/"] = {
     return {
       status: 200,
       body: {
-        browser: "firefox",
+        browser: browserType,
         platform_info: browser.runtime.getPlatformInfo(),
         request: req,
       },
@@ -29,7 +30,7 @@ Routes["/items"] = {
     };
   },
   async put(req) {
-    let isOurBid = function(item) {
+    let isOurBid = function (item) {
       return lib.isOurBid(req.browser_id, item);
     };
 
@@ -104,7 +105,7 @@ Routes["/state"] = {
     };
   },
   async post(req) {
-    const makePromise = async function(body) {
+    const makePromise = async function (body) {
       let tabs = body["tabs"];
       delete body["tabs"];
 
@@ -145,7 +146,7 @@ Routes["/windows"] = {
   description: "Create a new window.",
   usage: 'echo "https://www.google.com" > $0',
   async post(req) {
-    const makePromise = async function(body) {
+    const makePromise = async function (body) {
       return await browser.windows.create(body);
     };
 
@@ -162,7 +163,7 @@ Routes["/windows"] = {
     }
   },
   async put(req) {
-    const makePromise = async function(body) {
+    const makePromise = async function (body) {
       const id = body.id;
       delete body.id;
       return await browser.windows.update(id, body);
@@ -506,7 +507,7 @@ for (let key in Routes) {
     "$"
   );
 
-  Routes[key].__match = function(path) {
+  Routes[key].__match = function (path) {
     const result = Routes[key].__regex.exec(path);
     if (!result) {
       return;

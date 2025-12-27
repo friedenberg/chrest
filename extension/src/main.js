@@ -1,7 +1,7 @@
 import * as routes from "./routes.js";
 import { parse } from "error-stack-parser-es";
 import { Mutex } from "async-mutex";
-import browser_type from "consts:browser_type";
+import browserType from "consts:browserType";
 
 async function tryMatchRoute(req) {
   for (let route of routes.sortedRoutes) {
@@ -39,7 +39,7 @@ async function onMessageHTTP(req) {
     // TODO ERROR
   } else {
     req.browser_id = {
-      browser: browser_type,
+      browser: browserType,
       id: results["browser_id"],
     };
   }
@@ -48,7 +48,7 @@ async function onMessageHTTP(req) {
 
   response.headers = {
     "X-Chrest-Startup-Time": now.toISOString(),
-    "X-Chrest-Browser-Type": browser_type,
+    "X-Chrest-Browser-Type": browserType,
   };
 
   response.type = "http";
@@ -92,7 +92,7 @@ if (typeof browser == "undefined") {
 }
 
 function browserIdFromSettingString(v) {
-  return `${browser_type}-${v}`;
+  return `${browserType}-${v}`;
 }
 
 async function notifyMe(title, message) {

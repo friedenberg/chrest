@@ -1,4 +1,27 @@
 
-build:
-  just chrome/
-  just firefox/
+build: build-chrome build-firefox
+
+build-prepare_one browser:
+  #! /usr/bin/env -S bash -e
+
+  rm -rf dist-{{browser}}
+  mkdir -p dist-{{browser}}
+
+build-one browser:
+  #! /usr/bin/env -S bash -e
+
+  set -o pipefail
+
+  cat manifest-common.json manifest-{{browser}}.json |
+    jq -s 'reduce .[] as $item ({}; . + $item)' \
+    > dist-{{browser}}/manifest.json
+
+  cp src/* assets/* dist-{{browser}}
+  npx --no -- rollup --config --browserType={{browser}} -o dist-{{browser}}/main.js
+
+  zip -r dist-{{browser}}.zip dist-{{browser}}
+
+build-chrome: (build-prepare_one "chrome") (build-one "chrome")
+
+build-firefox: (build-prepare_one "firefox") && (build-one "firefox")
+  cp zz-firefox-amo-metadata.json dist-firefox
