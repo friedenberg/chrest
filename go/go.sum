@@ -1,9 +1,7 @@
 c2sp.org/CCTV/age v0.0.0-20240306222714-3ec4d716e805 h1:u2qwJeEvnypw+OCPUHmoZE3IqwfuN5kgDfo5MLzpNM0=
 c2sp.org/CCTV/age v0.0.0-20240306222714-3ec4d716e805/go.mod h1:FomMrUJ2Lxt5jCLmZkG3FHa72zUprnhd3v/Z18Snm4w=
-code.linenisgreat.com/dodder/go v0.0.0-20251201132815-3c84ed41296e h1:Th2mskZ/po51U3BYBnY26vsDmlFkBHDwfSXT7F+bSlg=
-code.linenisgreat.com/dodder/go v0.0.0-20251201132815-3c84ed41296e/go.mod h1:Tq0ir9gdUBQhngtSCUbopfQ4oVOSWn53lNWPB3T11Uc=
-code.linenisgreat.com/zit/go/zit v0.0.0-20250511115447-791c77cf8785 h1:G3yQ1ztB1BCArIiISqIclizjeqbhJOGBLs/4PWj27V8=
-code.linenisgreat.com/zit/go/zit v0.0.0-20250511115447-791c77cf8785/go.mod h1:DFig4zG1Z+aDl/LqhZEip3vCPY2Yjb/IoBsG0SFn1OE=
+code.linenisgreat.com/dodder/go v0.0.0-20251227143023-45addc7cfae0 h1:6yvwr9Tqm9GYrIzPQpZYp/aFjnIx8E902vvdKM5VS3w=
+code.linenisgreat.com/dodder/go v0.0.0-20251227143023-45addc7cfae0/go.mod h1:Fiu/P5zDPDekMZJ7Q92NGktr8pEsbaLITKyQwcpwaR8=
 filippo.io/age v1.2.1 h1:X0TZjehAZylOIj4DubWYU1vWQxv9bJpo+Uu2/LGhi1o=
 filippo.io/age v1.2.1/go.mod h1:JL9ew2lTN+Pyft4RiNGguFfOpewKwSHm5ayKD/A4004=
 github.com/brandondube/tai v0.1.0 h1:psVhcG48XNq1LtQtvz6C5+6JU+n1UFjE9XeYLLDJ/cs=

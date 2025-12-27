@@ -2,11 +2,8 @@ schema = 3
 
 [mod]
   [mod."code.linenisgreat.com/dodder/go"]
-    version = "v0.0.0-20251201132815-3c84ed41296e"
-    hash = "sha256-gy1KVBMd1hVOZzsqgphdVMPicT1h008jp6f+mTTBSVc="
-  [mod."code.linenisgreat.com/zit/go/zit"]
-    version = "v0.0.0-20250511115447-791c77cf8785"
-    hash = "sha256-4eDZC+9VBZR/uk0bmJp/uJ+zEZRzY3EQa9ZToWKbLbs="
+    version = "v0.0.0-20251227143023-45addc7cfae0"
+    hash = "sha256-RHzSCozE1Tv4iZOnEOzyeukgkZkr9BS1aa5ulzOTba0="
   [mod."filippo.io/age"]
     version = "v1.2.1"
     hash = "sha256-9ZJdrmqBj43zSvStt0r25wjSfnvitdx3GYtM3urHcaA="

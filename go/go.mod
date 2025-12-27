@@ -1,11 +1,10 @@
 module code.linenisgreat.com/chrest/go
 
-go 1.25.0
+go 1.25.5
 
-require code.linenisgreat.com/dodder/go v0.0.0-20251201132815-3c84ed41296e
+require code.linenisgreat.com/dodder/go v0.0.0-20251227143023-45addc7cfae0
 
 require (
-	code.linenisgreat.com/zit/go/zit v0.0.0-20250511115447-791c77cf8785 // indirect
 	filippo.io/age v1.2.1 // indirect
 	github.com/brandondube/tai v0.1.0 // indirect
 	github.com/google/go-cmp v0.7.0 // indirect
