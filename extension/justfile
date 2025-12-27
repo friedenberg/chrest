@@ -1,0 +1,4 @@
+
+build:
+  just chrome/
+  just firefox/

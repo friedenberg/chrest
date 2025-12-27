@@ -1,0 +1,8 @@
+
+build:
+  make
+
+deploy-local: build
+  #! /usr/bin/env -S bash -e
+  eval "$$(direnv hook bash)"
+  npx --no web-ext run -s dist/ --browser-console

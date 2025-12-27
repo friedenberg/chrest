@@ -44,8 +44,3 @@ dist/main.js: $(files_js_copy_to_dist)
 dist/manifest.json: common/manifest.json manifest.json
 >mkdir -p $(dir $@)
 >cat $^ | jq -s 'reduce .[] as $$item ({}; . + $$item)' > "$@"
-
-local_deploy: build
->eval "$$(direnv hook bash)"
->npx --no web-ext run -s dist/ --browser-console
-
