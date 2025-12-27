@@ -25,3 +25,19 @@ build-chrome: (build-prepare_one "chrome") (build-one "chrome")
 
 build-firefox: (build-prepare_one "firefox") && (build-one "firefox")
   cp zz-firefox-amo-metadata.json dist-firefox
+
+deploy-firefox: build-firefox
+  #! /usr/bin/env -S bash -e
+
+  set -a
+  source .secrets-firefox.env
+  set +a
+
+  npx \
+    --no \
+    web-ext sign \
+    --source-dir dist-firefox \
+    --channel=listed \
+    --amo-metadata=zz-firefox-amo-metadata.json \
+    --api-key="$jwt_issuer" \
+    --api-secret="$jwt_secret"
