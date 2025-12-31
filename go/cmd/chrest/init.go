@@ -8,10 +8,11 @@ import (
 	"code.linenisgreat.com/chrest/go/src/alfa/symlink"
 	"code.linenisgreat.com/chrest/go/src/bravo/config"
 	"code.linenisgreat.com/chrest/go/src/charlie/install"
+	"code.linenisgreat.com/dodder/go/src/_/interfaces"
 	"code.linenisgreat.com/dodder/go/src/alfa/errors"
 )
 
-func CmdInit() (err error) {
+func CmdInit(ctx interfaces.ActiveContext) (err error) {
 	var (
 		initConfig config.Config
 		idsChrome  install.IdSet
@@ -47,12 +48,13 @@ func CmdInit() (err error) {
 	flag.Parse()
 
 	// TODO do not overwrite config if it exists
-	if err = initConfig.Write(); err != nil {
+	if err = initConfig.Write(ctx); err != nil {
 		err = errors.Wrap(err)
 		return
 	}
 
 	var exe string
+
 	if exe, err = os.Executable(); err != nil {
 		err = errors.Wrap(err)
 		return
@@ -67,8 +69,8 @@ func CmdInit() (err error) {
 		return
 	}
 
-	for _, is := range []install.IdSet{idsChrome, idsFirefox} {
-		if _, _, err = is.Install(
+	for _, idSet := range []install.IdSet{idsChrome, idsFirefox} {
+		if _, _, err = idSet.Install(
 			initConfig,
 		); err != nil {
 			err = errors.Wrap(err)

@@ -4,8 +4,11 @@ import (
 	"log"
 	"os"
 	"sync"
+	"syscall"
 
 	"code.linenisgreat.com/chrest/go/src/bravo/config"
+	"code.linenisgreat.com/dodder/go/src/_/interfaces"
+	"code.linenisgreat.com/dodder/go/src/_/stack_frame"
 	"code.linenisgreat.com/dodder/go/src/alfa/errors"
 	"code.linenisgreat.com/dodder/go/src/bravo/ui"
 )
@@ -17,21 +20,37 @@ func init() {
 }
 
 func main() {
-	if err := run(); err != nil {
-		ui.Err().Print(err)
-		os.Exit(1)
+	ctx := errors.MakeContextDefault()
+	ctx.SetCancelOnSignals(syscall.SIGTERM)
+
+	if err := ctx.Run(
+		func(ctx errors.Context) {
+			if err := run(ctx); err != nil {
+				ctx.Cancel(err)
+			}
+		},
+	); err != nil {
+		var normalError stack_frame.ErrorStackTracer
+
+		if errors.As(err, &normalError) && !normalError.ShouldShowStackTrace() {
+			ui.Err().Printf("%s", normalError.Error())
+		} else {
+			if err != nil {
+				ui.Err().Print(err)
+			}
+		}
 	}
 }
 
-func run() (err error) {
+func run(ctx interfaces.ActiveContext) (err error) {
 	var cmd string
 
 	if len(os.Args) > 1 {
 		cmd = os.Args[1]
 	}
 
-	for i, x := range os.Args {
-		if x == cmd {
+	for i, arg := range os.Args {
+		if arg == cmd {
 			os.Args = append(os.Args[:i], os.Args[i+1:]...)
 			break
 		}
@@ -51,7 +70,7 @@ func run() (err error) {
 			return
 		}
 
-		if err = CmdServer(c); err != nil {
+		if err = CmdServer(ctx, c); err != nil {
 			err = errors.Wrap(err)
 			return
 		}
@@ -101,7 +120,7 @@ func run() (err error) {
 		}
 
 	case "init":
-		if err = CmdInit(); err != nil {
+		if err = CmdInit(ctx); err != nil {
 			err = errors.Wrap(err)
 			return
 		}

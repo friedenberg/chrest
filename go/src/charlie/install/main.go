@@ -1,7 +1,6 @@
 package install
 
 import (
-	"bufio"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -13,6 +12,7 @@ import (
 	"code.linenisgreat.com/chrest/go/src/alfa/browser"
 	"code.linenisgreat.com/chrest/go/src/bravo/config"
 	"code.linenisgreat.com/dodder/go/src/alfa/errors"
+	"code.linenisgreat.com/dodder/go/src/alfa/pool"
 	"code.linenisgreat.com/dodder/go/src/charlie/files"
 )
 
@@ -21,34 +21,35 @@ type IdSet struct {
 	Ids []string
 }
 
-func (is IdSet) String() string {
+func (idSet IdSet) String() string {
 	var sb strings.Builder
 
-	for i, v := range is.Ids {
+	for i, value := range idSet.Ids {
 		if i > 0 {
 			sb.WriteRune(',')
-			sb.WriteString(v)
+			sb.WriteString(value)
 		}
 	}
 
 	return sb.String()
 }
 
-func (is *IdSet) Set(v string) (err error) {
-	is.Ids = append(is.Ids, v)
+func (idSet *IdSet) Set(value string) (err error) {
+	idSet.Ids = append(idSet.Ids, value)
 	return
 }
 
-func (is IdSet) GetDefaultId() string {
-	switch is.Browser {
+func (idSet IdSet) GetDefaultId() string {
+	switch idSet.Browser {
 	case browser.Chrome, browser.Chromium:
+		// TODO compiler var
 		return "faeaeoifckcedjniagocclagdbbkifgo"
 
 	case browser.Firefox:
 		return "chrest@code.linenisgreat.com"
 
 	default:
-		panic(errors.Errorf("unsupported browser: %s", is.Browser))
+		panic(errors.Errorf("unsupported browser: %s", idSet.Browser))
 	}
 }
 
@@ -71,10 +72,12 @@ type (
 	}
 )
 
-func (is *IdSet) Install(c config.Config) (loc string, ij any, err error) {
+func (idSet *IdSet) Install(
+	config config.Config,
+) (loc string, insallJSON any, err error) {
 	dir := path.Join(
-		c.Home,
-		GetUserPath(is.Browser),
+		config.Home,
+		GetUserPath(idSet.Browser),
 	)
 
 	loc = path.Join(
@@ -87,21 +90,23 @@ func (is *IdSet) Install(c config.Config) (loc string, ij any, err error) {
 		return
 	}
 
-	var f *os.File
+	var file *os.File
 
-	if f, err = files.OpenReadWrite(loc); err != nil {
+	if file, err = files.OpenReadWrite(loc); err != nil {
 		err = errors.Wrap(err)
 		return
 	}
 
-	br := bufio.NewReader(f)
-	dec := json.NewDecoder(br)
+	bufferedReader, repool := pool.GetBufferedReader(file)
+	defer repool()
 
-	defer errors.DeferredCloser(&err, f)
+	dec := json.NewDecoder(bufferedReader)
 
-	serverPath := c.ServerPath()
+	defer errors.DeferredCloser(&err, file)
 
-	is.Ids = append(is.Ids, is.GetDefaultId())
+	serverPath := config.ServerPath()
+
+	idSet.Ids = append(idSet.Ids, idSet.GetDefaultId())
 
 	common := JSONCommon{
 		Name:        "com.linenisgreat.code.chrest",
@@ -110,7 +115,7 @@ func (is *IdSet) Install(c config.Config) (loc string, ij any, err error) {
 		Type:        "stdio",
 	}
 
-	switch is.Browser {
+	switch idSet.Browser {
 	case browser.Chrome, browser.Chromium:
 		var existing JSONChromeOrChromium
 
@@ -123,7 +128,7 @@ func (is *IdSet) Install(c config.Config) (loc string, ij any, err error) {
 			}
 		}
 
-		for _, id := range is.Ids {
+		for _, id := range idSet.Ids {
 			existing.AllowedOrigins = append(
 				existing.AllowedOrigins,
 				fmt.Sprintf("chrome-extension://%s/", id),
@@ -134,7 +139,7 @@ func (is *IdSet) Install(c config.Config) (loc string, ij any, err error) {
 		existing.AllowedOrigins = slices.Compact(existing.AllowedOrigins)
 
 		existing.JSONCommon = common
-		ij = existing
+		insallJSON = existing
 
 	case browser.Firefox:
 		var existing JSONFirefox
@@ -148,21 +153,21 @@ func (is *IdSet) Install(c config.Config) (loc string, ij any, err error) {
 			}
 		}
 
-		existing.AllowedExtensions = append(existing.AllowedExtensions, is.Ids...)
+		existing.AllowedExtensions = append(existing.AllowedExtensions, idSet.Ids...)
 		slices.Sort(existing.AllowedExtensions)
 		existing.AllowedExtensions = slices.Compact(existing.AllowedExtensions)
 
 		existing.JSONCommon = common
-		ij = existing
+		insallJSON = existing
 
 	default:
-		err = errors.Errorf("unsupported browser: %s", is.Browser)
+		err = errors.Errorf("unsupported browser: %s", idSet.Browser)
 		return
 	}
 
-	var b []byte
+	var bites []byte
 
-	if b, err = json.Marshal(ij); err != nil {
+	if bites, err = json.Marshal(insallJSON); err != nil {
 		err = errors.Wrap(err)
 		return
 	}
@@ -172,7 +177,7 @@ func (is *IdSet) Install(c config.Config) (loc string, ij any, err error) {
 		return
 	}
 
-	if err = os.WriteFile(loc, b, 0o666); err != nil {
+	if err = os.WriteFile(loc, bites, 0o666); err != nil {
 		err = errors.Wrap(err)
 		return
 	}

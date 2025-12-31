@@ -13,19 +13,19 @@ type BrowserId struct {
 	Id      string          `json:"id"`
 }
 
-func (bi BrowserId) IsEmpty() bool {
-	return bi.Browser == "" && bi.Id == ""
+func (browserId BrowserId) IsEmpty() bool {
+	return browserId.Browser == "" && browserId.Id == ""
 }
 
-func (bi *BrowserId) Set(v string) (err error) {
+func (browserId *BrowserId) Set(v string) (err error) {
 	v0 := v
 	v = strings.TrimSpace(strings.ToLower(v))
 
 	head, tail, _ := strings.Cut(v, "-")
 
-	bi.Id = tail
+	browserId.Id = tail
 
-	if err = bi.Browser.Set(head); err != nil {
+	if err = browserId.Browser.Set(head); err != nil {
 		err = errors.Wrapf(err, "Raw Id: %q", v0)
 		return
 	}
@@ -33,16 +33,16 @@ func (bi *BrowserId) Set(v string) (err error) {
 	return
 }
 
-func (bi BrowserId) String() string {
+func (browserId BrowserId) String() string {
 	var sb strings.Builder
 
-	fmt.Fprintf(&sb, "%s", bi.Browser)
+	fmt.Fprintf(&sb, "%s", browserId.Browser)
 
-	if bi.Id == "" {
+	if browserId.Id == "" {
 		return sb.String()
 	}
 
-	fmt.Fprintf(&sb, "-%s", bi.Id)
+	fmt.Fprintf(&sb, "-%s", browserId.Id)
 
 	return sb.String()
 }

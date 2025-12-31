@@ -9,7 +9,9 @@ import (
 	"path"
 	"path/filepath"
 
+	"code.linenisgreat.com/dodder/go/src/_/interfaces"
 	"code.linenisgreat.com/dodder/go/src/alfa/errors"
+	"code.linenisgreat.com/dodder/go/src/alfa/pool"
 	"code.linenisgreat.com/dodder/go/src/golf/fd"
 )
 
@@ -19,32 +21,32 @@ type Config struct {
 	Home           string      `json:"-"`
 }
 
-func (c Config) ServerPath() string {
-	return filepath.Join(c.Home, ".local", "bin", "chrest")
+func (config Config) ServerPath() string {
+	return filepath.Join(config.Home, ".local", "bin", "chrest")
 }
 
-func StateDirectory() (v string, err error) {
-	v = os.Getenv("XDG_STATE_HOME")
+func StateDirectory() (value string, err error) {
+	value = os.Getenv("XDG_STATE_HOME")
 
-	if v == "" {
-		if v, err = os.UserHomeDir(); err != nil {
+	if value == "" {
+		if value, err = os.UserHomeDir(); err != nil {
 			err = errors.Wrap(err)
 			return
 		}
 
-		v = path.Join(v, ".local", "state")
+		value = path.Join(value, ".local", "state")
 	}
 
-	v = path.Join(v, "chrest")
+	value = path.Join(value, "chrest")
 
 	return
 }
 
-func (c Config) GetSocketPathForBrowserId(
+func (config Config) GetSocketPathForBrowserId(
 	id BrowserId,
 ) (sock string, err error) {
 	if id.IsEmpty() {
-		id = c.DefaultBrowser
+		id = config.DefaultBrowser
 	}
 
 	var stateDir string
@@ -59,7 +61,7 @@ func (c Config) GetSocketPathForBrowserId(
 	return
 }
 
-func (c Config) GetAllSockets() (socks []string, err error) {
+func (config Config) GetAllSockets() (socks []string, err error) {
 	var stateDir string
 
 	if stateDir, err = StateDirectory(); err != nil {
@@ -75,11 +77,11 @@ func (c Config) GetAllSockets() (socks []string, err error) {
 	return
 }
 
-func (c Config) Directory() (v string) {
+func (config Config) Directory() (v string) {
 	v = os.Getenv("XDG_CONFIG_HOME")
 
 	if v == "" {
-		v = path.Join(c.Home, ".config")
+		v = path.Join(config.Home, ".config")
 	}
 
 	v = path.Join(v, "chrest")
@@ -87,11 +89,11 @@ func (c Config) Directory() (v string) {
 	return
 }
 
-func (c *Config) Read() (err error) {
+func (config *Config) Read() (err error) {
 	wg := errors.MakeWaitGroupParallel()
 
-	wg.Do(c.readConfig)
-	wg.Do(c.readLoadedBrowsers)
+	wg.Do(config.readConfig)
+	wg.Do(config.readLoadedBrowsers)
 
 	if err = wg.GetError(); err != nil {
 		err = errors.Wrap(err)
@@ -101,13 +103,13 @@ func (c *Config) Read() (err error) {
 	return
 }
 
-func (c *Config) readConfig() (err error) {
-	if c.Home, err = os.UserHomeDir(); err != nil {
+func (config *Config) readConfig() (err error) {
+	if config.Home, err = os.UserHomeDir(); err != nil {
 		err = errors.Wrap(err)
 		return
 	}
 
-	p := path.Join(c.Directory(), "config.json")
+	p := path.Join(config.Directory(), "config.json")
 
 	var f *os.File
 
@@ -125,7 +127,7 @@ func (c *Config) readConfig() (err error) {
 
 	dec := json.NewDecoder(bufio.NewReader(f))
 
-	if err = dec.Decode(c); err != nil {
+	if err = dec.Decode(config); err != nil {
 		err = errors.Wrap(err)
 		return
 	}
@@ -133,7 +135,7 @@ func (c *Config) readConfig() (err error) {
 	return
 }
 
-func (c *Config) readLoadedBrowsers() (err error) {
+func (config *Config) readLoadedBrowsers() (err error) {
 	var loadedBrowserPaths []string
 
 	var stateDir string
@@ -156,47 +158,51 @@ func (c *Config) readLoadedBrowsers() (err error) {
 			return
 		}
 
-		c.LoadedBrowsers = append(c.LoadedBrowsers, id)
+		config.LoadedBrowsers = append(config.LoadedBrowsers, id)
 	}
 
 	return
 }
 
-func (c *Config) Write() (err error) {
-	dir := c.Directory()
-	p := path.Join(dir, "config.json")
+func (config *Config) Write(ctx interfaces.ActiveContext) (err error) {
+	dir := config.Directory()
+	path := path.Join(dir, "config.json")
 
-	var f *os.File
+	tempFileName := func() (tempFileName string) {
+		var file *os.File
 
-	if f, err = os.CreateTemp("", ""); err != nil {
-		err = errors.Wrap(err)
+		if file, err = os.CreateTemp("", ""); err != nil {
+			err = errors.Wrap(err)
+			return
+		}
+
+		tempFileName = file.Name()
+
+		defer errors.ContextMustClose(ctx, file)
+
+		bufferedWriter, repool := pool.GetBufferedWriter(file)
+		defer repool()
+
+		defer errors.ContextMustFlush(ctx, bufferedWriter)
+
+		enc := json.NewEncoder(bufferedWriter)
+
+		if err = enc.Encode(config); err != nil {
+			err = errors.Wrap(err)
+			return
+		}
+
 		return
-	}
+	}()
 
-	defer f.Close()
-
-	w := bufio.NewWriter(f)
-
-	enc := json.NewEncoder(w)
-
-	if err = enc.Encode(c); err != nil {
-		err = errors.Wrap(err)
-		return
-	}
-
-	if err = w.Flush(); err != nil {
-		err = errors.Wrap(err)
-		return
-	}
-
-	log.Print(f.Name(), p)
+	log.Print(tempFileName, path)
 
 	if err = os.MkdirAll(dir, 0o700); err != nil {
 		err = errors.Wrap(err)
 		return
 	}
 
-	if err = os.Rename(f.Name(), p); err != nil {
+	if err = os.Rename(tempFileName, path); err != nil {
 		err = errors.Wrap(err)
 		return
 	}
