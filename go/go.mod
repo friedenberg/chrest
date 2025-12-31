@@ -5,6 +5,7 @@ go 1.25.5
 require code.linenisgreat.com/dodder/go v0.0.0-20251227143023-45addc7cfae0
 
 require (
+	code.linenisgreat.com/dodder v0.0.0-20251231134115-1b04c40be033 // indirect
 	filippo.io/age v1.2.1 // indirect
 	github.com/brandondube/tai v0.1.0 // indirect
 	github.com/google/go-cmp v0.7.0 // indirect

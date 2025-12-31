@@ -1,5 +1,9 @@
 c2sp.org/CCTV/age v0.0.0-20240306222714-3ec4d716e805 h1:u2qwJeEvnypw+OCPUHmoZE3IqwfuN5kgDfo5MLzpNM0=
 c2sp.org/CCTV/age v0.0.0-20240306222714-3ec4d716e805/go.mod h1:FomMrUJ2Lxt5jCLmZkG3FHa72zUprnhd3v/Z18Snm4w=
+code.linenisgreat.com/dodder v0.0.0-20251227143023-45addc7cfae0 h1:HdMGJcjfBgnoSd8X7sz8jNm8lhMPjxSLphcaCNTYTKU=
+code.linenisgreat.com/dodder v0.0.0-20251227143023-45addc7cfae0/go.mod h1:tmbH8J0uu8tJcxBVKRzFLScP7vuC1haviMAP9pGbkBc=
+code.linenisgreat.com/dodder v0.0.0-20251231134115-1b04c40be033 h1:PIirte16tUAklvLupT0KJAHHjhi4rktBfQ4W6W6dtk0=
+code.linenisgreat.com/dodder v0.0.0-20251231134115-1b04c40be033/go.mod h1:tmbH8J0uu8tJcxBVKRzFLScP7vuC1haviMAP9pGbkBc=
 code.linenisgreat.com/dodder/go v0.0.0-20251227143023-45addc7cfae0 h1:6yvwr9Tqm9GYrIzPQpZYp/aFjnIx8E902vvdKM5VS3w=
 code.linenisgreat.com/dodder/go v0.0.0-20251227143023-45addc7cfae0/go.mod h1:Fiu/P5zDPDekMZJ7Q92NGktr8pEsbaLITKyQwcpwaR8=
 filippo.io/age v1.2.1 h1:X0TZjehAZylOIj4DubWYU1vWQxv9bJpo+Uu2/LGhi1o=
