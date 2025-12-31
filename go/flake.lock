@@ -9,11 +9,11 @@
       },
       "locked": {
         "dir": "pkgs/alfa/devenv-go",
-        "lastModified": 1767107926,
-        "narHash": "sha256-CT8WHL3oR/XliGJxZWjY6tRegJVtTb/AeJaqsbFuR/0=",
+        "lastModified": 1767118221,
+        "narHash": "sha256-OHyxb1nKhlb7Oq09CL4RmFnkQNNGrrjeuS+/CwcVa4g=",
         "owner": "friedenberg",
         "repo": "eng",
-        "rev": "5c4261eae53f2261743076e2a7898ae85b354684",
+        "rev": "b5225e669aa42f059b89565d840a4d876325c3fd",
         "type": "github"
       },
       "original": {
@@ -68,7 +68,7 @@
         "flake-utils": "flake-utils",
         "nixpkgs": [
           "devenv-go",
-          "nixpkgs"
+          "nixpkgs-stable"
         ]
       },
       "locked": {

@@ -28,6 +28,10 @@
           ];
         };
 
+        pkgs-stable = import nixpkgs-stable {
+          inherit system;
+        };
+
         chrest = pkgs.buildGoApplication {
           pname = "chrest";
           version = "0.0.1";
@@ -36,6 +40,8 @@
             "cmd/chrest"
           ];
           modules = ./gomod2nix.toml;
+          go = pkgs-stable.go_1_25;
+          GOTOOLCHAIN = "local";
         };
       in
       {
