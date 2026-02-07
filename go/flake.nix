@@ -1,7 +1,7 @@
 {
   inputs = {
-    nixpkgs-stable.url = "github:NixOS/nixpkgs/9ef261221d1e72399f2036786498d78c38185c46";
-    nixpkgs.url = "github:NixOS/nixpkgs/c4cfc9ced33f81099f419fa59893df11dc3f9de9";
+    nixpkgs-master.url = "github:NixOS/nixpkgs/fa83fd837f3098e3e678e6cf017b2b36102c7211";
+    nixpkgs.url = "github:NixOS/nixpkgs/54b154f971b71d260378b284789df6b272b49634";
     utils.url = "https://flakehub.com/f/numtide/flake-utils/0.1.102";
 
     devenv-go.url = "github:friedenberg/eng?dir=pkgs/alfa/devenv-go";
@@ -12,7 +12,7 @@
     {
       self,
       nixpkgs,
-      nixpkgs-stable,
+      nixpkgs-master,
       utils,
       devenv-go,
       devenv-shell,
@@ -28,11 +28,11 @@
           ];
         };
 
-        pkgs-stable = import nixpkgs-stable {
+        pkgs-master = import nixpkgs-master {
           inherit system;
         };
 
-        chrest = pkgs.buildGoApplication {
+        chrest = pkgs-master.buildGoApplication {
           pname = "chrest";
           version = "0.0.1";
           src = ./.;
@@ -40,7 +40,7 @@
             "cmd/chrest"
           ];
           modules = ./gomod2nix.toml;
-          go = pkgs-stable.go_1_25;
+          go = pkgs.go_1_25;
           GOTOOLCHAIN = "local";
         };
       in
@@ -49,9 +49,9 @@
         packages.chrest = chrest;
         packages.default = chrest;
 
-        devShells.default = pkgs.mkShell {
+        devShells.default = pkgs-master.mkShell {
           packages = (
-            with pkgs;
+            with pkgs-master;
             [
               bats
               fish
