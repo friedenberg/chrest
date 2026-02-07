@@ -1,9 +1,6 @@
 schema = 3
 
 [mod]
-  [mod."code.linenisgreat.com/dodder"]
-    version = "v0.0.0-20251231134115-1b04c40be033"
-    hash = "sha256-Us235G7Cib2PkQlizPmNSea3rtcfuIIC07uJT+TjGfQ="
   [mod."code.linenisgreat.com/dodder/go"]
     version = "v0.0.0-20251227143023-45addc7cfae0"
     hash = "sha256-RHzSCozE1Tv4iZOnEOzyeukgkZkr9BS1aa5ulzOTba0="
@@ -16,12 +13,24 @@ schema = 3
   [mod."github.com/google/go-cmp"]
     version = "v0.7.0"
     hash = "sha256-JbxZFBFGCh/Rj5XZ1vG94V2x7c18L8XKB0N9ZD5F2rM="
+  [mod."github.com/google/jsonschema-go"]
+    version = "v0.3.0"
+    hash = "sha256-GIVEtsm2C1nUWa3lOh56Z8dEYS4vRDQeTpiy1mIFXUg="
+  [mod."github.com/modelcontextprotocol/go-sdk"]
+    version = "v1.2.0"
+    hash = "sha256-eZJr7ru3v3l3t46EhLYW7TuGqWFnx172vJA0SIoaOWA="
+  [mod."github.com/yosida95/uritemplate/v3"]
+    version = "v3.0.2"
+    hash = "sha256-znUsCrfogPwAUNsdxBL93jIW/joercUm7RxKSExuWTM="
   [mod."golang.org/x/crypto"]
     version = "v0.46.0"
     hash = "sha256-I8N/spcw3/h0DFA+V1WK38HctckWIB9ep93DEVCALxU="
   [mod."golang.org/x/exp"]
     version = "v0.0.0-20251219203646-944ab1f22d93"
     hash = "sha256-0n6AiDMlSiV2jc4+J2RrseVv7oypKO9q1ZUZuaC8wrM="
+  [mod."golang.org/x/oauth2"]
+    version = "v0.30.0"
+    hash = "sha256-btD7BUtQpOswusZY5qIU90uDo38buVrQ0tmmQ8qNHDg="
   [mod."golang.org/x/sys"]
     version = "v0.39.0"
     hash = "sha256-dxTBu/JAWUkPbjFIXXRFdhQWyn+YyEpIC+tWqGo0Y6U="

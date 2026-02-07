@@ -125,6 +125,17 @@ func run(ctx interfaces.ActiveContext) (err error) {
 			return
 		}
 
+	case "mcp":
+		if err = c.Read(); err != nil {
+			err = errors.Wrap(err)
+			return
+		}
+
+		if err = CmdMcp(ctx, c); err != nil {
+			err = errors.Wrap(err)
+			return
+		}
+
 		// TODO
 		// case "demo":
 		// 	if err = c.Read(); err != nil {
