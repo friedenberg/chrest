@@ -2,15 +2,11 @@
 build: build-go build-extension
 
 reload: build
-  pushd go/
-  ./build/chrest install jbcogiaaaaikinoljmplilmcnicpfoek
-  popd
+  go/build/release/chrest install jbcogiaaaaikinoljmplilmcnicpfoek
   chrest reload-extension
 
 build-go:
-  pushd go/
-  just go/
+  just go/build
 
 build-extension:
-  pushd extension
-  just extension/
+  just extension/build

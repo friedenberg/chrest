@@ -1,3 +1,4 @@
+import browserType from "consts:browserType";
 
 if (typeof browser == "undefined") {
   // Chrome does not support the browser namespace yet.
@@ -12,6 +13,8 @@ function saveOptions(e) {
 }
 
 function restoreOptions() {
+  document.querySelector("#browser-prefix").textContent = `${browserType}-`;
+
   function setCurrentChoice(result) {
     document.querySelector("#browser-id").value = result.browser_id || "";
   }
