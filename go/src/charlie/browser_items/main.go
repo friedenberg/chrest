@@ -57,6 +57,15 @@ func (b BrowserProxy) GetAll(
 		return
 	}
 
+	return b.GetForSockets(ctx, req, socks)
+}
+
+// GetForSockets gets items from the specified sockets.
+func (b BrowserProxy) GetForSockets(
+	ctx context.Context,
+	req BrowserRequestGet,
+	socks []string,
+) (resp HTTPResponseWithRequestPayloadGet, err error) {
 	wg := errors.MakeWaitGroupParallel()
 
 	var l sync.Mutex
@@ -153,6 +162,15 @@ func (b BrowserProxy) PutAll(
 		return
 	}
 
+	return b.PutForSockets(ctx, req, socks)
+}
+
+// PutForSockets puts items to the specified sockets.
+func (b BrowserProxy) PutForSockets(
+	ctx context.Context,
+	req BrowserRequestPut,
+	socks []string,
+) (resp HTTPResponseWithRequestPayloadPut, err error) {
 	wg := errors.MakeWaitGroupParallel()
 
 	var l sync.Mutex

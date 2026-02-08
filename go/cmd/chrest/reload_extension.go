@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"io"
 	"os"
@@ -13,6 +14,14 @@ import (
 )
 
 func CmdReloadExtension(c config.Config) (err error) {
+	addFlagsOnce.Do(ClientAddFlags)
+	flag.Parse()
+
+	if err = browserIds.ApplyEnvironment(); err != nil {
+		err = errors.Wrap(err)
+		return
+	}
+
 	var exe string
 
 	if exe, err = os.Executable(); err != nil {

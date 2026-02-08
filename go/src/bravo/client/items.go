@@ -3,8 +3,8 @@ package client
 import (
 	"fmt"
 	"net/url"
-	"strings"
 
+	"code.linenisgreat.com/chrest/go/src/bravo/config"
 	"code.linenisgreat.com/dodder/go/src/alfa/errors"
 )
 
@@ -32,35 +32,10 @@ func (i BrowserItem) GetUrl() (u *url.URL, err error) {
 	return
 }
 
-type BrowserId struct {
-	Browser string `json:"browser"`
-	Pid     string `json:"pid"`
-}
-
-func (bi BrowserId) String() string {
-	var sb strings.Builder
-
-	sb.WriteString("browser")
-
-	if bi.Browser == "" {
-		return sb.String()
-	}
-
-	fmt.Fprintf(&sb, "-%s", bi.Browser)
-
-	if bi.Pid == "" {
-		return sb.String()
-	}
-
-	fmt.Fprintf(&sb, "-%s", bi.Pid)
-
-	return sb.String()
-}
-
 type BrowserItemId struct {
-	BrowserId BrowserId `json:"browser-id"`
-	Id        string    `json:"id"`
-	Type      string    `json:"type"`
+	BrowserId config.BrowserId `json:"browser-id"`
+	Id        string           `json:"id"`
+	Type      string           `json:"type"`
 }
 
 func (bi BrowserItemId) String() string {

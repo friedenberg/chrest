@@ -15,9 +15,10 @@ type Server struct {
 	mcpServer *mcp.Server
 	proxy     browser_items.BrowserProxy
 	scopes    ScopeConfig
+	sockets   []string // if non-empty, only query these sockets
 }
 
-func NewServer(c config.Config, scopes ScopeConfig) *Server {
+func NewServer(c config.Config, scopes ScopeConfig, sockets []string) *Server {
 	mcpServer := mcp.NewServer(
 		&mcp.Implementation{
 			Name:    "chrest",
@@ -30,11 +31,21 @@ func NewServer(c config.Config, scopes ScopeConfig) *Server {
 		mcpServer: mcpServer,
 		proxy:     browser_items.BrowserProxy{Config: c},
 		scopes:    scopes,
+		sockets:   sockets,
 	}
 
 	s.registerTools()
 
 	return s
+}
+
+// getSockets returns the socket paths to query. If browser filtering was
+// configured, returns the filtered sockets. Otherwise returns all available sockets.
+func (s *Server) getSockets() ([]string, error) {
+	if len(s.sockets) > 0 {
+		return s.sockets, nil
+	}
+	return s.proxy.GetAllSockets()
 }
 
 func (s *Server) RunStdio(ctx context.Context) (err error) {

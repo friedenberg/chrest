@@ -255,7 +255,12 @@ func (s *Server) handleGetBrowserItems(
 	req *mcp.CallToolRequest,
 	_ any,
 ) (*mcp.CallToolResult, any, error) {
-	resp, err := s.proxy.GetAll(ctx, browser_items.BrowserRequestGet{})
+	socks, err := s.getSockets()
+	if err != nil {
+		return nil, nil, errors.Wrap(err)
+	}
+
+	resp, err := s.proxy.GetForSockets(ctx, browser_items.BrowserRequestGet{}, socks)
 	if err != nil {
 		return nil, nil, errors.Wrap(err)
 	}
@@ -300,7 +305,12 @@ func (s *Server) handleManageBrowserItems(
 		})
 	}
 
-	resp, err := s.proxy.PutAll(ctx, browserReq)
+	socks, err := s.getSockets()
+	if err != nil {
+		return nil, nil, errors.Wrap(err)
+	}
+
+	resp, err := s.proxy.PutForSockets(ctx, browserReq, socks)
 	if err != nil {
 		return nil, nil, errors.Wrap(err)
 	}
@@ -356,7 +366,7 @@ func (s *Server) requestAllBrowsers(
 	path string,
 	body any,
 ) (string, error) {
-	socks, err := s.proxy.GetAllSockets()
+	socks, err := s.getSockets()
 	if err != nil {
 		return "", errors.Wrap(err)
 	}

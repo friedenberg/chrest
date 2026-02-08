@@ -19,7 +19,7 @@ import (
 
 var (
 	printFullRequest *bool
-	browserId        config.BrowserId
+	browserIds       browserIdFlags
 )
 
 func ClientAddFlags() {
@@ -30,9 +30,9 @@ func ClientAddFlags() {
 	)
 
 	flag.Var(
-		&browserId,
+		&browserIds,
 		"browser",
-		"which browser to communicate with",
+		"which browser(s) to communicate with (repeatable)",
 	)
 }
 
@@ -40,8 +40,13 @@ func CmdClient(c config.Config) (err error) {
 	addFlagsOnce.Do(ClientAddFlags)
 	flag.Parse()
 
+	if err = browserIds.ApplyEnvironment(); err != nil {
+		err = errors.Wrap(err)
+		return
+	}
+
 	var sock string
-	if sock, err = c.GetSocketPathForBrowserId(browserId); err != nil {
+	if sock, err = browserIds.GetSocketForSingle(c); err != nil {
 		err = errors.Wrap(err)
 		return
 	}

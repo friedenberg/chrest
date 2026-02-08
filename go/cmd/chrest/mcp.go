@@ -22,20 +22,35 @@ func (s *scopeFlags) Set(value string) error {
 }
 
 var (
-	mcpTransport *string
-	mcpPort      *int
-	mcpScopes    scopeFlags
+	mcpTransport  *string
+	mcpPort       *int
+	mcpScopes     scopeFlags
+	mcpBrowserIds browserIdFlags
 )
 
 func mcpAddFlags() {
 	mcpTransport = flag.String("transport", "stdio", "Transport type: stdio or sse")
 	mcpPort = flag.Int("port", 8080, "Port for SSE transport")
 	flag.Var(&mcpScopes, "scope", "Permission scope (repeatable, format: scope:level, e.g., tabs:read)")
+	flag.Var(&mcpBrowserIds, "browser", "Which browser(s) to query (repeatable, default: all)")
 }
 
 func CmdMcp(ctx interfaces.ActiveContext, c config.Config) (err error) {
 	addFlagsOnce.Do(mcpAddFlags)
 	flag.Parse()
+
+	if err = mcpBrowserIds.ApplyEnvironment(); err != nil {
+		err = errors.Wrap(err)
+		return
+	}
+
+	var sockets []string
+	if !mcpBrowserIds.IsEmpty() {
+		if sockets, err = mcpBrowserIds.GetSockets(c); err != nil {
+			err = errors.Wrap(err)
+			return
+		}
+	}
 
 	// Start with defaults
 	scopes := mcpserver.DefaultScopes()
@@ -49,7 +64,7 @@ func CmdMcp(ctx interfaces.ActiveContext, c config.Config) (err error) {
 		return
 	}
 
-	server := mcpserver.NewServer(c, scopes)
+	server := mcpserver.NewServer(c, scopes, sockets)
 
 	switch *mcpTransport {
 	case "stdio":

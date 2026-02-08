@@ -20,9 +20,14 @@ func CmdItemsGet(c config.Config) (err error) {
 	addFlagsOnce.Do(ClientAddFlags)
 	flag.Parse()
 
+	if err = browserIds.ApplyEnvironment(); err != nil {
+		err = errors.Wrap(err)
+		return
+	}
+
 	var socks []string
 
-	if socks, err = c.GetAllSockets(); err != nil {
+	if socks, err = browserIds.GetSockets(c); err != nil {
 		err = errors.Wrap(err)
 		return
 	}
