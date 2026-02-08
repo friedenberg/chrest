@@ -2,8 +2,8 @@ schema = 3
 
 [mod]
   [mod.'code.linenisgreat.com/dodder/go']
-    version = 'v0.0.0-20260208155806-f49cae7b2d71'
-    hash = 'sha256-oQ4K3HJZdlIPCtQkDD4+D7tIvo3CykB6pZFzMrpXNYU='
+    version = 'v0.0.0-20260208160524-0a77d5e62729'
+    hash = 'sha256-8TjINgryiOcsx+6OtW7fc0zPU5LgnGwPxW98oc+eX74='
 
   [mod.'filippo.io/age']
     version = 'v1.3.1'
