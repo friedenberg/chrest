@@ -14,9 +14,10 @@ import (
 type Server struct {
 	mcpServer *mcp.Server
 	proxy     browser_items.BrowserProxy
+	scopes    ScopeConfig
 }
 
-func NewServer(c config.Config) *Server {
+func NewServer(c config.Config, scopes ScopeConfig) *Server {
 	mcpServer := mcp.NewServer(
 		&mcp.Implementation{
 			Name:    "chrest",
@@ -28,6 +29,7 @@ func NewServer(c config.Config) *Server {
 	s := &Server{
 		mcpServer: mcpServer,
 		proxy:     browser_items.BrowserProxy{Config: c},
+		scopes:    scopes,
 	}
 
 	s.registerTools()

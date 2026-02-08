@@ -5,26 +5,62 @@ import (
 )
 
 func (s *Server) registerTools() {
-	s.registerBrowserInfoTools()
-	s.registerWindowTools()
-	s.registerTabTools()
-	s.registerItemTools()
-	s.registerStateTools()
+	// browser_info is always available (no scope required)
+	s.registerBrowserInfoTool()
+
+	// management scope
+	if s.scopes.Allows(ScopeManagement, AccessRead) {
+		s.registerManagementTools()
+	}
+
+	// windows scope
+	if s.scopes.Allows(ScopeWindows, AccessRead) {
+		s.registerWindowReadTools()
+	}
+	if s.scopes.Allows(ScopeWindows, AccessWrite) {
+		s.registerWindowWriteTools()
+	}
+
+	// tabs scope
+	if s.scopes.Allows(ScopeTabs, AccessRead) {
+		s.registerTabReadTools()
+	}
+	if s.scopes.Allows(ScopeTabs, AccessWrite) {
+		s.registerTabWriteTools()
+	}
+
+	// items (requires any of: tabs, bookmarks, or history read access)
+	if s.scopes.AllowsAny([]Scope{ScopeTabs, ScopeBookmarks, ScopeHistory}, AccessRead) {
+		s.registerItemReadTools()
+	}
+	if s.scopes.AllowsAny([]Scope{ScopeTabs, ScopeBookmarks}, AccessWrite) {
+		s.registerItemWriteTools()
+	}
+
+	// state scope
+	if s.scopes.Allows(ScopeState, AccessRead) {
+		s.registerStateReadTools()
+	}
+	if s.scopes.Allows(ScopeState, AccessWrite) {
+		s.registerStateWriteTools()
+	}
 }
 
-func (s *Server) registerBrowserInfoTools() {
+func (s *Server) registerBrowserInfoTool() {
 	mcp.AddTool(s.mcpServer, &mcp.Tool{
 		Name:        "browser_info",
 		Description: "Get browser information including type, version, and platform details from all connected browsers",
 	}, s.handleBrowserInfo)
+}
 
+func (s *Server) registerManagementTools() {
 	mcp.AddTool(s.mcpServer, &mcp.Tool{
 		Name:        "list_extensions",
 		Description: "List all installed browser extensions from all connected browsers",
 	}, s.handleListExtensions)
 }
 
-func (s *Server) registerWindowTools() {
+func (s *Server) registerWindowReadTools() {
 	mcp.AddTool(s.mcpServer, &mcp.Tool{
 		Name:        "list_windows",
 		Description: "List all browser windows with their tabs from all connected browsers",
@@ -34,7 +70,9 @@ func (s *Server) registerWindowTools() {
 		Name:        "get_window",
 		Description: "Get details of a specific window by ID",
 	}, s.handleGetWindow)
+}
 
+func (s *Server) registerWindowWriteTools() {
 	mcp.AddTool(s.mcpServer, &mcp.Tool{
 		Name:        "create_window",
 		Description: "Create a new browser window with optional URLs",
@@ -51,7 +89,7 @@ func (s *Server) registerWindowTools() {
 	}, s.handleCloseWindow)
 }
 
-func (s *Server) registerTabTools() {
+func (s *Server) registerTabReadTools() {
 	mcp.AddTool(s.mcpServer, &mcp.Tool{
 		Name:        "list_tabs",
 		Description: "List all tabs across all windows from all connected browsers",
@@ -61,7 +99,9 @@ func (s *Server) registerTabTools() {
 		Name:        "get_tab",
 		Description: "Get details of a specific tab by ID",
 	}, s.handleGetTab)
+}
 
+func (s *Server) registerTabWriteTools() {
 	mcp.AddTool(s.mcpServer, &mcp.Tool{
 		Name:        "create_tab",
 		Description: "Create a new tab with the specified URL",
@@ -78,24 +118,28 @@ func (s *Server) registerTabTools() {
 	}, s.handleCloseTab)
 }
 
-func (s *Server) registerItemTools() {
+func (s *Server) registerItemReadTools() {
 	mcp.AddTool(s.mcpServer, &mcp.Tool{
 		Name:        "get_browser_items",
 		Description: "Get all browser items (tabs, bookmarks, history) from all connected browsers",
 	}, s.handleGetBrowserItems)
+}
 
+func (s *Server) registerItemWriteTools() {
 	mcp.AddTool(s.mcpServer, &mcp.Tool{
 		Name:        "manage_browser_items",
 		Description: "Add, delete, or focus browser items across all connected browsers",
 	}, s.handleManageBrowserItems)
 }
 
-func (s *Server) registerStateTools() {
+func (s *Server) registerStateReadTools() {
 	mcp.AddTool(s.mcpServer, &mcp.Tool{
 		Name:        "get_browser_state",
 		Description: "Get the current browser state (windows and tabs) for saving/restoring",
 	}, s.handleGetBrowserState)
+}
 
+func (s *Server) registerStateWriteTools() {
 	mcp.AddTool(s.mcpServer, &mcp.Tool{
 		Name:        "restore_browser_state",
 		Description: "Restore a previously saved browser state (create windows and tabs)",

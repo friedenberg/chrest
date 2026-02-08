@@ -15,8 +15,13 @@ import (
 	"code.linenisgreat.com/dodder/go/src/golf/fd"
 )
 
+type MCPConfig struct {
+	Scopes map[string]string `json:"scopes,omitempty"`
+}
+
 type Config struct {
 	DefaultBrowser BrowserId   `json:"default-browser"`
+	MCP            MCPConfig   `json:"mcp,omitempty"`
 	LoadedBrowsers []BrowserId `json:"-"`
 	Home           string      `json:"-"`
 }
