@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"os"
 	"sync"
@@ -64,16 +65,17 @@ func run(ctx interfaces.ActiveContext) (err error) {
 	}
 
 	switch cmd {
-	default:
-		if c, err = config.Default(); err != nil {
-			err = errors.Wrap(err)
-			return
-		}
-
-		if err = CmdServer(ctx, c); err != nil {
-			err = errors.Wrap(err)
-			return
-		}
+	case "":
+		fmt.Println("Usage: chrest <command> [options]")
+		fmt.Println()
+		fmt.Println("Commands:")
+		fmt.Println("  init              Initialize configuration and install native messaging host")
+		fmt.Println("  client            Forward HTTP request from stdin to browser")
+		fmt.Println("  items-get         Get browser items (tabs, bookmarks, history)")
+		fmt.Println("  items-put         Put browser items")
+		fmt.Println("  mcp               Run MCP server")
+		fmt.Println("  reload-extension  Reload the browser extension")
+		return
 
 	case "reload-extension":
 		if err = c.Read(); err != nil {

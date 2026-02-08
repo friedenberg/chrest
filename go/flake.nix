@@ -41,6 +41,7 @@
           src = ./.;
           subPackages = [
             "cmd/chrest"
+            "cmd/chrest-server"
           ];
           modules = ./gomod2nix.toml;
           go = pkgs.go_1_25;

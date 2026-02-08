@@ -27,7 +27,7 @@ type Config struct {
 }
 
 func (config Config) ServerPath() string {
-	return filepath.Join(config.Home, ".local", "bin", "chrest")
+	return filepath.Join(config.Home, ".local", "bin", "chrest-server")
 }
 
 func StateDirectory() (value string, err error) {
