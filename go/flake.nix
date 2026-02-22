@@ -4,8 +4,8 @@
     nixpkgs.url = "github:NixOS/nixpkgs/23d72dabcb3b12469f57b37170fcbc1789bd7457";
     utils.url = "https://flakehub.com/f/numtide/flake-utils/0.1.102";
 
-    devenv-go.url = "github:friedenberg/eng?dir=pkgs/alfa/devenv-go";
-    devenv-shell.url = "github:friedenberg/eng?dir=pkgs/alfa/devenv-shell";
+    devenv-go.url = "github:amarbel-llc/eng?dir=pkgs/alfa/devenv-go";
+    devenv-shell.url = "github:amarbel-llc/eng?dir=pkgs/alfa/devenv-shell";
   };
 
   outputs =
