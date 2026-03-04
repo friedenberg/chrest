@@ -5,7 +5,7 @@
     utils.url = "https://flakehub.com/f/numtide/flake-utils/0.1.102";
 
     devenv-go.url = "github:amarbel-llc/purse-first?dir=devenvs/go";
-    devenv-js.url = "github:amarbel-llc/eng?dir=devenvs/js";
+    devenv-browser_extension.url = "path:./devenvs/browser_extension";
   };
 
   outputs =
@@ -15,12 +15,11 @@
       nixpkgs-master,
       utils,
       devenv-go,
-      devenv-js,
+      devenv-browser_extension,
     }:
     (utils.lib.eachDefaultSystem (
       system:
       let
-
         pkgs = import nixpkgs {
           inherit system;
           overlays = [
@@ -35,16 +34,13 @@
             [
               fish
               gnumake
-              httpie
-              jq
               just
-              web-ext
             ]
           );
 
           inputsFrom = [
             devenv-go.devShells.${system}.default
-            devenv-js.devShells.${system}.default
+            devenv-browser_extension.devShells.${system}.default
           ];
         };
       }
