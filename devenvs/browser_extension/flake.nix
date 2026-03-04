@@ -22,11 +22,11 @@
         devShells.default = pkgs.mkShell {
           packages = [
             pkgs.nodejs_latest
-            pkgs.web-ext
             pkgs.jq
             pkgs.zip
             pkgs.httpie
-            pkgs-master.nodePackages.rollup
+            pkgs-master.web-ext
+            pkgs-master.nodePackages_latest.rollup
           ];
         };
       }
