@@ -1,0 +1,1 @@
+- [ ] Write custom buildNpmPackage derivation for rollup to handle native Rust binary deps (replaces npx rollup workaround in devenv-browser_extension)
