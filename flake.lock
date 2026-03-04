@@ -127,22 +127,6 @@
         "type": "github"
       }
     },
-    "nixpkgs-master_3": {
-      "locked": {
-        "lastModified": 1771603159,
-        "narHash": "sha256-9T7Ml6t7hI7rNi2kOgZhm2himxunOcsSBx1LLAlQSvI=",
-        "owner": "NixOS",
-        "repo": "nixpkgs",
-        "rev": "5b7e21f22978c4b740b3907f3251b470f466a9a2",
-        "type": "github"
-      },
-      "original": {
-        "owner": "NixOS",
-        "repo": "nixpkgs",
-        "rev": "5b7e21f22978c4b740b3907f3251b470f466a9a2",
-        "type": "github"
-      }
-    },
     "nixpkgs_2": {
       "locked": {
         "lastModified": 1771419570,
@@ -180,7 +164,6 @@
         "devenv-browser_extension": "devenv-browser_extension",
         "devenv-go": "devenv-go",
         "nixpkgs": "nixpkgs_3",
-        "nixpkgs-master": "nixpkgs-master_3",
         "utils": "utils_3"
       }
     },
