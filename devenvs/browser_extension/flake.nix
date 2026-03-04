@@ -26,7 +26,6 @@
             pkgs.zip
             pkgs.httpie
             pkgs-master.web-ext
-            pkgs-master.nodePackages_latest.rollup
           ];
         };
       }
