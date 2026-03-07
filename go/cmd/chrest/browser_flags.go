@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"code.linenisgreat.com/chrest/go/src/bravo/config"
-	"code.linenisgreat.com/dodder/go/src/alfa/errors"
+	"code.linenisgreat.com/dodder/go/lib/bravo/errors"
 )
 
 // browserIdFlags is a repeatable flag type that collects multiple browser IDs.

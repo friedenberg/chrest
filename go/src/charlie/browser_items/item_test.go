@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"code.linenisgreat.com/dodder/go/src/bravo/ui"
+	"code.linenisgreat.com/dodder/go/lib/charlie/ui"
 )
 
 func TestMain(m *testing.M) {

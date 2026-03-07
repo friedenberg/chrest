@@ -8,8 +8,8 @@ import (
 	"code.linenisgreat.com/chrest/go/src/alfa/symlink"
 	"code.linenisgreat.com/chrest/go/src/bravo/config"
 	"code.linenisgreat.com/chrest/go/src/charlie/install"
-	"code.linenisgreat.com/dodder/go/src/_/interfaces"
-	"code.linenisgreat.com/dodder/go/src/alfa/errors"
+	"code.linenisgreat.com/dodder/go/lib/_/interfaces"
+	"code.linenisgreat.com/dodder/go/lib/bravo/errors"
 )
 
 func CmdInit(ctx interfaces.ActiveContext) (err error) {

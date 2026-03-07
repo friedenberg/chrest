@@ -2,7 +2,7 @@ package install
 
 import (
 	"code.linenisgreat.com/chrest/go/src/alfa/browser"
-	"code.linenisgreat.com/dodder/go/src/alfa/errors"
+	"code.linenisgreat.com/dodder/go/lib/bravo/errors"
 )
 
 func GetUserPath(b browser.Browser) string {

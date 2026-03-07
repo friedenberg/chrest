@@ -9,7 +9,7 @@ import (
 	"sync"
 
 	"code.linenisgreat.com/chrest/go/src/charlie/browser_items"
-	"code.linenisgreat.com/dodder/go/src/alfa/errors"
+	"code.linenisgreat.com/dodder/go/lib/bravo/errors"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 

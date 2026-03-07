@@ -8,7 +8,7 @@ import (
 	"sync"
 
 	"code.linenisgreat.com/chrest/go/src/bravo/config"
-	"code.linenisgreat.com/dodder/go/src/alfa/errors"
+	"code.linenisgreat.com/dodder/go/lib/bravo/errors"
 )
 
 type BrowserProxy struct {

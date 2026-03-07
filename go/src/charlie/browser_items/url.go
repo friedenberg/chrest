@@ -3,7 +3,7 @@ package browser_items
 import (
 	"net/url"
 
-	"code.linenisgreat.com/dodder/go/src/alfa/errors"
+	"code.linenisgreat.com/dodder/go/lib/bravo/errors"
 )
 
 type Url struct {

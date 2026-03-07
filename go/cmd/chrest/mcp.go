@@ -6,8 +6,8 @@ import (
 
 	"code.linenisgreat.com/chrest/go/src/bravo/config"
 	mcpserver "code.linenisgreat.com/chrest/go/src/delta/mcp"
-	"code.linenisgreat.com/dodder/go/src/_/interfaces"
-	"code.linenisgreat.com/dodder/go/src/alfa/errors"
+	"code.linenisgreat.com/dodder/go/lib/_/interfaces"
+	"code.linenisgreat.com/dodder/go/lib/bravo/errors"
 )
 
 type scopeFlags []string

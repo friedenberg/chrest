@@ -3,7 +3,7 @@ package mcp
 import (
 	"strings"
 
-	"code.linenisgreat.com/dodder/go/src/alfa/errors"
+	"code.linenisgreat.com/dodder/go/lib/bravo/errors"
 )
 
 type AccessLevel string

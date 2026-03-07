@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"code.linenisgreat.com/chrest/go/src/alfa/browser"
-	"code.linenisgreat.com/dodder/go/src/alfa/errors"
+	"code.linenisgreat.com/dodder/go/lib/bravo/errors"
 )
 
 type BrowserId struct {

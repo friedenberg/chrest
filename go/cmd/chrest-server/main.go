@@ -7,9 +7,9 @@ import (
 
 	"code.linenisgreat.com/chrest/go/src/bravo/config"
 	"code.linenisgreat.com/chrest/go/src/bravo/server"
-	"code.linenisgreat.com/dodder/go/src/_/stack_frame"
-	"code.linenisgreat.com/dodder/go/src/alfa/errors"
-	"code.linenisgreat.com/dodder/go/src/bravo/ui"
+	"code.linenisgreat.com/dodder/go/lib/_/stack_frame"
+	"code.linenisgreat.com/dodder/go/lib/bravo/errors"
+	"code.linenisgreat.com/dodder/go/lib/charlie/ui"
 )
 
 func init() {

@@ -11,9 +11,9 @@ import (
 
 	"code.linenisgreat.com/chrest/go/src/alfa/browser"
 	"code.linenisgreat.com/chrest/go/src/bravo/config"
-	"code.linenisgreat.com/dodder/go/src/alfa/errors"
-	"code.linenisgreat.com/dodder/go/src/alfa/pool"
-	"code.linenisgreat.com/dodder/go/src/charlie/files"
+	"code.linenisgreat.com/dodder/go/lib/bravo/errors"
+	"code.linenisgreat.com/dodder/go/lib/alfa/pool"
+	"code.linenisgreat.com/dodder/go/lib/delta/files"
 )
 
 type IdSet struct {
