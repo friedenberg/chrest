@@ -8,11 +8,11 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"strings"
 
 	"code.linenisgreat.com/dodder/go/lib/_/interfaces"
-	"code.linenisgreat.com/dodder/go/lib/bravo/errors"
 	"code.linenisgreat.com/dodder/go/lib/alfa/pool"
+	"code.linenisgreat.com/dodder/go/lib/bravo/errors"
+	"code.linenisgreat.com/dodder/go/lib/charlie/fd"
 )
 
 type MCPConfig struct {
@@ -158,7 +158,7 @@ func (config *Config) readLoadedBrowsers() (err error) {
 	for _, loadedBrowserPath := range loadedBrowserPaths {
 		var id BrowserId
 
-		if err = id.Set(strings.TrimSuffix(filepath.Base(loadedBrowserPath), filepath.Ext(loadedBrowserPath))); err != nil {
+		if err = id.Set(fd.FileNameSansExt(loadedBrowserPath)); err != nil {
 			err = errors.Wrap(err)
 			return
 		}

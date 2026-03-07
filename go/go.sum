@@ -1,5 +1,5 @@
-code.linenisgreat.com/dodder/go v0.0.0-20260306145455-1f6d8283bded h1:W3ZGlv9ldzhF6LFmwD9hWewlIQObsV3qT9VTU5VxIdY=
-code.linenisgreat.com/dodder/go v0.0.0-20260306145455-1f6d8283bded/go.mod h1:GrcXZeDFZ4f1ZjtbK7mY0SjL1f+/u1W/GRxkmf2r1Do=
+code.linenisgreat.com/dodder/go v0.0.0-20260307134648-9b896861407d h1:FMMjZgqcwxbJVa8nF1DIP8IKHzmPG5oPodENxuK/PcE=
+code.linenisgreat.com/dodder/go v0.0.0-20260307134648-9b896861407d/go.mod h1:puIm6Sv+fZBJuWBH0xk6AQiuW+C2iuSHosBrIli2oqk=
 github.com/golang-jwt/jwt/v5 v5.2.2 h1:Rl4B7itRWVtYIHFrSNd7vhTiz9UpLdi6gZhZ3wEeDy8=
 github.com/golang-jwt/jwt/v5 v5.2.2/go.mod h1:pqrtFR0X4osieyHYxtmOUWsAWrfe1Q5UVIyoH402zdk=
 github.com/google/go-cmp v0.7.0 h1:wk8382ETsv4JYUZwIsn6YpYiWiBsYLSJiTsyBybVuN8=

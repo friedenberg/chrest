@@ -3,7 +3,7 @@ module code.linenisgreat.com/chrest/go
 go 1.25.5
 
 require (
-	code.linenisgreat.com/dodder/go v0.0.0-20260306145455-1f6d8283bded
+	code.linenisgreat.com/dodder/go v0.0.0-20260307134648-9b896861407d
 	github.com/modelcontextprotocol/go-sdk v1.2.0
 )
 
