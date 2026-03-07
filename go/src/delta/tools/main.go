@@ -1,0 +1,17 @@
+package tools
+
+import (
+	"code.linenisgreat.com/chrest/go/src/charlie/browser_items"
+	"code.linenisgreat.com/chrest/go/src/delta/proxy"
+	"github.com/amarbel-llc/purse-first/libs/go-mcp/command"
+)
+
+func RegisterAll(app *command.App, p *proxy.BrowserProxy) {
+	itemsProxy := browser_items.BrowserProxy{Config: p.Config}
+
+	registerBrowserCommands(app, p)
+	registerWindowCommands(app, p)
+	registerTabCommands(app, p)
+	registerItemCommands(app, p, itemsProxy)
+	registerStateCommands(app, p)
+}

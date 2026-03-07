@@ -4,7 +4,7 @@ go 1.25.5
 
 require (
 	code.linenisgreat.com/dodder/go v0.0.0-20260307134648-9b896861407d
-	github.com/amarbel-llc/purse-first/libs/go-mcp v0.0.3-0.20260223142938-fd723e615485
+	github.com/amarbel-llc/purse-first/libs/go-mcp v0.0.3-0.20260225223101-430acdb13048
 	github.com/modelcontextprotocol/go-sdk v1.4.0
 )
 
@@ -19,4 +19,5 @@ require (
 	golang.org/x/term v0.40.0 // indirect
 	golang.org/x/text v0.34.0 // indirect
 	golang.org/x/xerrors v0.0.0-20240903120638-7835f813f4da // indirect
+	mvdan.cc/sh/v3 v3.12.0 // indirect
 )
