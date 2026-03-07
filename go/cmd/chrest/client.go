@@ -1,6 +1,8 @@
 package main
 
 import (
+	"context"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"io"
@@ -15,43 +17,49 @@ import (
 	"code.linenisgreat.com/chrest/go/src/bravo/config"
 	"code.linenisgreat.com/dodder/go/lib/_/primordial"
 	"code.linenisgreat.com/dodder/go/lib/bravo/errors"
+	"github.com/amarbel-llc/purse-first/libs/go-mcp/command"
 )
 
-var (
-	printFullRequest *bool
-	browserIds       browserIdFlags
-)
-
-func ClientAddFlags() {
-	printFullRequest = flag.Bool(
-		"full-request",
-		false,
-		"print the full request including headers",
-	)
-
-	flag.Var(
-		&browserIds,
-		"browser",
-		"which browser(s) to communicate with (repeatable)",
-	)
+func registerClientCommand(app *command.App, c config.Config) {
+	app.AddCommand(&command.Command{
+		Name:        "client",
+		Description: command.Description{Short: "Forward HTTP request from stdin to browser"},
+		RunCLI: func(ctx context.Context, args json.RawMessage) error {
+			return cmdClient(c)
+		},
+	})
 }
 
-func CmdClient(c config.Config) (err error) {
-	addFlagsOnce.Do(ClientAddFlags)
-	flag.Parse()
+func cmdClient(c config.Config) (err error) {
+	fs := flag.NewFlagSet("client", flag.ContinueOnError)
+	printFullRequest := fs.Bool("full-request", false, "print the full request including headers")
+	browserFlag := fs.String("browser", "", "which browser to communicate with")
 
-	if err = browserIds.ApplyEnvironment(); err != nil {
+	if err = fs.Parse(os.Args[2:]); err != nil {
 		err = errors.Wrap(err)
 		return
+	}
+
+	browser := *browserFlag
+	if browser == "" {
+		browser = os.Getenv("CHREST_BROWSER")
+	}
+
+	var bid config.BrowserId
+	if browser != "" {
+		if err = bid.Set(browser); err != nil {
+			err = errors.Wrap(err)
+			return
+		}
 	}
 
 	var sock string
-	if sock, err = browserIds.GetSocketForSingle(c); err != nil {
+	if sock, err = c.GetSocketPathForBrowserId(bid); err != nil {
 		err = errors.Wrap(err)
 		return
 	}
 
-	if err = cmdClientOneSocket(sock); err != nil {
+	if err = cmdClientOneSocket(sock, *printFullRequest, fs.Args()); err != nil {
 		if errors.IsErrno(err, syscall.ECONNREFUSED) {
 			if err = os.Remove(sock); err != nil {
 				err = errors.Wrap(err)
@@ -66,8 +74,8 @@ func CmdClient(c config.Config) (err error) {
 	return
 }
 
-func cmdClientOneSocket(sock string) (err error) {
-	cmdHttpArgs := append([]string{"--offline"}, flag.Args()...)
+func cmdClientOneSocket(sock string, fullRequest bool, httpieArgs []string) (err error) {
+	cmdHttpArgs := append([]string{"--offline"}, httpieArgs...)
 	cmdHttpArgs[2] = filepath.Join("localhost", cmdHttpArgs[2])
 	cmdHttp := exec.Command("http", cmdHttpArgs...)
 	cmdHttp.Stdin = os.Stdin
@@ -90,7 +98,7 @@ func cmdClientOneSocket(sock string) (err error) {
 		return
 	}
 
-	if *printFullRequest {
+	if fullRequest {
 		if _, err = io.Copy(os.Stdout, httpieStdout); err != nil {
 			err = errors.Errorf("failed to write request to stdout: %w", err)
 			return

@@ -1,7 +1,8 @@
 package main
 
 import (
-	"flag"
+	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -11,17 +12,20 @@ import (
 	"code.linenisgreat.com/chrest/go/src/bravo/config"
 	"code.linenisgreat.com/dodder/go/lib/bravo/errors"
 	"code.linenisgreat.com/dodder/go/lib/charlie/ui"
+	"github.com/amarbel-llc/purse-first/libs/go-mcp/command"
 )
 
-func CmdReloadExtension(c config.Config) (err error) {
-	addFlagsOnce.Do(ClientAddFlags)
-	flag.Parse()
+func registerReloadExtensionCommand(app *command.App, c config.Config) {
+	app.AddCommand(&command.Command{
+		Name:        "reload-extension",
+		Description: command.Description{Short: "Reload the browser extension"},
+		RunCLI: func(ctx context.Context, args json.RawMessage) error {
+			return cmdReloadExtension(c)
+		},
+	})
+}
 
-	if err = browserIds.ApplyEnvironment(); err != nil {
-		err = errors.Wrap(err)
-		return
-	}
-
+func cmdReloadExtension(c config.Config) (err error) {
 	var exe string
 
 	if exe, err = os.Executable(); err != nil {
@@ -29,11 +33,11 @@ func CmdReloadExtension(c config.Config) (err error) {
 		return
 	}
 
-	os.Args = []string{exe, "POST", "/runtime/reload"}
+	os.Args = []string{exe, "client", "POST", "/runtime/reload"}
 
 	fmt.Println("reloading server")
 
-	if err = CmdClient(c); err != nil {
+	if err = cmdClient(c); err != nil {
 		if errors.Is(err, io.ErrUnexpectedEOF) {
 			err = nil
 		} else {
@@ -42,12 +46,12 @@ func CmdReloadExtension(c config.Config) (err error) {
 		}
 	}
 
-	os.Args[1] = "GET"
+	os.Args[2] = "GET"
 
 	for {
 		fmt.Println("waiting for server to come back up")
 
-		if err = CmdClient(c); err != nil {
+		if err = cmdClient(c); err != nil {
 			if errors.Is(err, io.ErrUnexpectedEOF) {
 				err = nil
 				time.Sleep(1e8)

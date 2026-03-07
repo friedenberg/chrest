@@ -1,20 +1,22 @@
 package main
 
 import (
-	"fmt"
+	"context"
 	"log"
 	"os"
-	"sync"
 	"syscall"
 
+	"github.com/amarbel-llc/purse-first/libs/go-mcp/command"
+	"github.com/amarbel-llc/purse-first/libs/go-mcp/server"
+	"github.com/amarbel-llc/purse-first/libs/go-mcp/transport"
+
 	"code.linenisgreat.com/chrest/go/src/bravo/config"
-	"code.linenisgreat.com/dodder/go/lib/_/interfaces"
+	"code.linenisgreat.com/chrest/go/src/delta/proxy"
+	"code.linenisgreat.com/chrest/go/src/delta/tools"
 	"code.linenisgreat.com/dodder/go/lib/_/stack_frame"
 	"code.linenisgreat.com/dodder/go/lib/bravo/errors"
 	"code.linenisgreat.com/dodder/go/lib/charlie/ui"
 )
-
-var addFlagsOnce sync.Once
 
 func init() {
 	log.SetPrefix("chrest ")
@@ -43,20 +45,7 @@ func main() {
 	}
 }
 
-func run(ctx interfaces.ActiveContext) (err error) {
-	var cmd string
-
-	if len(os.Args) > 1 {
-		cmd = os.Args[1]
-	}
-
-	for i, arg := range os.Args {
-		if arg == cmd {
-			os.Args = append(os.Args[:i], os.Args[i+1:]...)
-			break
-		}
-	}
-
+func run(ctx errors.Context) (err error) {
 	var c config.Config
 
 	if c, err = config.Default(); err != nil {
@@ -64,89 +53,51 @@ func run(ctx interfaces.ActiveContext) (err error) {
 		return
 	}
 
-	switch cmd {
-	case "":
-		fmt.Println("Usage: chrest <command> [options]")
-		fmt.Println()
-		fmt.Println("Commands:")
-		fmt.Println("  init              Initialize configuration and install native messaging host")
-		fmt.Println("  client            Forward HTTP request from stdin to browser")
-		fmt.Println("  items-get         Get browser items (tabs, bookmarks, history)")
-		fmt.Println("  items-put         Put browser items")
-		fmt.Println("  mcp               Run MCP server")
-		fmt.Println("  reload-extension  Reload the browser extension")
+	if err = c.Read(); err != nil {
+		err = errors.Wrap(err)
 		return
+	}
 
-	case "reload-extension":
-		if err = c.Read(); err != nil {
+	p := &proxy.BrowserProxy{Config: c}
+
+	app := command.NewApp("chrest", "Manage browsers via REST")
+	app.MCPArgs = []string{"mcp"}
+
+	tools.RegisterAll(app, p)
+	registerClientCommand(app, c)
+	registerReloadExtensionCommand(app, c)
+	registerInitCommand(app)
+	registerGeneratePluginCommand(app)
+
+	if len(os.Args) > 1 && os.Args[1] == "mcp" {
+		if err = runMCP(ctx, app); err != nil {
 			err = errors.Wrap(err)
 			return
 		}
+		return
+	}
 
-		if err = CmdReloadExtension(c); err != nil {
-			err = errors.Wrap(err)
-			return
-		}
-
-	case "client":
-		if err = c.Read(); err != nil {
-			err = errors.Wrap(err)
-			return
-		}
-
-		if err = CmdClient(c); err != nil {
-			err = errors.Wrap(err)
-			return
-		}
-
-	case "items-get":
-		if err = c.Read(); err != nil {
-			err = errors.Wrap(err)
-			return
-		}
-
-		if err = CmdItemsGet(c); err != nil {
-			err = errors.Wrap(err)
-			return
-		}
-
-	case "items-put":
-		if err = c.Read(); err != nil {
-			err = errors.Wrap(err)
-			return
-		}
-
-		if err = CmdItemsPut(c); err != nil {
-			err = errors.Wrap(err)
-			return
-		}
-
-	case "init":
-		if err = CmdInit(ctx); err != nil {
-			err = errors.Wrap(err)
-			return
-		}
-
-	case "mcp":
-		if err = c.Read(); err != nil {
-			err = errors.Wrap(err)
-			return
-		}
-
-		if err = CmdMcp(ctx, c); err != nil {
-			err = errors.Wrap(err)
-			return
-		}
-
-		// TODO
-		// case "demo":
-		// 	if err = c.Read(); err != nil {
-		// 		err = errors.Wrap(err)
-		// 		return
-		// 	}
-
-		// err = CmdDemo(c)
+	if err = app.RunCLI(ctx, os.Args[1:], command.StubPrompter{}); err != nil {
+		err = errors.Wrap(err)
+		return
 	}
 
 	return
+}
+
+func runMCP(ctx context.Context, app *command.App) error {
+	t := transport.NewStdio(os.Stdin, os.Stdout)
+	registry := server.NewToolRegistryV1()
+	app.RegisterMCPToolsV1(registry)
+
+	srv, err := server.New(t, server.Options{
+		ServerName:    app.Name,
+		ServerVersion: app.Version,
+		Tools:         registry,
+	})
+	if err != nil {
+		return errors.Wrap(err)
+	}
+
+	return srv.Run(ctx)
 }
