@@ -5,25 +5,13 @@ schema = 3
     version = 'v0.0.0-20260307134648-9b896861407d'
     hash = 'sha256-9U6FdZqiYWf35iIyyM5M8eKKfv/f7O0wsLqJyp1ibEg='
 
+  [mod.'github.com/amarbel-llc/purse-first/libs/go-mcp']
+    version = 'v0.0.3-0.20260307142926-60d137260c17'
+    hash = 'sha256-WObdHaMoWlBY214A1DcUjlJyszOJ4Pp2FA8fnlrjwI0='
+
   [mod.'github.com/google/go-cmp']
     version = 'v0.7.0'
     hash = 'sha256-JbxZFBFGCh/Rj5XZ1vG94V2x7c18L8XKB0N9ZD5F2rM='
-
-  [mod.'github.com/google/jsonschema-go']
-    version = 'v0.4.2'
-    hash = 'sha256-kNExU/AI+CS27tQntXEpFqSio+HV2wzo2P458jqncOk='
-
-  [mod.'github.com/modelcontextprotocol/go-sdk']
-    version = 'v1.2.0'
-    hash = 'sha256-eZJr7ru3v3l3t46EhLYW7TuGqWFnx172vJA0SIoaOWA='
-
-  [mod.'github.com/yosida95/uritemplate/v3']
-    version = 'v3.0.2'
-    hash = 'sha256-znUsCrfogPwAUNsdxBL93jIW/joercUm7RxKSExuWTM='
-
-  [mod.'golang.org/x/oauth2']
-    version = 'v0.35.0'
-    hash = 'sha256-QeleoXu+9K3LJZiw6/iPR+EQzi/OLDBTFdrP2/d1XN8='
 
   [mod.'golang.org/x/sys']
     version = 'v0.41.0'
@@ -40,3 +28,7 @@ schema = 3
   [mod.'golang.org/x/xerrors']
     version = 'v0.0.0-20240903120638-7835f813f4da'
     hash = 'sha256-bE7CcrnAvryNvM26ieJGXqbAtuLwHaGcmtVMsVnksqo='
+
+  [mod.'mvdan.cc/sh/v3']
+    version = 'v3.12.0'
+    hash = 'sha256-1T55DgxWYDG1Y3SyZYLmSdLQPMVC6LUp1yLH98wKhGk='
