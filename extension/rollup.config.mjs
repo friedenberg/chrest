@@ -1,30 +1,46 @@
 import { nodeResolve } from '@rollup/plugin-node-resolve';
-import consts from 'rollup-plugin-consts';
 
-export default (commandLineArgs) => {
-  const plugins = [
-    nodeResolve(),
-    consts({
-      browserType: commandLineArgs.browserType,
-    })
-  ];
+const browserType = process.env.BROWSER_TYPE;
 
-  return [
-    {
-      input: 'src/main.js',
-      output: {
-        file: `dist-${commandLineArgs.browserType}/main.js`,
-        format: 'cjs',
-      },
-      plugins,
+function constsPlugin(consts) {
+  const prefix = 'consts:';
+  return {
+    name: 'consts-plugin',
+    resolveId(id) {
+      if (id.startsWith(prefix)) return id;
     },
-    {
-      input: 'src/options.js',
-      output: {
-        file: `dist-${commandLineArgs.browserType}/options.js`,
-        format: 'iife',
-      },
-      plugins,
+    load(id) {
+      if (!id.startsWith(prefix)) return;
+      const key = id.slice(prefix.length);
+      if (!(key in consts)) {
+        this.error(`Cannot find const: ${key}`);
+        return;
+      }
+      return `export default ${JSON.stringify(consts[key])}`;
     },
-  ];
-};
+  };
+}
+
+const plugins = [
+  nodeResolve(),
+  constsPlugin({ browserType }),
+];
+
+export default [
+  {
+    input: 'src/main.js',
+    output: {
+      file: `dist-${browserType}/main.js`,
+      format: 'cjs',
+    },
+    plugins,
+  },
+  {
+    input: 'src/options.js',
+    output: {
+      file: `dist-${browserType}/options.js`,
+      format: 'iife',
+    },
+    plugins,
+  },
+];

@@ -17,7 +17,7 @@ build-one browser:
     > dist-{{browser}}/manifest.json
 
   cp src/* assets/* dist-{{browser}}
-  npx --no -- rollup --config --browserType={{browser}}
+  BROWSER_TYPE={{browser}} npx --no -- rollup --config
 
   zip -r dist-{{browser}}.zip dist-{{browser}}
 
