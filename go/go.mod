@@ -4,7 +4,7 @@ go 1.25.5
 
 require (
 	code.linenisgreat.com/dodder/go v0.0.0-20260307134648-9b896861407d
-	github.com/amarbel-llc/purse-first/libs/go-mcp v0.0.3-0.20260307142926-60d137260c17
+	github.com/amarbel-llc/purse-first/libs/go-mcp v0.0.4
 )
 
 require (
