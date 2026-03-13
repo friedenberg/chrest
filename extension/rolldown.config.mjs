@@ -1,5 +1,3 @@
-import { nodeResolve } from '@rollup/plugin-node-resolve';
-
 const browserType = process.env.BROWSER_TYPE;
 
 function constsPlugin(consts) {
@@ -22,7 +20,6 @@ function constsPlugin(consts) {
 }
 
 const plugins = [
-  nodeResolve(),
   constsPlugin({ browserType }),
 ];
 
