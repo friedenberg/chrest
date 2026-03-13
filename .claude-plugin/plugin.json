@@ -1,0 +1,10 @@
+{
+  "name": "chrest",
+  "mcpServers": {
+    "chrest": {
+      "type": "stdio",
+      "command": "chrest",
+      "args": ["mcp"]
+    }
+  }
+}

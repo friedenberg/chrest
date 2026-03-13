@@ -67,6 +67,7 @@ func run(ctx errors.Context) (err error) {
 	registerClientCommand(app, c)
 	registerReloadExtensionCommand(app, c)
 	registerInitCommand(app)
+	registerInstallMCPCommand(app)
 	registerGeneratePluginCommand(app)
 
 	if len(os.Args) > 1 && os.Args[1] == "mcp" {
