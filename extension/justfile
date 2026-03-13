@@ -1,5 +1,8 @@
 
-build: build-chrome build-firefox
+build: npm-install build-chrome build-firefox
+
+npm-install:
+  npm ci
 
 build-prepare_one browser:
   #! /usr/bin/env -S bash -e
@@ -17,7 +20,7 @@ build-one browser:
     > dist-{{browser}}/manifest.json
 
   cp src/* assets/* dist-{{browser}}
-  BROWSER_TYPE={{browser}} npx --no -- rolldown --config rolldown.config.mjs
+  BROWSER_TYPE={{browser}} node_modules/.bin/rolldown --config rolldown.config.mjs
 
   zip -r dist-{{browser}}.zip dist-{{browser}}
 

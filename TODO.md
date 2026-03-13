@@ -1,1 +1,2 @@
 - [ ] Write custom buildNpmPackage derivation for rollup to handle native Rust binary deps (replaces npx rollup workaround in devenv-browser_extension)
+- [ ] Upstream PR to nixpkgs: add bin output to rolldown package (currently only installs lib/node_modules, missing bin/rolldown CLI wrapper)
