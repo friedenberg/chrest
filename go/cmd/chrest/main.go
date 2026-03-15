@@ -7,6 +7,7 @@ import (
 	"syscall"
 
 	"github.com/amarbel-llc/purse-first/libs/go-mcp/command"
+	huhprompter "github.com/amarbel-llc/purse-first/libs/go-mcp/command/huh"
 	"github.com/amarbel-llc/purse-first/libs/go-mcp/server"
 	"github.com/amarbel-llc/purse-first/libs/go-mcp/transport"
 
@@ -78,7 +79,7 @@ func run(ctx errors.Context) (err error) {
 		return
 	}
 
-	if err = app.RunCLI(ctx, os.Args[1:], command.StubPrompter{}); err != nil {
+	if err = app.RunCLI(ctx, os.Args[1:], huhprompter.Prompter{}); err != nil {
 		err = errors.Wrap(err)
 		return
 	}
