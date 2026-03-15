@@ -3,13 +3,13 @@ Chrest: healthier window and tab hygiene
 
 --------------------------------------------------------------------------------
 
-Chrest is a CLI tool and Chrome extension that allow you to manage Chrome via
-REST. Chrest was inspired by (and somewhat forked from)
+Chrest is a CLI tool and browser extension that lets you manage Chrome and
+Firefox via REST. Chrest was inspired by (and somewhat forked from)
 [`TabFS`](https://omar.website/tabfs/).
 
 Chrest consists of two parts:
 
-1.  Chrome Extension: ([/extension](extension))
+1.  Browser Extension: ([/extension](extension))
 2.  Native Messaging Host & CLI Client: `chrest` ([/](/))
 
 # Examples
@@ -116,32 +116,39 @@ like [`http`](https://httpie.io/) and [`jq`](https://jqlang.github.io/jq/).
 
 # Installation
 
-1.  Clone this repo: `git clone github.com/friedenberg/chrest`
-1.  Go to [Chrome extensions](chrome://extensions/)
-1.  Enable Developer mode (top-right corner)
-1.  Load-unpacked the [`extension/`](extension) folder from this repo
-    
-    Take note of the extension ID, it looks like
-    `lbgclgjcapgipnneocphmhckebhbbkac`
+## 1. Install the CLI
 
-1.  `go build`
-1.  `./chrest install <extension ID>`
-1.  Add `$HOME/.local/bin` to your `$PATH`
-1.  Reload the extension in Chrome to start the service worker
-1.  Try `http --ignore-stdin --offline localhost/windows | ./chrest client | jq`
+Choose one:
 
-example: 
+-   Go: `go install code.linenisgreat.com/chrest/go/cmd/chrest@latest`
+-   Nix: `nix profile install github:friedenberg/chrest`
 
-```shell
-# fish shell
-go build -o chrest cmd/main.go; and ./chrest install lbgclgjcapgipnneocphmhckebhbbkac
-```
+## 2. Install the browser extension
 
-# Todo
+**Chrome:**
+1.  Go to [chrome://extensions/](chrome://extensions/)
+2.  Enable Developer mode (top-right corner)
+3.  Click "Load unpacked" and select the `extension/dist-chrome/` folder
 
--   mutate bookmark endpoints
--   proper `PUT` endpoints for windows and tabs
--   history endpoints
+**Firefox:**
+1.  Go to [about:debugging#/runtime/this-firefox](about:debugging#/runtime/this-firefox)
+2.  Click "Load Temporary Add-on" and select any file in `extension/dist-firefox/`
+
+## 3. Initialize chrest
+
+    $ chrest init --browser chrome
+
+Or for Firefox:
+
+    $ chrest init --browser firefox
+
+If you omit `--browser`, chrest will prompt you interactively.
+
+## 4. Verify
+
+Reload the extension in your browser, then:
+
+    $ chrest list-windows
 
 # Known Issues
 
