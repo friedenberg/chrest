@@ -251,7 +251,7 @@ Routes["/windows/#WINDOW_ID"] = {
     };
   },
   async delete({ windowId }) {
-    await browser.windows.remove(windowId);
+    await browser.windows.remove(parseInt(windowId));
 
     return {
       status: 204,
@@ -377,7 +377,7 @@ Routes["/tabs/#TAB_ID"] = {
     };
   },
   async delete({ tabId }) {
-    await browser.tabs.remove(tabId);
+    await browser.tabs.remove(parseInt(tabId));
 
     return {
       status: 204,
