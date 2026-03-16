@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"code.linenisgreat.com/chrest/go/src/alfa/symlink"
 	"code.linenisgreat.com/chrest/go/src/bravo/config"
@@ -91,9 +92,20 @@ func cmdInit(ctx context.Context, args json.RawMessage, p command.Prompter) (err
 		return
 	}
 
+	serverBinary := filepath.Join(filepath.Dir(exe), "chrest-server")
+
+	if _, err = os.Stat(serverBinary); err != nil {
+		w.NotOk(
+			fmt.Sprintf("Find chrest-server binary at %s", serverBinary),
+			map[string]string{"error": err.Error()},
+		)
+		err = errors.Errorf("chrest-server not found adjacent to chrest at %s", serverBinary)
+		return
+	}
+
 	serverPath := initConfig.ServerPath()
 
-	if err = symlink.Symlink(exe, serverPath); err != nil {
+	if err = symlink.Symlink(serverBinary, serverPath); err != nil {
 		w.NotOk(
 			fmt.Sprintf("Symlink chrest-server to %s", serverPath),
 			map[string]string{"error": err.Error()},
