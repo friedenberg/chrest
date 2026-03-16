@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
+	"fmt"
 	"net"
 	"net/http"
 	"sync"
@@ -42,11 +43,15 @@ func (p *BrowserProxy) RequestAllBrowsers(
 	wg := errors.MakeWaitGroupParallel()
 	var l sync.Mutex
 	var allResults []any
+	var sockErrors []string
 
 	for _, sock := range socks {
 		wg.Do(func() (err error) {
 			result, err := p.requestOneBrowser(ctx, sock, method, path, body)
 			if err != nil {
+				l.Lock()
+				sockErrors = append(sockErrors, fmt.Sprintf("%s: %s", sock, err))
+				l.Unlock()
 				return nil
 			}
 
@@ -65,6 +70,17 @@ func (p *BrowserProxy) RequestAllBrowsers(
 
 	if err = wg.GetError(); err != nil {
 		return "", errors.Wrap(err)
+	}
+
+	if len(allResults) == 0 && len(sockErrors) > 0 {
+		return "", errors.Errorf(
+			"no browsers responded (is the extension running?): %s",
+			sockErrors[0],
+		)
+	}
+
+	if allResults == nil {
+		allResults = []any{}
 	}
 
 	jsonBytes, err := json.MarshalIndent(allResults, "", "  ")
