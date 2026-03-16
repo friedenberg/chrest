@@ -15,6 +15,8 @@ import (
 	"github.com/amarbel-llc/purse-first/libs/go-mcp/command"
 )
 
+const defaultBrowserName = "default"
+
 func registerInitCommand(app *command.App) {
 	app.AddCommand(&command.Command{
 		Name: "init",
@@ -23,6 +25,7 @@ func registerInitCommand(app *command.App) {
 		},
 		Params: []command.Param{
 			{Name: "browser", Type: command.String, Description: "Default browser (chrome or firefox)"},
+			{Name: "name", Type: command.String, Description: "Browser instance name (default: \"default\")"},
 			{Name: "extension-id", Type: command.String, Description: "Custom extension ID (uses default if omitted)"},
 		},
 		Run: func(ctx context.Context, args json.RawMessage, p command.Prompter) (*command.Result, error) {
@@ -34,6 +37,7 @@ func registerInitCommand(app *command.App) {
 func cmdInit(ctx context.Context, args json.RawMessage, p command.Prompter) (err error) {
 	var params struct {
 		Browser     string `json:"browser"`
+		Name        string `json:"name"`
 		ExtensionId string `json:"extension-id"`
 	}
 
@@ -54,6 +58,15 @@ func cmdInit(ctx context.Context, args json.RawMessage, p command.Prompter) (err
 		params.Browser = options[idx]
 	}
 
+	usedDefaultName := false
+
+	if params.Name == "" {
+		params.Name = defaultBrowserName
+		usedDefaultName = true
+	}
+
+	bid := fmt.Sprintf("%s-%s", params.Browser, params.Name)
+
 	w := tap.NewColorWriter(os.Stderr, true)
 	defer w.Plan()
 
@@ -65,9 +78,9 @@ func cmdInit(ctx context.Context, args json.RawMessage, p command.Prompter) (err
 		return
 	}
 
-	if err = initConfig.DefaultBrowser.Set(params.Browser); err != nil {
+	if err = initConfig.DefaultBrowser.Set(bid); err != nil {
 		w.NotOk(
-			fmt.Sprintf("Set default browser to %s", params.Browser),
+			fmt.Sprintf("Set default browser to %s", bid),
 			map[string]string{"error": err.Error()},
 		)
 		err = errors.Wrap(err)
@@ -82,7 +95,12 @@ func cmdInit(ctx context.Context, args json.RawMessage, p command.Prompter) (err
 		return
 	}
 
-	w.Ok(fmt.Sprintf("Wrote config to %s", initConfig.Directory()))
+	nameNote := ""
+	if usedDefaultName {
+		nameNote = " (using default name)"
+	}
+
+	w.Ok(fmt.Sprintf("Wrote config to %s (browser: %s)%s", initConfig.Directory(), bid, nameNote))
 
 	var exe string
 
@@ -148,6 +166,11 @@ func cmdInit(ctx context.Context, args json.RawMessage, p command.Prompter) (err
 		"Installed native messaging host for %s (extension: %s)",
 		params.Browser,
 		extensionId,
+	))
+
+	w.Comment(fmt.Sprintf(
+		"Set browser_id to \"%s\" in the extension options page, then reload the extension",
+		params.Name,
 	))
 
 	return

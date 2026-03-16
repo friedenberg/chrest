@@ -5,3 +5,4 @@
 - [ ] Refactor client command to use go-mcp command framework params instead of flag.NewFlagSet
 - [ ] Refactor reload-extension to stop mutating os.Args to call cmdClient
 - [ ] Add state-clear command (extension supports DELETE /state but no CLI command exists)
+- [ ] Test and fix reload-extension: server spawns but socket never appears after browser.runtime.reload() — likely extension not sending who-am-i after reload
