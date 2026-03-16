@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
-	"log"
 	"os"
 	"path"
 	"path/filepath"
@@ -194,8 +193,6 @@ func (config *Config) Write(ctx interfaces.ActiveContext) (err error) {
 
 		return
 	}()
-
-	log.Print(tempFileName, path)
 
 	if err = os.MkdirAll(dir, 0o700); err != nil {
 		err = errors.Wrap(err)
