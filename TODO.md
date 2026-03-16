@@ -1,3 +1,7 @@
 - [ ] Write custom buildNpmPackage derivation for rollup to handle native Rust binary deps (replaces npx rollup workaround in devenv-browser_extension)
 - [ ] Upstream PR to nixpkgs: add bin output to rolldown package (currently only installs lib/node_modules, missing bin/rolldown CLI wrapper)
 - [x] Once purse-first install_mcp branch lands: replace local install_mcp.go with `app.InstallMCP()` from go-mcp, update go.mod to new go-mcp version, delete mcpServerConfig/mcpJSON types and cmdInstallMCP func
+- [ ] FDR: Unified socket routing strategy — currently client command uses flag+env for browser selection, proxy queries all sockets, tool commands have no browser targeting. Need a consistent model for: default browser from config, explicit browser override, multi-browser fan-out vs single-browser targeting
+- [ ] Refactor client command to use go-mcp command framework params instead of flag.NewFlagSet
+- [ ] Refactor reload-extension to stop mutating os.Args to call cmdClient
+- [ ] Add state-clear command (extension supports DELETE /state but no CLI command exists)
