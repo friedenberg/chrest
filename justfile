@@ -18,6 +18,8 @@ test-go:
 
 test-mcp: build
   npx @modelcontextprotocol/inspector --cli --method tools/list go/build/release/chrest mcp
+  npx @modelcontextprotocol/inspector --cli --method resources/list go/build/release/chrest mcp
+  npx @modelcontextprotocol/inspector --cli --method resources/templates/list go/build/release/chrest mcp
 
 dev-install-mcp: build
   go/build/release/chrest install-mcp

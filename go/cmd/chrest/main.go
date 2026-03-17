@@ -12,7 +12,9 @@ import (
 	"github.com/amarbel-llc/purse-first/libs/go-mcp/transport"
 
 	"code.linenisgreat.com/chrest/go/src/bravo/config"
+	"code.linenisgreat.com/chrest/go/src/charlie/browser_items"
 	"code.linenisgreat.com/chrest/go/src/delta/proxy"
+	"code.linenisgreat.com/chrest/go/src/delta/resources"
 	"code.linenisgreat.com/chrest/go/src/delta/tools"
 	"code.linenisgreat.com/dodder/go/lib/_/stack_frame"
 	"code.linenisgreat.com/dodder/go/lib/bravo/errors"
@@ -73,7 +75,7 @@ func run(ctx errors.Context) (err error) {
 	registerGeneratePluginCommand(app)
 
 	if len(os.Args) > 1 && os.Args[1] == "mcp" {
-		if err = runMCP(ctx, app); err != nil {
+		if err = runMCP(ctx, app, p); err != nil {
 			err = errors.Wrap(err)
 			return
 		}
@@ -88,15 +90,19 @@ func run(ctx errors.Context) (err error) {
 	return
 }
 
-func runMCP(ctx context.Context, app *command.App) error {
+func runMCP(ctx context.Context, app *command.App, p *proxy.BrowserProxy) error {
 	t := transport.NewStdio(os.Stdin, os.Stdout)
 	registry := server.NewToolRegistryV1()
 	app.RegisterMCPToolsV1(registry)
+
+	itemsProxy := browser_items.BrowserProxy{Config: p.Config}
+	itemResources := resources.NewItemResources(p, itemsProxy)
 
 	srv, err := server.New(t, server.Options{
 		ServerName:    app.Name,
 		ServerVersion: app.Version,
 		Tools:         registry,
+		Resources:     itemResources,
 	})
 	if err != nil {
 		return errors.Wrap(err)
