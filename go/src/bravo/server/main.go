@@ -80,6 +80,11 @@ func (s *Server) Initialize() {
 	}
 
 	ui.Err().Printf("listening: %s", pathSock)
+
+	go func() {
+		<-s.Done()
+		os.Remove(pathSock)
+	}()
 }
 
 func (s *Server) Serve() {
