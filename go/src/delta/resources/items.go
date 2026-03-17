@@ -7,6 +7,8 @@ import (
 	"math"
 	"strconv"
 	"strings"
+	"sync"
+	"time"
 
 	"code.linenisgreat.com/chrest/go/src/charlie/browser_items"
 	"code.linenisgreat.com/chrest/go/src/delta/proxy"
@@ -17,12 +19,17 @@ const (
 	itemsURI         = "chrest://items"
 	itemsTemplateURI = "chrest://items/{page}"
 	pageSize         = 100
+	cacheTTL         = 30 * time.Second
 )
 
 // ItemResources implements server.ResourceProvider for paginated browser items.
 type ItemResources struct {
 	proxy      *proxy.BrowserProxy
 	itemsProxy browser_items.BrowserProxy
+
+	mu        sync.Mutex
+	cached    []browser_items.Item
+	cachedAt  time.Time
 }
 
 func NewItemResources(p *proxy.BrowserProxy, itemsProxy browser_items.BrowserProxy) *ItemResources {
@@ -63,6 +70,13 @@ func (r *ItemResources) ReadResource(ctx context.Context, uri string) (*protocol
 }
 
 func (r *ItemResources) fetchAll(ctx context.Context) ([]browser_items.Item, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	if r.cached != nil && time.Since(r.cachedAt) < cacheTTL {
+		return r.cached, nil
+	}
+
 	socks, err := r.proxy.GetSockets()
 	if err != nil {
 		return nil, err
@@ -73,7 +87,10 @@ func (r *ItemResources) fetchAll(ctx context.Context) ([]browser_items.Item, err
 		return nil, err
 	}
 
-	return resp.RequestPayloadGet, nil
+	r.cached = resp.RequestPayloadGet
+	r.cachedAt = time.Now()
+
+	return r.cached, nil
 }
 
 type pageInfo struct {
