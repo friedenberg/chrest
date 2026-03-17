@@ -6,8 +6,11 @@ import (
 	"os"
 	"syscall"
 
+	"encoding/json"
+
 	"github.com/amarbel-llc/purse-first/libs/go-mcp/command"
 	huhprompter "github.com/amarbel-llc/purse-first/libs/go-mcp/command/huh"
+	"github.com/amarbel-llc/purse-first/libs/go-mcp/protocol"
 	"github.com/amarbel-llc/purse-first/libs/go-mcp/server"
 	"github.com/amarbel-llc/purse-first/libs/go-mcp/transport"
 
@@ -97,6 +100,35 @@ func runMCP(ctx context.Context, app *command.App, p *proxy.BrowserProxy) error 
 
 	itemsProxy := browser_items.BrowserProxy{Config: p.Config}
 	itemResources := resources.NewItemResources(p, itemsProxy)
+
+	// Bridge tool: exposes resources as a tool for subagent access
+	registry.Register(
+		protocol.ToolV1{
+			Name:        "read-resource",
+			Description: "Read a chrest resource by URI (e.g. chrest://items, chrest://items/1)",
+			InputSchema: json.RawMessage(`{"type":"object","properties":{"uri":{"type":"string","description":"Resource URI to read"}},"required":["uri"]}`),
+		},
+		func(ctx context.Context, args json.RawMessage) (*protocol.ToolCallResultV1, error) {
+			var p0 struct {
+				URI string `json:"uri"`
+			}
+			if err := json.Unmarshal(args, &p0); err != nil {
+				return protocol.ErrorResultV1(err.Error()), nil
+			}
+			result, err := itemResources.ReadResource(ctx, p0.URI)
+			if err != nil {
+				return protocol.ErrorResultV1(err.Error()), nil
+			}
+			if len(result.Contents) == 0 {
+				return protocol.ErrorResultV1("no content"), nil
+			}
+			return &protocol.ToolCallResultV1{
+				Content: []protocol.ContentBlockV1{
+					protocol.TextContentV1(result.Contents[0].Text),
+				},
+			}, nil
+		},
+	)
 
 	srv, err := server.New(t, server.Options{
 		ServerName:    app.Name,
