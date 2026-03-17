@@ -11,6 +11,14 @@ build-go:
 build-extension:
   just extension/build
 
+test: test-go test-mcp
+
+test-go:
+  just go/tests-go
+
+test-mcp: build
+  npx @modelcontextprotocol/inspector --cli --method tools/list go/build/release/chrest mcp
+
 dev-install-mcp: build
   go/build/release/chrest install-mcp
 
