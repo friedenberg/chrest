@@ -11,5 +11,8 @@ build-go:
 build-extension:
   just extension/build
 
+dev-install-mcp: build
+  go/build/release/chrest install-mcp
+
 demo:
   vhs demo/demo.tape
