@@ -6,3 +6,4 @@
 - [ ] Refactor reload-extension to stop mutating os.Args to call cmdClient
 - [ ] Add state-clear command (extension supports DELETE /state but no CLI command exists)
 - [ ] Test and fix reload-extension: server spawns but socket never appears after browser.runtime.reload() — likely extension not sending who-am-i after reload
+- [ ] Demo: richer demo capture showing MCP usage and browser side-by-side (VHS is terminal-only, need OBS/ffmpeg or similar)
