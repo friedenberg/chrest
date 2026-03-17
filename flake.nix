@@ -33,6 +33,7 @@
               fish
               gnumake
               just
+              vhs
             ]
           );
 

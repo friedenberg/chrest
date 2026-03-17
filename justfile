@@ -10,3 +10,6 @@ build-go:
 
 build-extension:
   just extension/build
+
+demo:
+  vhs demo/demo.tape
