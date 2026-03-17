@@ -62,6 +62,7 @@ func run(ctx errors.Context) (err error) {
 	p := &proxy.BrowserProxy{Config: c}
 
 	app := command.NewApp("chrest", "Manage browsers via REST")
+	app.Version = "0.1.0"
 	app.MCPArgs = []string{"mcp"}
 
 	tools.RegisterAll(app, p)
