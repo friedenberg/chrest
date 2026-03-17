@@ -65,7 +65,7 @@ func registerWindowCommands(app *command.App, p *proxy.BrowserProxy) {
 
 			body := map[string]any{}
 			if len(p0.URLs) > 0 {
-				body["urls"] = p0.URLs
+				body["url"] = p0.URLs
 			}
 			if p0.Focused {
 				body["focused"] = true
