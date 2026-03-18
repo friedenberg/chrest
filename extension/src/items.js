@@ -183,9 +183,9 @@ export async function allTabItems(bid) {
 
 export async function allBookmarkItems(bid) {
   return (await browser.bookmarks.search({}))
-    .filter((b) => {
+    .filter((b) =>
       b.children === undefined || b.type === "bookmark"
-    })
+    )
     .map(o => urlItemForBookmark(bid, o));
 }
 

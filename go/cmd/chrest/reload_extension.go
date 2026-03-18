@@ -11,7 +11,6 @@ import (
 
 	"code.linenisgreat.com/chrest/go/src/bravo/config"
 	"code.linenisgreat.com/dodder/go/lib/bravo/errors"
-	"code.linenisgreat.com/dodder/go/lib/charlie/ui"
 	"github.com/amarbel-llc/purse-first/libs/go-mcp/command"
 )
 
@@ -48,25 +47,30 @@ func cmdReloadExtension(c config.Config) (err error) {
 
 	os.Args[2] = "GET"
 
-	for {
-		fmt.Println("waiting for server to come back up")
+	// The native host process is killed when the extension reloads.
+	// Wait for Chrome to relaunch it and for the new socket to appear.
+	maxRetries := 30
+	for i := range maxRetries {
+		fmt.Printf("waiting for server to come back up (%d/%d)\n", i+1, maxRetries)
+		time.Sleep(500 * time.Millisecond)
 
 		if err = cmdClient(c); err != nil {
-			if errors.Is(err, io.ErrUnexpectedEOF) {
+			if errors.Is(err, io.ErrUnexpectedEOF) ||
+				errors.IsErrno(err, syscall.ECONNREFUSED) ||
+				errors.IsErrno(err, syscall.ENOENT) {
 				err = nil
-				time.Sleep(1e8)
 				continue
-			} else if errors.IsErrno(err, syscall.ECONNREFUSED) {
-				ui.Err().Print("Browser failed to restart extension. It will need to be restarted manually.")
-				err = nil
-				return
-			} else {
-				err = errors.Wrap(err)
-				return
 			}
+
+			err = errors.Wrap(err)
+			return
 		}
 
 		break
+	}
+
+	if err == nil && maxRetries > 0 {
+		fmt.Println("extension reloaded successfully")
 	}
 
 	return

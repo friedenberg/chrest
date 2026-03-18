@@ -70,6 +70,13 @@ func (s *Server) Initialize() {
 		}
 	}
 
+	// Remove stale socket from a previous process that was killed without
+	// cleanup (e.g. Chrome kills native host on extension reload).
+	if _, err := os.Stat(pathSock); err == nil {
+		ui.Err().Printf("removing stale socket: %s", pathSock)
+		os.Remove(pathSock)
+	}
+
 	{
 		var err error
 
