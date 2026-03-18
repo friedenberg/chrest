@@ -16,10 +16,30 @@ test: test-go test-mcp
 test-go:
   just go/tests-go
 
+mcp-bin := "go/build/release/chrest mcp"
+mcp-inspect := "npx @modelcontextprotocol/inspector --cli"
+
 test-mcp: build
-  npx @modelcontextprotocol/inspector --cli --method tools/list go/build/release/chrest mcp
-  npx @modelcontextprotocol/inspector --cli --method resources/list go/build/release/chrest mcp
-  npx @modelcontextprotocol/inspector --cli --method resources/templates/list go/build/release/chrest mcp
+  #!/usr/bin/env bash
+  set -euo pipefail
+  tools=$({{mcp-inspect}} --method tools/list {{mcp-bin}})
+  resources=$({{mcp-inspect}} --method resources/list {{mcp-bin}})
+  templates=$({{mcp-inspect}} --method resources/templates/list {{mcp-bin}})
+  # Verify listings return valid JSON
+  echo "$tools" | jq -e '.tools | length > 0'
+  echo "$resources" | jq -e '.resources | length > 0'
+  echo "$templates" | jq -e '.resourceTemplates | length > 0'
+  # Verify readOnlyHint annotations
+  for tool in browser-info list-windows get-window list-tabs get-tab list-extensions items-get state-get read-resource; do
+    echo "$tools" | jq -e --arg t "$tool" '.tools[] | select(.name == $t) | .annotations.readOnlyHint == true' \
+      || { echo "FAIL: $tool missing readOnlyHint"; exit 1; }
+  done
+  # Verify destructiveHint annotations
+  for tool in close-window close-tab state-restore items-put; do
+    echo "$tools" | jq -e --arg t "$tool" '.tools[] | select(.name == $t) | .annotations.destructiveHint == true' \
+      || { echo "FAIL: $tool missing destructiveHint"; exit 1; }
+  done
+  echo "All MCP validations passed"
 
 dev-install-mcp: build
   go/build/release/chrest install-mcp
