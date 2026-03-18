@@ -124,16 +124,6 @@ async function initialize(e) {
     browser.runtime.openOptionsPage();
   } else {
     await initializePort(results["browser_id"]);
-
-    let lastError = browser.runtime.lastError;
-
-    if (lastError === undefined || lastError === null) {
-      console.log("socket started");
-      await notifyMe("Chrest", "Native host socket started");
-    } else {
-      console.log("socket failed to start");
-      await notifyMe("Chrest", `Native host socket failed: ${lastError}`);
-    }
   }
 }
 
@@ -151,6 +141,14 @@ async function initializePort(browser_id) {
   port = browser.runtime.connectNative("com.linenisgreat.code.chrest");
   port.onMessage.addListener(onMessage);
 
+  port.onDisconnect.addListener(async () => {
+    let error = browser.runtime.lastError;
+    let msg = error ? error.message : "unknown reason";
+    console.error(`native host disconnected: ${msg}`);
+    port = undefined;
+    await notifyMe("Chrest", `Native host disconnected: ${msg}`);
+  });
+
   let browserId = browserIdFromSettingString(browser_id);
   console.log(browserId);
 
@@ -158,6 +156,9 @@ async function initializePort(browser_id) {
     type: "who-am-i",
     browser_id: browserId,
   });
+
+  console.log("native host connected");
+  await notifyMe("Chrest", "Native host connected");
 }
 
 browser.runtime.onStartup.addListener(() => {
