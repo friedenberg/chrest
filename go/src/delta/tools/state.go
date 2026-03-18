@@ -26,6 +26,7 @@ func registerStateCommands(app *command.App, p *proxy.BrowserProxy) {
 	app.AddCommand(&command.Command{
 		Name:        "state-restore",
 		Description: command.Description{Short: "Restore browser state from a saved snapshot"},
+		Annotations: &protocol.ToolAnnotations{DestructiveHint: protocol.BoolPtr(true)},
 		Params: []command.Param{
 			{Name: "state", Type: command.Object, Required: true, Description: "Browser state object to restore"},
 		},

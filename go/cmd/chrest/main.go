@@ -107,6 +107,7 @@ func runMCP(ctx context.Context, app *command.App, p *proxy.BrowserProxy) error 
 			Name:        "read-resource",
 			Description: "Read a chrest resource by URI (e.g. chrest://items, chrest://items/1)",
 			InputSchema: json.RawMessage(`{"type":"object","properties":{"uri":{"type":"string","description":"Resource URI to read"}},"required":["uri"]}`),
+			Annotations: &protocol.ToolAnnotations{ReadOnlyHint: protocol.BoolPtr(true)},
 		},
 		func(ctx context.Context, args json.RawMessage) (*protocol.ToolCallResultV1, error) {
 			var p0 struct {

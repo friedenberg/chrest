@@ -48,6 +48,7 @@ func registerItemCommands(
 	app.AddCommand(&command.Command{
 		Name:        "items-put",
 		Description: command.Description{Short: "Add, delete, or focus browser items"},
+		Annotations: &protocol.ToolAnnotations{DestructiveHint: protocol.BoolPtr(true)},
 		Params: []command.Param{
 			{Name: "added", Type: command.Array, Description: "Items to add (objects with id, url, title)"},
 			{Name: "deleted", Type: command.Array, Description: "Items to delete (objects with id, url, title)"},
