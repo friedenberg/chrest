@@ -16,6 +16,10 @@ All commands use justfiles. Run from appropriate directory or use root justfile.
 ```bash
 just build              # builds both go and extension
 just reload             # builds and reinstalls extension
+just test               # run go tests + MCP validation
+just test-mcp           # validate MCP tools, resources, and annotations
+just dev-install-mcp    # build + install MCP server to ~/.claude.json
+just demo               # generate VHS demo GIF
 ```
 
 ### Go (from `go/` directory)
@@ -52,14 +56,32 @@ just deploy-firefox     # sign and deploy to Firefox AMO
 - `bravo/config/` - Configuration and state directory management
 - `charlie/install/` - Native messaging host installation (platform-specific paths)
 - `charlie/browser_items/` - Browser item types and operations
+- `delta/proxy/` - Multi-browser proxy (fan-out requests to all sockets)
+- `delta/tools/` - MCP tool definitions with annotations
+- `delta/resources/` - MCP paginated resources (`chrest://items`, `chrest://items/{page}`)
 
 ### CLI Commands (`go/cmd/chrest/main.go`)
 - `chrest` (default) - Start native messaging server
 - `chrest client` - Forward HTTP request from stdin to browser
 - `chrest install <extension-id>` - Install native messaging host manifest
+- `chrest install-mcp` - Install MCP server config to `~/.claude.json`
 - `chrest reload-extension` - Reload the browser extension
 - `chrest items-get` / `items-put` - Get/put browser items
-- `chrest init` - Initialize configuration
+- `chrest init` - Initialize configuration (browser, name, extension-id)
+- `chrest mcp` - Start MCP server (stdio transport)
+
+### MCP Server (`chrest mcp`)
+Exposes browser management as MCP tools and resources over stdio (JSON-RPC 2.0).
+
+**Tools** — all browser tools (list-windows, create-tab, close-tab, etc.) plus:
+- `read-resource` — bridge tool so subagents can access MCP resources via tools/call
+
+**Resources:**
+- `chrest://items` — paginated index (total count, page URIs)
+- `chrest://items/{page}` — 100 items per page (tabs, bookmarks, history)
+- Items are cached for 30s to handle concurrent reads
+
+**Annotations:** read-only tools have `readOnlyHint`, destructive tools (close-*, state-restore, items-put) have `destructiveHint`. Validated by `just test-mcp`.
 
 ### Extension REST Routes (`extension/src/routes.js`)
 - `/` - Browser info
@@ -82,7 +104,7 @@ Uses nix flakes with direnv. The root `flake.nix` provides a dev shell with Go a
 http --ignore-stdin --offline localhost/windows | chrest client | jq
 
 # Create new window with URL
-http --ignore-stdin --offline localhost/windows urls[]=https://example.com | chrest client | jq
+http --ignore-stdin --offline localhost/windows url[]=https://example.com | chrest client | jq
 
 # Close a window
 http --ignore-stdin --offline DELETE localhost/windows/1234 | chrest client
