@@ -31,11 +31,11 @@
       },
       "locked": {
         "dir": "devenvs/shell",
-        "lastModified": 1773422429,
-        "narHash": "sha256-JSyNFMiN+O7TtZB8sJMeqBxElCjQCmd9jBbvB39u2qU=",
+        "lastModified": 1774185568,
+        "narHash": "sha256-sST5jO0fWdd1grtoqawCDpKIK92r8tD44DOEf05VA1o=",
         "owner": "amarbel-llc",
         "repo": "purse-first",
-        "rev": "95e1e5de5c68ef64596ad18a115ab61709f147b0",
+        "rev": "f108139e29a8c9971d37753044a074e093d2af16",
         "type": "github"
       },
       "original": {
