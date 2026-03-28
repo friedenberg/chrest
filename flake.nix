@@ -1,6 +1,6 @@
 {
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/3e20095fe3c6cbb1ddcef89b26969a69a1570776";
+    nixpkgs.url = "github:NixOS/nixpkgs/fea3b367d61c1a6592bc47c72f40a9f3e6a53e96";
     utils.url = "https://flakehub.com/f/numtide/flake-utils/0.1.102";
 
     devenv-go.url = "github:amarbel-llc/purse-first?dir=devenvs/go";
