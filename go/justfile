@@ -10,7 +10,13 @@ build-go-binary tags output:
   mkdir -p '{{output}}'
   go build -tags '{{tags}}' -o '{{output}}' ./cmd/*
 
-build-go: \
+build-go-generate:
+  go generate ./src/alfa/...
+  go generate ./src/bravo/...
+  go generate ./src/charlie/...
+  go generate ./src/delta/...
+
+build-go: build-go-generate \
     (build-go-binary "debug" "build/debug") \
     (build-go-binary "" "build/release")
 

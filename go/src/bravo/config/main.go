@@ -1,17 +1,12 @@
 package config
 
 import (
-	"bufio"
-	"encoding/json"
 	"fmt"
 	"os"
 	"path"
 	"path/filepath"
 
-	"code.linenisgreat.com/dodder/go/lib/_/interfaces"
-	"code.linenisgreat.com/dodder/go/lib/alfa/pool"
 	"code.linenisgreat.com/dodder/go/lib/bravo/errors"
-	"code.linenisgreat.com/dodder/go/lib/charlie/fd"
 )
 
 type Config struct {
@@ -84,125 +79,6 @@ func (config Config) Directory() (v string) {
 	}
 
 	v = path.Join(v, "chrest")
-
-	return
-}
-
-func (config *Config) Read() (err error) {
-	wg := errors.MakeWaitGroupParallel()
-
-	wg.Do(config.readConfig)
-	wg.Do(config.readLoadedBrowsers)
-
-	if err = wg.GetError(); err != nil {
-		err = errors.Wrap(err)
-		return
-	}
-
-	return
-}
-
-func (config *Config) readConfig() (err error) {
-	if config.Home, err = os.UserHomeDir(); err != nil {
-		err = errors.Wrap(err)
-		return
-	}
-
-	p := path.Join(config.Directory(), "config.json")
-
-	var f *os.File
-
-	if f, err = os.Open(p); err != nil {
-		if errors.IsNotExist(err) {
-			err = nil
-		} else {
-			err = errors.Wrap(err)
-		}
-
-		return
-	}
-
-	defer errors.DeferredCloser(&err, f)
-
-	dec := json.NewDecoder(bufio.NewReader(f))
-
-	if err = dec.Decode(config); err != nil {
-		err = errors.Wrap(err)
-		return
-	}
-
-	return
-}
-
-func (config *Config) readLoadedBrowsers() (err error) {
-	var loadedBrowserPaths []string
-
-	var stateDir string
-
-	if stateDir, err = StateDirectory(); err != nil {
-		err = errors.Wrap(err)
-		return
-	}
-
-	if loadedBrowserPaths, err = filepath.Glob(filepath.Join(stateDir, "*.sock")); err != nil {
-		err = errors.Wrap(err)
-		return
-	}
-
-	for _, loadedBrowserPath := range loadedBrowserPaths {
-		var id BrowserId
-
-		if err = id.Set(fd.FileNameSansExt(loadedBrowserPath)); err != nil {
-			err = errors.Wrap(err)
-			return
-		}
-
-		config.LoadedBrowsers = append(config.LoadedBrowsers, id)
-	}
-
-	return
-}
-
-func (config *Config) Write(ctx interfaces.ActiveContext) (err error) {
-	dir := config.Directory()
-	path := path.Join(dir, "config.json")
-
-	tempFileName := func() (tempFileName string) {
-		var file *os.File
-
-		if file, err = os.CreateTemp("", ""); err != nil {
-			err = errors.Wrap(err)
-			return
-		}
-
-		tempFileName = file.Name()
-
-		defer errors.ContextMustClose(ctx, file)
-
-		bufferedWriter, repool := pool.GetBufferedWriter(file)
-		defer repool()
-
-		defer errors.ContextMustFlush(ctx, bufferedWriter)
-
-		enc := json.NewEncoder(bufferedWriter)
-
-		if err = enc.Encode(config); err != nil {
-			err = errors.Wrap(err)
-			return
-		}
-
-		return
-	}()
-
-	if err = os.MkdirAll(dir, 0o700); err != nil {
-		err = errors.Wrap(err)
-		return
-	}
-
-	if err = os.Rename(tempFileName, path); err != nil {
-		err = errors.Wrap(err)
-		return
-	}
 
 	return
 }

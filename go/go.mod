@@ -1,15 +1,16 @@
 module code.linenisgreat.com/chrest/go
 
-go 1.25.5
+go 1.26
 
 require (
 	code.linenisgreat.com/dodder/go v0.0.0-20260307134648-9b896861407d
+	github.com/amarbel-llc/bob/packages/tap-dancer/go v0.0.0-20260315134819-f7c6cbb2c6f2
 	github.com/amarbel-llc/purse-first/libs/go-mcp v0.0.4
 	github.com/amarbel-llc/purse-first/libs/go-mcp/command/huh v0.0.4
+	github.com/amarbel-llc/tommy v0.0.0-20260326203518-8ebebb5d2759
 )
 
 require (
-	github.com/amarbel-llc/bob/packages/tap-dancer/go v0.0.0-20260315134819-f7c6cbb2c6f2 // indirect
 	github.com/atotto/clipboard v0.1.4 // indirect
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
 	github.com/catppuccin/go v0.3.0 // indirect
