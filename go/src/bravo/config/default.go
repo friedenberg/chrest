@@ -4,7 +4,7 @@ import (
 	"os"
 
 	"code.linenisgreat.com/chrest/go/src/alfa/browser"
-	"code.linenisgreat.com/dodder/go/lib/bravo/errors"
+	"github.com/amarbel-llc/purse-first/libs/dewey/bravo/errors"
 )
 
 func Default() (config Config, err error) {

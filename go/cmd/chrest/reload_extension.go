@@ -10,8 +10,8 @@ import (
 	"time"
 
 	"code.linenisgreat.com/chrest/go/src/bravo/config"
-	"code.linenisgreat.com/dodder/go/lib/bravo/errors"
-	"github.com/amarbel-llc/purse-first/libs/go-mcp/command"
+	"github.com/amarbel-llc/purse-first/libs/dewey/bravo/errors"
+	"github.com/amarbel-llc/purse-first/libs/dewey/golf/command"
 )
 
 func registerReloadExtensionCommand(app *command.App, c config.Config) {

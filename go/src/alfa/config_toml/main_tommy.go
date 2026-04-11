@@ -4,15 +4,15 @@ package config_toml
 
 import (
 	"fmt"
-
 	"github.com/amarbel-llc/tommy/pkg/cst"
 	"github.com/amarbel-llc/tommy/pkg/document"
+	"strings"
 )
 
-// Ensure imports are used.
 var (
 	_ = fmt.Errorf
 	_ cst.NodeKind
+	_ = strings.Contains
 )
 
 type ConfigDocument struct {
@@ -27,109 +27,125 @@ func DecodeConfig(input []byte) (*ConfigDocument, error) {
 		return nil, err
 	}
 
-	d := &ConfigDocument{cstDoc: doc, consumed: make(map[string]bool)}
-
-	if tableNode := d.cstDoc.FindTable("default-browser"); tableNode != nil {
-		d.consumed["default-browser"] = true
-		if v, err := document.GetFromContainer[string](d.cstDoc, tableNode, "browser"); err == nil {
-			if err := d.data.DefaultBrowser.Browser.UnmarshalText([]byte(v)); err != nil {
-				return nil, fmt.Errorf("browser: %w", err)
-			}
-			d.consumed["default-browser.browser"] = true
-		}
-		if v, err := document.GetFromContainer[string](d.cstDoc, tableNode, "id"); err == nil {
-			d.data.DefaultBrowser.Id = v
-			d.consumed["default-browser.id"] = true
-		}
+	d := &ConfigDocument{
+		consumed: make(map[string]bool),
+		cstDoc:   doc,
 	}
 
+	for _, _ch := range d.cstDoc.Root().Children {
+		if _ch.Kind == cst.NodeTable && cst.TableHeaderKey(_ch) == "default-browser" {
+			d.consumed["default-browser"] = true
+			for _, _kv := range _ch.Children {
+				if _kv.Kind != cst.NodeKeyValue {
+					continue
+				}
+				switch cst.KeyValueName(_kv) {
+				case "browser":
+					if v, ok := cst.ExtractString(_kv); ok {
+						if err := d.data.DefaultBrowser.Browser.UnmarshalText([]byte(v)); err != nil {
+							return nil, fmt.Errorf("browser: %w", err)
+						}
+						d.consumed["default-browser.browser"] = true
+					}
+				case "id":
+					if v, ok := cst.ExtractString(_kv); ok {
+						d.data.DefaultBrowser.Id = v
+						d.consumed["default-browser.id"] = true
+					}
+				}
+			}
+			break
+		}
+	}
 	return d, nil
 }
-
-func (d *ConfigDocument) Data() *Config { return &d.data }
-
+func (d *ConfigDocument) Data() *Config {
+	return &d.data
+}
 func (d *ConfigDocument) Encode() ([]byte, error) {
 	{
-		tableNode := d.cstDoc.EnsureTable("default-browser")
+		tableNode := cst.EnsureChildTable(d.cstDoc.Root(), d.cstDoc.Root(), "default-browser")
 		{
 			v, err := d.data.DefaultBrowser.Browser.MarshalText()
 			if err != nil {
 				return nil, fmt.Errorf("browser: %w", err)
 			}
-			if err := d.cstDoc.SetInContainer(tableNode, "browser", string(v)); err != nil {
-				return nil, err
+			if err := cst.SetAny(tableNode, "browser", string(v)); err != nil {
+				return nil, fmt.Errorf("%w", err)
 			}
 		}
 		if d.data.DefaultBrowser.Id != "" {
-			if err := d.cstDoc.SetInContainer(tableNode, "id", d.data.DefaultBrowser.Id); err != nil {
-				return nil, err
+			if err := cst.SetAny(tableNode, "id", d.data.DefaultBrowser.Id); err != nil {
+				return nil, fmt.Errorf("%w", err)
 			}
 		} else {
-			_ = d.cstDoc.DeleteFromContainer(tableNode, "id")
+			cst.DeleteValue(tableNode, "id")
 		}
 	}
-
 	return d.cstDoc.Bytes(), nil
 }
-
 func (d *ConfigDocument) Undecoded() []string {
 	return document.UndecodedKeys(d.cstDoc.Root(), d.consumed)
 }
-
 func (d *ConfigDocument) Comment(key string) string {
 	return d.cstDoc.GetComment(key)
 }
-
 func (d *ConfigDocument) SetComment(key, comment string) {
 	d.cstDoc.SetComment(key, comment)
 }
-
 func (d *ConfigDocument) InlineComment(key string) string {
 	return d.cstDoc.GetInlineComment(key)
 }
-
 func (d *ConfigDocument) SetInlineComment(key, comment string) {
 	d.cstDoc.SetInlineComment(key, comment)
 }
-
 func DecodeConfigInto(data *Config, doc *document.Document, container *cst.Node, consumed map[string]bool, keyPrefix string) error {
-	if tableNode := doc.FindTableInContainer(container, "default-browser"); tableNode != nil {
-		consumed[keyPrefix+"default-browser"] = true
-		if v, err := document.GetFromContainer[string](doc, tableNode, "browser"); err == nil {
-			if err := data.DefaultBrowser.Browser.UnmarshalText([]byte(v)); err != nil {
-				return fmt.Errorf("browser: %w", err)
+	for _, _ch := range doc.Root().Children {
+		if _ch.Kind == cst.NodeTable && cst.TableHeaderKey(_ch) == keyPrefix+"default-browser" {
+			consumed[keyPrefix+"default-browser"] = true
+			for _, _kv := range _ch.Children {
+				if _kv.Kind != cst.NodeKeyValue {
+					continue
+				}
+				switch cst.KeyValueName(_kv) {
+				case "browser":
+					if v, ok := cst.ExtractString(_kv); ok {
+						if err := data.DefaultBrowser.Browser.UnmarshalText([]byte(v)); err != nil {
+							return fmt.Errorf("browser: %w", err)
+						}
+						consumed[keyPrefix+"default-browser.browser"] = true
+					}
+				case "id":
+					if v, ok := cst.ExtractString(_kv); ok {
+						data.DefaultBrowser.Id = v
+						consumed[keyPrefix+"default-browser.id"] = true
+					}
+				}
 			}
-			consumed[keyPrefix+"default-browser.browser"] = true
-		}
-		if v, err := document.GetFromContainer[string](doc, tableNode, "id"); err == nil {
-			data.DefaultBrowser.Id = v
-			consumed[keyPrefix+"default-browser.id"] = true
+			break
 		}
 	}
-
 	return nil
 }
-
 func EncodeConfigFrom(data *Config, doc *document.Document, container *cst.Node) error {
 	{
-		tableNode := doc.EnsureTableInContainer(container, "default-browser")
+		tableNode := cst.EnsureChildTable(doc.Root(), container, "default-browser")
 		{
 			v, err := data.DefaultBrowser.Browser.MarshalText()
 			if err != nil {
 				return fmt.Errorf("browser: %w", err)
 			}
-			if err := doc.SetInContainer(tableNode, "browser", string(v)); err != nil {
-				return err
+			if err := cst.SetAny(tableNode, "browser", string(v)); err != nil {
+				return fmt.Errorf("%w", err)
 			}
 		}
 		if data.DefaultBrowser.Id != "" {
-			if err := doc.SetInContainer(tableNode, "id", data.DefaultBrowser.Id); err != nil {
-				return err
+			if err := cst.SetAny(tableNode, "id", data.DefaultBrowser.Id); err != nil {
+				return fmt.Errorf("%w", err)
 			}
 		} else {
-			_ = doc.DeleteFromContainer(tableNode, "id")
+			cst.DeleteValue(tableNode, "id")
 		}
 	}
-
 	return nil
 }

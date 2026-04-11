@@ -6,9 +6,10 @@ import (
 	"path/filepath"
 
 	config_toml "code.linenisgreat.com/chrest/go/src/alfa/config_toml"
-	"code.linenisgreat.com/dodder/go/lib/_/interfaces"
-	"code.linenisgreat.com/dodder/go/lib/bravo/errors"
-	"code.linenisgreat.com/dodder/go/lib/charlie/fd"
+	"strings"
+
+	"github.com/amarbel-llc/purse-first/libs/dewey/0/interfaces"
+	"github.com/amarbel-llc/purse-first/libs/dewey/bravo/errors"
 )
 
 func (config *Config) Read() (err error) {
@@ -76,7 +77,10 @@ func (config *Config) readLoadedBrowsers() (err error) {
 	for _, loadedBrowserPath := range loadedBrowserPaths {
 		var id BrowserId
 
-		if err = id.Set(fd.FileNameSansExt(loadedBrowserPath)); err != nil {
+		base := filepath.Base(loadedBrowserPath)
+		name := strings.TrimSuffix(base, filepath.Ext(base))
+
+		if err = id.Set(name); err != nil {
 			err = errors.Wrap(err)
 			return
 		}

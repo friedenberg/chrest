@@ -10,9 +10,9 @@ import (
 	"code.linenisgreat.com/chrest/go/src/alfa/symlink"
 	"code.linenisgreat.com/chrest/go/src/bravo/config"
 	"code.linenisgreat.com/chrest/go/src/charlie/install"
-	"code.linenisgreat.com/dodder/go/lib/bravo/errors"
+	"github.com/amarbel-llc/purse-first/libs/dewey/bravo/errors"
 	tap "github.com/amarbel-llc/bob/packages/tap-dancer/go"
-	"github.com/amarbel-llc/purse-first/libs/go-mcp/command"
+	"github.com/amarbel-llc/purse-first/libs/dewey/golf/command"
 )
 
 const defaultBrowserName = "default"

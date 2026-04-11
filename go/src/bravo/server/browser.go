@@ -6,8 +6,8 @@ import (
 	"io"
 	"os"
 
-	"code.linenisgreat.com/dodder/go/lib/bravo/errors"
-	"code.linenisgreat.com/dodder/go/lib/charlie/ohio"
+	"github.com/amarbel-llc/purse-first/libs/dewey/bravo/errors"
+	"github.com/amarbel-llc/purse-first/libs/dewey/charlie/ohio"
 )
 
 func WriteToBrowser(m interface{}) (n int64, err error) {

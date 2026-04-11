@@ -1,25 +1,21 @@
 schema = 3
 
 [mod]
-  [mod.'code.linenisgreat.com/dodder/go']
-    version = 'v0.0.0-20260307134648-9b896861407d'
-    hash = 'sha256-9U6FdZqiYWf35iIyyM5M8eKKfv/f7O0wsLqJyp1ibEg='
-
   [mod.'github.com/amarbel-llc/bob/packages/tap-dancer/go']
     version = 'v0.0.0-20260315134819-f7c6cbb2c6f2'
     hash = 'sha256-ayN35kfrro9EUW3+11zPSwt/VZcKxAIp0a4o5crk5Os='
+
+  [mod.'github.com/amarbel-llc/purse-first/libs/dewey']
+    version = 'v0.0.0-20260411184728-e8d4d588e93a'
+    hash = 'sha256-z9M7cEFPWwzhlb/B23MlpASJRFMr+8PKNPxrJAATU6I='
 
   [mod.'github.com/amarbel-llc/purse-first/libs/go-mcp']
     version = 'v0.0.4'
     hash = 'sha256-xEmWi8sABzRWp8fbPavpZKznx943HWqVcLv6pckTP+k='
 
-  [mod.'github.com/amarbel-llc/purse-first/libs/go-mcp/command/huh']
-    version = 'v0.0.4'
-    hash = 'sha256-JbqwWV87R2fQge+4BWZQysOpkgMpGCNYFoOR3VkVSK8='
-
   [mod.'github.com/amarbel-llc/tommy']
-    version = 'v0.0.0-20260326203518-8ebebb5d2759'
-    hash = 'sha256-X0Q2E/jREtcOoq22q0/QBGRyHyuN0G9qFU+qDXPsSbM='
+    version = 'v0.0.0-20260405143331-87255e87bf37'
+    hash = 'sha256-ElzACYuPmWpNk7bm4V8de18P+PqG+92X9aSxJg8gRUI='
 
   [mod.'github.com/atotto/clipboard']
     version = 'v0.1.4'
@@ -134,21 +130,21 @@ schema = 3
     hash = 'sha256-GyCDxxMQhXA3Pi/TsWXpA8cX5akEoZV7CFx4RO3rARU='
 
   [mod.'golang.org/x/sys']
-    version = 'v0.41.0'
-    hash = 'sha256-owjs3/IzAKfFlIz1U1fiHSfl2+bTUhaXTyWEjL5SWHk='
+    version = 'v0.43.0'
+    hash = 'sha256-aDQXqSTZES2l/132PBxhZN4ywldpPyfm7LByYCHzzwM='
 
   [mod.'golang.org/x/term']
-    version = 'v0.40.0'
-    hash = 'sha256-tu8USqDmcWfwery/+xti/BdUpNLbMNmZeghBNDsj1fQ='
+    version = 'v0.42.0'
+    hash = 'sha256-FCiDvAfq7dgBGQuiDYDFJbj/JPawhrmPF2qdUEftQ1c='
 
   [mod.'golang.org/x/text']
-    version = 'v0.34.0'
-    hash = 'sha256-wGKd1JkeiFROibvo2kkAuQ7JajSIfV4utGaoGbTQhQM='
+    version = 'v0.36.0'
+    hash = 'sha256-/0t9C6Mc8kYjxweFB0us2lGKo8GovHhBiq5nlMOppC0='
 
   [mod.'golang.org/x/xerrors']
     version = 'v0.0.0-20240903120638-7835f813f4da'
     hash = 'sha256-bE7CcrnAvryNvM26ieJGXqbAtuLwHaGcmtVMsVnksqo='
 
   [mod.'mvdan.cc/sh/v3']
-    version = 'v3.12.0'
-    hash = 'sha256-1T55DgxWYDG1Y3SyZYLmSdLQPMVC6LUp1yLH98wKhGk='
+    version = 'v3.13.1'
+    hash = 'sha256-FM+2xpGELZLm4Gc09OE5Z3JeNLPMvzeb1wRcdAIeKy4='

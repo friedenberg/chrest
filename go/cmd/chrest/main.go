@@ -8,20 +8,20 @@ import (
 
 	"encoding/json"
 
-	"github.com/amarbel-llc/purse-first/libs/go-mcp/command"
-	huhprompter "github.com/amarbel-llc/purse-first/libs/go-mcp/command/huh"
-	"github.com/amarbel-llc/purse-first/libs/go-mcp/protocol"
-	"github.com/amarbel-llc/purse-first/libs/go-mcp/server"
-	"github.com/amarbel-llc/purse-first/libs/go-mcp/transport"
+	"github.com/amarbel-llc/purse-first/libs/dewey/golf/command"
+	"code.linenisgreat.com/chrest/go/src/alfa/prompter"
+	"github.com/amarbel-llc/purse-first/libs/dewey/golf/protocol"
+	"github.com/amarbel-llc/purse-first/libs/dewey/golf/server"
+	"github.com/amarbel-llc/purse-first/libs/dewey/golf/transport"
 
 	"code.linenisgreat.com/chrest/go/src/bravo/config"
 	"code.linenisgreat.com/chrest/go/src/charlie/browser_items"
 	"code.linenisgreat.com/chrest/go/src/delta/proxy"
 	"code.linenisgreat.com/chrest/go/src/delta/resources"
 	"code.linenisgreat.com/chrest/go/src/delta/tools"
-	"code.linenisgreat.com/dodder/go/lib/_/stack_frame"
-	"code.linenisgreat.com/dodder/go/lib/bravo/errors"
-	"code.linenisgreat.com/dodder/go/lib/charlie/ui"
+	"github.com/amarbel-llc/purse-first/libs/dewey/0/stack_frame"
+	"github.com/amarbel-llc/purse-first/libs/dewey/bravo/errors"
+	"github.com/amarbel-llc/purse-first/libs/dewey/charlie/ui"
 )
 
 func init() {
@@ -85,7 +85,7 @@ func run(ctx errors.Context) (err error) {
 		return
 	}
 
-	if err = app.RunCLI(ctx, os.Args[1:], huhprompter.Prompter{}); err != nil {
+	if err = app.RunCLI(ctx, os.Args[1:], prompter.Prompter{}); err != nil {
 		err = errors.Wrap(err)
 		return
 	}

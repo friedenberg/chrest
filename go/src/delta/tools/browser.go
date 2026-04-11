@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 
 	"code.linenisgreat.com/chrest/go/src/delta/proxy"
-	"github.com/amarbel-llc/purse-first/libs/go-mcp/command"
-	"github.com/amarbel-llc/purse-first/libs/go-mcp/protocol"
+	"github.com/amarbel-llc/purse-first/libs/dewey/golf/command"
+	"github.com/amarbel-llc/purse-first/libs/dewey/golf/protocol"
 )
 
 func registerBrowserCommands(app *command.App, p *proxy.BrowserProxy) {

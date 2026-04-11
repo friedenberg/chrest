@@ -3,12 +3,13 @@ module code.linenisgreat.com/chrest/go
 go 1.26
 
 require (
-	code.linenisgreat.com/dodder/go v0.0.0-20260307134648-9b896861407d
 	github.com/amarbel-llc/bob/packages/tap-dancer/go v0.0.0-20260315134819-f7c6cbb2c6f2
-	github.com/amarbel-llc/purse-first/libs/go-mcp v0.0.4
-	github.com/amarbel-llc/purse-first/libs/go-mcp/command/huh v0.0.4
-	github.com/amarbel-llc/tommy v0.0.0-20260326203518-8ebebb5d2759
+	github.com/amarbel-llc/purse-first/libs/dewey v0.0.0-20260411184728-e8d4d588e93a
+	github.com/amarbel-llc/tommy v0.0.0-20260405143331-87255e87bf37
+	github.com/charmbracelet/huh v0.8.0
 )
+
+require github.com/amarbel-llc/purse-first/libs/go-mcp v0.0.4 // indirect
 
 require (
 	github.com/atotto/clipboard v0.1.4 // indirect
@@ -17,7 +18,6 @@ require (
 	github.com/charmbracelet/bubbles v1.0.0 // indirect
 	github.com/charmbracelet/bubbletea v1.3.10 // indirect
 	github.com/charmbracelet/colorprofile v0.4.1 // indirect
-	github.com/charmbracelet/huh v0.8.0 // indirect
 	github.com/charmbracelet/lipgloss v1.1.0 // indirect
 	github.com/charmbracelet/x/ansi v0.11.6 // indirect
 	github.com/charmbracelet/x/cellbuf v0.0.15 // indirect
@@ -39,9 +39,9 @@ require (
 	github.com/muesli/termenv v0.16.0 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e // indirect
-	golang.org/x/sys v0.41.0 // indirect
-	golang.org/x/term v0.40.0 // indirect
-	golang.org/x/text v0.34.0 // indirect
+	golang.org/x/sys v0.43.0 // indirect
+	golang.org/x/term v0.42.0 // indirect
+	golang.org/x/text v0.36.0 // indirect
 	golang.org/x/xerrors v0.0.0-20240903120638-7835f813f4da // indirect
-	mvdan.cc/sh/v3 v3.12.0 // indirect
+	mvdan.cc/sh/v3 v3.13.1 // indirect
 )

@@ -3,7 +3,7 @@ package symlink
 import (
 	"os"
 
-	"code.linenisgreat.com/dodder/go/lib/bravo/errors"
+	"github.com/amarbel-llc/purse-first/libs/dewey/bravo/errors"
 )
 
 func Symlink(oldPath, newPath string) (err error) {
