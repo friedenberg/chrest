@@ -9,7 +9,7 @@ import (
 	"github.com/amarbel-llc/purse-first/libs/dewey/golf/protocol"
 )
 
-func registerBrowserCommands(app *command.App, p *proxy.BrowserProxy) {
+func registerBrowserCommands(app *command.Utility, p *proxy.BrowserProxy) {
 	app.AddCommand(&command.Command{
 		Name:        "browser-info",
 		Description: command.Description{Short: "Get browser information"},

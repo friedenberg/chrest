@@ -8,7 +8,7 @@ import (
 	"github.com/amarbel-llc/purse-first/libs/dewey/golf/command"
 )
 
-func registerGeneratePluginCommand(app *command.App) {
+func registerGeneratePluginCommand(app *command.Utility) {
 	app.AddCommand(&command.Command{
 		Name:   "generate-plugin",
 		Hidden: true,

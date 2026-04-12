@@ -66,7 +66,7 @@ func run(ctx errors.Context) (err error) {
 
 	p := &proxy.BrowserProxy{Config: c}
 
-	app := command.NewApp("chrest", "Manage browsers via REST")
+	app := command.NewUtility("chrest", "Manage browsers via REST")
 	app.Version = "0.1.0"
 	app.MCPArgs = []string{"mcp"}
 
@@ -93,7 +93,7 @@ func run(ctx errors.Context) (err error) {
 	return
 }
 
-func runMCP(ctx context.Context, app *command.App, p *proxy.BrowserProxy) error {
+func runMCP(ctx context.Context, app *command.Utility, p *proxy.BrowserProxy) error {
 	t := transport.NewStdio(os.Stdin, os.Stdout)
 	registry := server.NewToolRegistryV1()
 	app.RegisterMCPToolsV1(registry)

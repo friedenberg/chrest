@@ -17,7 +17,7 @@ import (
 
 const defaultBrowserName = "default"
 
-func registerInitCommand(app *command.App) {
+func registerInitCommand(app *command.Utility) {
 	browser := command.StringFlag{}
 	browser.Name = "browser"
 	browser.Description = "Default browser (chrome or firefox)"

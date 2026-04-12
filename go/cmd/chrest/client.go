@@ -19,7 +19,7 @@ import (
 	"github.com/amarbel-llc/purse-first/libs/dewey/golf/command"
 )
 
-func registerClientCommand(app *command.App, c config.Config) {
+func registerClientCommand(app *command.Utility, c config.Config) {
 	browserFlag := command.StringFlag{}
 	browserFlag.Name = "browser"
 	browserFlag.Description = "Which browser to communicate with"

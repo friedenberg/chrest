@@ -6,8 +6,8 @@ schema = 3
     hash = 'sha256-ayN35kfrro9EUW3+11zPSwt/VZcKxAIp0a4o5crk5Os='
 
   [mod.'github.com/amarbel-llc/purse-first/libs/dewey']
-    version = 'v0.0.0-20260411184728-e8d4d588e93a'
-    hash = 'sha256-z9M7cEFPWwzhlb/B23MlpASJRFMr+8PKNPxrJAATU6I='
+    version = 'v0.0.0-20260412112748-fd33419c9739'
+    hash = 'sha256-NaWj7GmTqCLB9mYylZ8suFb/8NzkhMxhPWglFtWYXMU='
 
   [mod.'github.com/amarbel-llc/purse-first/libs/go-mcp']
     version = 'v0.0.4'

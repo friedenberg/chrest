@@ -16,7 +16,7 @@ import (
 	"github.com/amarbel-llc/purse-first/libs/dewey/golf/command"
 )
 
-func registerReloadExtensionCommand(app *command.App, c config.Config) {
+func registerReloadExtensionCommand(app *command.Utility, c config.Config) {
 	app.AddCommand(&command.Command{
 		Name:        "reload-extension",
 		Description: command.Description{Short: "Reload the browser extension"},

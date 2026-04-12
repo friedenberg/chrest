@@ -9,7 +9,7 @@ import (
 	"github.com/amarbel-llc/purse-first/libs/dewey/golf/protocol"
 )
 
-func registerStateCommands(app *command.App, p *proxy.BrowserProxy) {
+func registerStateCommands(app *command.Utility, p *proxy.BrowserProxy) {
 	app.AddCommand(&command.Command{
 		Name:        "state-get",
 		Description: command.Description{Short: "Get current browser state"},

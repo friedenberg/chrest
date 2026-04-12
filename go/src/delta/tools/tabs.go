@@ -9,7 +9,7 @@ import (
 	"github.com/amarbel-llc/purse-first/libs/dewey/golf/protocol"
 )
 
-func registerTabCommands(app *command.App, p *proxy.BrowserProxy) {
+func registerTabCommands(app *command.Utility, p *proxy.BrowserProxy) {
 	tabID := command.StringFlag{}
 	tabID.Name = "tab_id"
 	tabID.Required = true

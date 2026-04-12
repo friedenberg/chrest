@@ -17,7 +17,7 @@ type itemArg struct {
 }
 
 func registerItemCommands(
-	app *command.App,
+	app *command.Utility,
 	p *proxy.BrowserProxy,
 	itemsProxy browser_items.BrowserProxy,
 ) {

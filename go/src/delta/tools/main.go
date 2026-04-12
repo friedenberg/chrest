@@ -6,7 +6,7 @@ import (
 	"github.com/amarbel-llc/purse-first/libs/dewey/golf/command"
 )
 
-func RegisterAll(app *command.App, p *proxy.BrowserProxy) {
+func RegisterAll(app *command.Utility, p *proxy.BrowserProxy) {
 	itemsProxy := browser_items.BrowserProxy{Config: p.Config}
 
 	registerBrowserCommands(app, p)

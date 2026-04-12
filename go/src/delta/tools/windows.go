@@ -9,7 +9,7 @@ import (
 	"github.com/amarbel-llc/purse-first/libs/dewey/golf/protocol"
 )
 
-func registerWindowCommands(app *command.App, p *proxy.BrowserProxy) {
+func registerWindowCommands(app *command.Utility, p *proxy.BrowserProxy) {
 	windowID := command.StringFlag{}
 	windowID.Name = "window_id"
 	windowID.Required = true

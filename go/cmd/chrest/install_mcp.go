@@ -7,7 +7,7 @@ import (
 	"github.com/amarbel-llc/purse-first/libs/dewey/golf/command"
 )
 
-func registerInstallMCPCommand(app *command.App) {
+func registerInstallMCPCommand(app *command.Utility) {
 	app.AddCommand(&command.Command{
 		Name: "install-mcp",
 		Description: command.Description{
