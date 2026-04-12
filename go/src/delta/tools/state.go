@@ -28,7 +28,7 @@ func registerStateCommands(app *command.App, p *proxy.BrowserProxy) {
 		Description: command.Description{Short: "Restore browser state from a saved snapshot"},
 		Annotations: &protocol.ToolAnnotations{DestructiveHint: protocol.BoolPtr(true)},
 		Params: []command.Param{
-			{Name: "state", Type: command.Object, Required: true, Description: "Browser state object to restore"},
+			command.ObjectFlag{Name: "state", Required: true, Description: "Browser state object to restore"},
 		},
 		Run: func(ctx context.Context, args json.RawMessage, _ command.Prompter) (*command.Result, error) {
 			var p0 struct {

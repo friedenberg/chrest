@@ -18,16 +18,25 @@ import (
 const defaultBrowserName = "default"
 
 func registerInitCommand(app *command.App) {
+	browser := command.StringFlag{}
+	browser.Name = "browser"
+	browser.Description = "Default browser (chrome or firefox)"
+	browser.EnumValues = []string{"chrome", "firefox"}
+
+	name := command.StringFlag{}
+	name.Name = "name"
+	name.Description = "Browser instance name (default: \"default\")"
+
+	extensionID := command.StringFlag{}
+	extensionID.Name = "extension-id"
+	extensionID.Description = "Custom extension ID (uses default if omitted)"
+
 	app.AddCommand(&command.Command{
 		Name: "init",
 		Description: command.Description{
 			Short: "Initialize configuration and install native messaging host",
 		},
-		Params: []command.Param{
-			{Name: "browser", Type: command.String, Description: "Default browser (chrome or firefox)"},
-			{Name: "name", Type: command.String, Description: "Browser instance name (default: \"default\")"},
-			{Name: "extension-id", Type: command.String, Description: "Custom extension ID (uses default if omitted)"},
-		},
+		Params: []command.Param{browser, name, extensionID},
 		Run: func(ctx context.Context, args json.RawMessage, p command.Prompter) (*command.Result, error) {
 			return nil, cmdInit(ctx, args, p)
 		},

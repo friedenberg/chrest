@@ -4,7 +4,7 @@ go 1.26
 
 require (
 	github.com/amarbel-llc/bob/packages/tap-dancer/go v0.0.0-20260315134819-f7c6cbb2c6f2
-	github.com/amarbel-llc/purse-first/libs/dewey v0.0.0-20260411184728-e8d4d588e93a
+	github.com/amarbel-llc/purse-first/libs/dewey v0.0.0-20260412112748-fd33419c9739
 	github.com/amarbel-llc/tommy v0.0.0-20260405143331-87255e87bf37
 	github.com/charmbracelet/huh v0.8.0
 )

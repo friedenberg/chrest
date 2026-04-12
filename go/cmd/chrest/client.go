@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"encoding/json"
-	"flag"
 	"fmt"
 	"io"
 	"net"
@@ -21,30 +20,41 @@ import (
 )
 
 func registerClientCommand(app *command.App, c config.Config) {
+	browserFlag := command.StringFlag{}
+	browserFlag.Name = "browser"
+	browserFlag.Description = "Which browser to communicate with"
+	browserFlag.Default = os.Getenv("CHREST_BROWSER")
+
+	fullRequestFlag := command.BoolFlag{}
+	fullRequestFlag.Name = "full-request"
+	fullRequestFlag.Description = "Print the full request including headers"
+
+	httpieArgs := command.StringArg{}
+	httpieArgs.Name = "args"
+	httpieArgs.Variadic = true
+	httpieArgs.Description = "HTTPie arguments (e.g. GET /windows)"
+
 	app.AddCommand(&command.Command{
 		Name:        "client",
 		Description: command.Description{Short: "Forward HTTP request from stdin to browser"},
+		Params:      []command.Param{browserFlag, fullRequestFlag, httpieArgs},
 		RunCLI: func(ctx context.Context, args json.RawMessage) error {
-			return cmdClient(c)
+			var params struct {
+				Browser     string   `json:"browser"`
+				FullRequest bool     `json:"full-request"`
+				Args        []string `json:"args"`
+			}
+
+			if err := json.Unmarshal(args, &params); err != nil {
+				return errors.Wrap(err)
+			}
+
+			return cmdClient(c, params.Browser, params.FullRequest, params.Args)
 		},
 	})
 }
 
-func cmdClient(c config.Config) (err error) {
-	fs := flag.NewFlagSet("client", flag.ContinueOnError)
-	printFullRequest := fs.Bool("full-request", false, "print the full request including headers")
-	browserFlag := fs.String("browser", "", "which browser to communicate with")
-
-	if err = fs.Parse(os.Args[2:]); err != nil {
-		err = errors.Wrap(err)
-		return
-	}
-
-	browser := *browserFlag
-	if browser == "" {
-		browser = os.Getenv("CHREST_BROWSER")
-	}
-
+func cmdClient(c config.Config, browser string, fullRequest bool, httpieArgs []string) (err error) {
 	var bid config.BrowserId
 	if browser != "" {
 		if err = bid.Set(browser); err != nil {
@@ -59,7 +69,7 @@ func cmdClient(c config.Config) (err error) {
 		return
 	}
 
-	if err = cmdClientOneSocket(sock, *printFullRequest, fs.Args()); err != nil {
+	if err = cmdClientOneSocket(sock, fullRequest, httpieArgs); err != nil {
 		if errors.IsErrno(err, syscall.ECONNREFUSED) {
 			if err = os.Remove(sock); err != nil {
 				err = errors.Wrap(err)

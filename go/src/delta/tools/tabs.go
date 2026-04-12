@@ -10,6 +10,28 @@ import (
 )
 
 func registerTabCommands(app *command.App, p *proxy.BrowserProxy) {
+	tabID := command.StringFlag{}
+	tabID.Name = "tab_id"
+	tabID.Required = true
+	tabID.Description = "Tab ID"
+
+	url := command.StringFlag{}
+	url.Name = "url"
+	url.Description = "URL"
+
+	urlRequired := command.StringFlag{}
+	urlRequired.Name = "url"
+	urlRequired.Required = true
+	urlRequired.Description = "URL to open"
+
+	windowID := command.StringFlag{}
+	windowID.Name = "window_id"
+	windowID.Description = "Window ID to create the tab in"
+
+	active := command.BoolFlag{}
+	active.Name = "active"
+	active.Description = "Whether the tab should be active"
+
 	app.AddCommand(&command.Command{
 		Name:        "list-tabs",
 		Description: command.Description{Short: "List all browser tabs"},
@@ -27,9 +49,7 @@ func registerTabCommands(app *command.App, p *proxy.BrowserProxy) {
 		Name:        "get-tab",
 		Description: command.Description{Short: "Get a specific browser tab by ID"},
 		Annotations: &protocol.ToolAnnotations{ReadOnlyHint: protocol.BoolPtr(true)},
-		Params: []command.Param{
-			{Name: "tab_id", Type: command.String, Required: true, Description: "Tab ID"},
-		},
+		Params:      []command.Param{tabID},
 		Run: func(ctx context.Context, args json.RawMessage, _ command.Prompter) (*command.Result, error) {
 			var p0 struct {
 				TabID string `json:"tab_id"`
@@ -48,11 +68,7 @@ func registerTabCommands(app *command.App, p *proxy.BrowserProxy) {
 	app.AddCommand(&command.Command{
 		Name:        "create-tab",
 		Description: command.Description{Short: "Create a new browser tab"},
-		Params: []command.Param{
-			{Name: "url", Type: command.String, Required: true, Description: "URL to open"},
-			{Name: "window_id", Type: command.String, Description: "Window ID to create the tab in"},
-			{Name: "active", Type: command.Bool, Description: "Whether the tab should be active"},
-		},
+		Params:      []command.Param{urlRequired, windowID, active},
 		Run: func(ctx context.Context, args json.RawMessage, _ command.Prompter) (*command.Result, error) {
 			var p0 struct {
 				URL      string `json:"url"`
@@ -84,11 +100,7 @@ func registerTabCommands(app *command.App, p *proxy.BrowserProxy) {
 	app.AddCommand(&command.Command{
 		Name:        "update-tab",
 		Description: command.Description{Short: "Update a browser tab"},
-		Params: []command.Param{
-			{Name: "tab_id", Type: command.String, Required: true, Description: "Tab ID"},
-			{Name: "url", Type: command.String, Description: "New URL for the tab"},
-			{Name: "active", Type: command.Bool, Description: "Whether the tab should be active"},
-		},
+		Params:      []command.Param{tabID, url, active},
 		Run: func(ctx context.Context, args json.RawMessage, _ command.Prompter) (*command.Result, error) {
 			var p0 struct {
 				TabID  string `json:"tab_id"`
@@ -119,9 +131,7 @@ func registerTabCommands(app *command.App, p *proxy.BrowserProxy) {
 		Name:        "close-tab",
 		Description: command.Description{Short: "Close a browser tab"},
 		Annotations: &protocol.ToolAnnotations{DestructiveHint: protocol.BoolPtr(true)},
-		Params: []command.Param{
-			{Name: "tab_id", Type: command.String, Required: true, Description: "Tab ID"},
-		},
+		Params:      []command.Param{tabID},
 		Run: func(ctx context.Context, args json.RawMessage, _ command.Prompter) (*command.Result, error) {
 			var p0 struct {
 				TabID string `json:"tab_id"`

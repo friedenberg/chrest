@@ -50,9 +50,9 @@ func registerItemCommands(
 		Description: command.Description{Short: "Add, delete, or focus browser items"},
 		Annotations: &protocol.ToolAnnotations{DestructiveHint: protocol.BoolPtr(true)},
 		Params: []command.Param{
-			{Name: "added", Type: command.Array, Description: "Items to add (objects with id, url, title)"},
-			{Name: "deleted", Type: command.Array, Description: "Items to delete (objects with id, url, title)"},
-			{Name: "focused", Type: command.Array, Description: "Items to focus (objects with id, url, title)"},
+			command.ArrayFlag{Name: "added", Description: "Items to add (objects with id, url, title)"},
+			command.ArrayFlag{Name: "deleted", Description: "Items to delete (objects with id, url, title)"},
+			command.ArrayFlag{Name: "focused", Description: "Items to focus (objects with id, url, title)"},
 		},
 		Run: func(ctx context.Context, args json.RawMessage, _ command.Prompter) (*command.Result, error) {
 			var p0 struct {

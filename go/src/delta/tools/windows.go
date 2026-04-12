@@ -10,6 +10,15 @@ import (
 )
 
 func registerWindowCommands(app *command.App, p *proxy.BrowserProxy) {
+	windowID := command.StringFlag{}
+	windowID.Name = "window_id"
+	windowID.Required = true
+	windowID.Description = "Window ID"
+
+	focused := command.BoolFlag{}
+	focused.Name = "focused"
+	focused.Description = "Whether the window should be focused"
+
 	app.AddCommand(&command.Command{
 		Name:        "list-windows",
 		Description: command.Description{Short: "List all browser windows"},
@@ -27,9 +36,7 @@ func registerWindowCommands(app *command.App, p *proxy.BrowserProxy) {
 		Name:        "get-window",
 		Description: command.Description{Short: "Get a specific browser window by ID"},
 		Annotations: &protocol.ToolAnnotations{ReadOnlyHint: protocol.BoolPtr(true)},
-		Params: []command.Param{
-			{Name: "window_id", Type: command.String, Required: true, Description: "Window ID"},
-		},
+		Params:      []command.Param{windowID},
 		Run: func(ctx context.Context, args json.RawMessage, _ command.Prompter) (*command.Result, error) {
 			var p0 struct {
 				WindowID string `json:"window_id"`
@@ -45,14 +52,19 @@ func registerWindowCommands(app *command.App, p *proxy.BrowserProxy) {
 		},
 	})
 
+	urls := command.ArrayFlag{
+		Name:        "urls",
+		Description: "URLs to open in the new window",
+	}
+
+	incognito := command.BoolFlag{}
+	incognito.Name = "incognito"
+	incognito.Description = "Whether to create an incognito window"
+
 	app.AddCommand(&command.Command{
 		Name:        "create-window",
 		Description: command.Description{Short: "Create a new browser window"},
-		Params: []command.Param{
-			{Name: "urls", Type: command.Array, Description: "URLs to open in the new window"},
-			{Name: "focused", Type: command.Bool, Description: "Whether the window should be focused"},
-			{Name: "incognito", Type: command.Bool, Description: "Whether to create an incognito window"},
-		},
+		Params:      []command.Param{urls, focused, incognito},
 		Run: func(ctx context.Context, args json.RawMessage, _ command.Prompter) (*command.Result, error) {
 			var p0 struct {
 				URLs      []string `json:"urls"`
@@ -82,14 +94,15 @@ func registerWindowCommands(app *command.App, p *proxy.BrowserProxy) {
 		},
 	})
 
+	state := command.StringFlag{}
+	state.Name = "state"
+	state.Description = "Window state (normal, minimized, maximized, fullscreen)"
+	state.EnumValues = []string{"normal", "minimized", "maximized", "fullscreen"}
+
 	app.AddCommand(&command.Command{
 		Name:        "update-window",
 		Description: command.Description{Short: "Update a browser window"},
-		Params: []command.Param{
-			{Name: "window_id", Type: command.String, Required: true, Description: "Window ID"},
-			{Name: "focused", Type: command.Bool, Description: "Whether the window should be focused"},
-			{Name: "state", Type: command.String, Description: "Window state (normal, minimized, maximized, fullscreen)"},
-		},
+		Params:      []command.Param{windowID, focused, state},
 		Run: func(ctx context.Context, args json.RawMessage, _ command.Prompter) (*command.Result, error) {
 			var p0 struct {
 				WindowID string `json:"window_id"`
@@ -120,9 +133,7 @@ func registerWindowCommands(app *command.App, p *proxy.BrowserProxy) {
 		Name:        "close-window",
 		Description: command.Description{Short: "Close a browser window"},
 		Annotations: &protocol.ToolAnnotations{DestructiveHint: protocol.BoolPtr(true)},
-		Params: []command.Param{
-			{Name: "window_id", Type: command.String, Required: true, Description: "Window ID"},
-		},
+		Params:      []command.Param{windowID},
 		Run: func(ctx context.Context, args json.RawMessage, _ command.Prompter) (*command.Result, error) {
 			var p0 struct {
 				WindowID string `json:"window_id"`
