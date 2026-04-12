@@ -1,11 +1,13 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"encoding/json"
 	"fmt"
 	"io"
-	"os"
+	"net"
+	"net/http"
 	"syscall"
 	"time"
 
@@ -24,19 +26,42 @@ func registerReloadExtensionCommand(app *command.App, c config.Config) {
 	})
 }
 
-func cmdReloadExtension(c config.Config) (err error) {
-	var exe string
+func requestSocket(sock, method, path string) (resp *http.Response, err error) {
+	var conn net.Conn
 
-	if exe, err = os.Executable(); err != nil {
+	if conn, err = net.Dial("unix", sock); err != nil {
 		err = errors.Wrap(err)
 		return
 	}
 
-	os.Args = []string{exe, "client", "POST", "/runtime/reload"}
+	defer conn.Close()
+
+	req, _ := http.NewRequest(method, "http://localhost"+path, nil)
+
+	if err = req.Write(conn); err != nil {
+		err = errors.Wrap(err)
+		return
+	}
+
+	if resp, err = http.ReadResponse(bufio.NewReader(conn), req); err != nil {
+		err = errors.Wrap(err)
+		return
+	}
+
+	return
+}
+
+func cmdReloadExtension(c config.Config) (err error) {
+	var sock string
+
+	if sock, err = c.GetSocketPathForBrowserId(config.BrowserId{}); err != nil {
+		err = errors.Wrap(err)
+		return
+	}
 
 	fmt.Println("reloading server")
 
-	if err = cmdClient(c); err != nil {
+	if _, err = requestSocket(sock, "POST", "/runtime/reload"); err != nil {
 		if errors.Is(err, io.ErrUnexpectedEOF) {
 			err = nil
 		} else {
@@ -45,8 +70,6 @@ func cmdReloadExtension(c config.Config) (err error) {
 		}
 	}
 
-	os.Args[2] = "GET"
-
 	// The native host process is killed when the extension reloads.
 	// Wait for Chrome to relaunch it and for the new socket to appear.
 	maxRetries := 30
@@ -54,7 +77,9 @@ func cmdReloadExtension(c config.Config) (err error) {
 		fmt.Printf("waiting for server to come back up (%d/%d)\n", i+1, maxRetries)
 		time.Sleep(500 * time.Millisecond)
 
-		if err = cmdClient(c); err != nil {
+		var resp *http.Response
+
+		if resp, err = requestSocket(sock, "GET", "/"); err != nil {
 			if errors.Is(err, io.ErrUnexpectedEOF) ||
 				errors.IsErrno(err, syscall.ECONNREFUSED) ||
 				errors.IsErrno(err, syscall.ENOENT) {
@@ -66,6 +91,7 @@ func cmdReloadExtension(c config.Config) (err error) {
 			return
 		}
 
+		resp.Body.Close()
 		break
 	}
 
