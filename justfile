@@ -1,4 +1,6 @@
 
+default: build test
+
 build: build-go build-extension
 
 reload: build
