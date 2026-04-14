@@ -44,7 +44,7 @@
             "cmd/chrest-server"
           ];
           modules = ./gomod2nix.toml;
-          go = pkgs.go_1_25;
+          go = pkgs-master.go_1_26;
           GOTOOLCHAIN = "local";
           postInstall = ''
             $out/bin/chrest generate-plugin $out
