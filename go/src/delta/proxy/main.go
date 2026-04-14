@@ -141,6 +141,9 @@ func (p *BrowserProxy) requestOneBrowser(
 
 	var result any
 	if err = json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		if errors.IsEOF(err) {
+			return nil, nil
+		}
 		return nil, errors.Wrap(err)
 	}
 

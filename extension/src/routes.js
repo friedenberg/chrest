@@ -1,6 +1,6 @@
 import * as lib from "./lib.js";
 import * as items from "./items.js";
-import browserType from 'consts:browserType';
+import browserType from "consts:browserType";
 
 export let Routes = {};
 
@@ -49,9 +49,18 @@ Routes["/items"] = {
     // TODO check existing tabs for "added" elements and switch them to
     // "focused"
     let body = {
-      added: await items.makeUrlItems(req.browser_id, req.body.added.filter(isOurBid)),
-      deleted: await items.removeUrlItems(req.browser_id, req.body.deleted.filter(isOurBid)),
-      focused: await items.focusUrlItems(req.browser_id, req.body.focused.filter(isOurBid)),
+      added: await items.makeUrlItems(
+        req.browser_id,
+        req.body.added.filter(isOurBid),
+      ),
+      deleted: await items.removeUrlItems(
+        req.browser_id,
+        req.body.deleted.filter(isOurBid),
+      ),
+      focused: await items.focusUrlItems(
+        req.browser_id,
+        req.body.focused.filter(isOurBid),
+      ),
     };
 
     // let addedWindowIds = {}
@@ -93,11 +102,9 @@ Routes["/state"] = {
   },
   async delete(req) {
     await Promise.all(
-      (
-        await browser.windows.getAll()
-      ).map((w) => {
+      (await browser.windows.getAll()).map((w) => {
         return browser.windows.remove(w.id);
-      })
+      }),
     );
 
     return {
@@ -246,7 +253,7 @@ Routes["/windows/#WINDOW_ID"] = {
     return {
       status: 200,
       body: await lib.windowsWithTabs(
-        await browser.windows.update(wid, req.body)
+        await browser.windows.update(wid, req.body),
       ),
     };
   },
@@ -273,7 +280,7 @@ Routes["/windows/#WINDOW_ID/tabs"] = {
       return {
         status: 201,
         body: await Promise.all(
-          req.body.map((b) => lib.makeTabWithWindowId(b, wid))
+          req.body.map((b) => lib.makeTabWithWindowId(b, wid)),
         ),
       };
     } else {
@@ -298,7 +305,7 @@ Routes["/windows/#WINDOW_ID/tab-urls"] = {
     await Promise.all(
       req.body.map((url) => {
         return browser.tabs.create({ windowId: wid, url: url });
-      })
+      }),
     );
 
     return {
@@ -311,7 +318,7 @@ Routes["/windows/#WINDOW_ID/tab-urls"] = {
     await Promise.all(
       req.body.map((url) => {
         return browser.tabs.create({ windowId: wid, url: url });
-      })
+      }),
     );
 
     return {
@@ -351,7 +358,7 @@ Routes["/tabs"] = {
       return {
         status: 200,
         body: await Promise.all(
-          req.body.map((b) => lib.updateTab(b, groupCache, windowCache))
+          req.body.map((b) => lib.updateTab(b, groupCache, windowCache)),
         ),
       };
     } else {
@@ -391,7 +398,7 @@ Routes["/tabs/#TAB_ID"] = {
       return {
         status: 200,
         body: await Promise.all(
-          req.body.map((b) => lib.updateTab(b, groupCache, windowCache))
+          req.body.map((b) => lib.updateTab(b, groupCache, windowCache)),
         ),
       };
     } else {
@@ -505,7 +512,11 @@ Routes["/debugger/command"] = {
     const tabId = parseInt(req.body.tabId);
     const method = req.body.method;
     const params = req.body.params || {};
-    const result = await browser.debugger.sendCommand({ tabId }, method, params);
+    const result = await browser.debugger.sendCommand(
+      { tabId },
+      method,
+      params,
+    );
     return { status: 200, body: result };
   },
 };
@@ -523,23 +534,23 @@ for (let key in Routes) {
   Routes[key].__matchVarCount = 0;
   Routes[key].__regex = new RegExp(
     "^" +
-    key
-      .split("/")
-      .map((keySegment) =>
-        keySegment
-          .replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
-          .replace(/([#:])([A-Z_]+)/g, (_, sigil, varName) => {
-            console.log(key, sigil, varName);
-            Routes[key].__matchVarCount++;
-            return (
-              `(?<${sigil === "#" ? "int$" : "string$"}${varName}>` +
-              (sigil === "#" ? "[^/]+" : "[^/]+") +
-              `)`
-            );
-          })
-      )
-      .join("/") +
-    "$"
+      key
+        .split("/")
+        .map((keySegment) =>
+          keySegment
+            .replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+            .replace(/([#:])([A-Z_]+)/g, (_, sigil, varName) => {
+              console.log(key, sigil, varName);
+              Routes[key].__matchVarCount++;
+              return (
+                `(?<${sigil === "#" ? "int$" : "string$"}${varName}>` +
+                (sigil === "#" ? "[^/]+" : "[^/]+") +
+                `)`
+              );
+            }),
+        )
+        .join("/") +
+      "$",
   );
 
   Routes[key].__match = function (path) {
@@ -563,5 +574,5 @@ for (let key in Routes) {
 
 // most specific (lowest matchVarCount) routes should match first
 export const sortedRoutes = Object.values(Routes).sort(
-  (a, b) => a.__matchVarCount - b.__matchVarCount
+  (a, b) => a.__matchVarCount - b.__matchVarCount,
 );

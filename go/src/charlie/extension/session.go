@@ -52,7 +52,17 @@ func (s *Session) sendCommand(ctx context.Context, method string, params any) (j
 		return nil, errors.Wrap(err)
 	}
 
-	return json.RawMessage(result), nil
+	// RequestAllBrowsers wraps results in a JSON array. Unwrap the first element.
+	var arr []json.RawMessage
+	if err := json.Unmarshal([]byte(result), &arr); err != nil {
+		return nil, errors.Wrap(err)
+	}
+
+	if len(arr) == 0 {
+		return nil, errors.Errorf("no browser responded to CDP command %q", method)
+	}
+
+	return arr[0], nil
 }
 
 func (s *Session) Navigate(ctx context.Context, url string) error {
