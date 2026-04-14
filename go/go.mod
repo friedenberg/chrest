@@ -6,7 +6,7 @@ tool github.com/amarbel-llc/tommy
 
 require (
 	github.com/amarbel-llc/bob/packages/tap-dancer/go v0.0.0-20260315134819-f7c6cbb2c6f2
-	github.com/amarbel-llc/purse-first/libs/dewey v0.0.0-20260412121306-fc90b8109380
+	github.com/amarbel-llc/purse-first/libs/dewey v0.0.4
 	github.com/amarbel-llc/tommy v0.0.0-20260405143331-87255e87bf37
 	github.com/charmbracelet/huh v0.8.0
 )
