@@ -61,21 +61,90 @@ Required for chrome.debugger.attach/sendCommand/detach API access."
 
 ---
 
-### Task 2: Add debugger routes to extension
+### Task 2: Per-route timeout overrides in extension
+
+**Files:**
+- Modify: `extension/src/main.js`
+
+The extension has a hardcoded 1-second timeout (`main.js:47`) on all route
+handlers. CDP operations like `Page.printToPDF` can take 10+ seconds. Routes
+need to be able to declare a custom timeout.
+
+**Step 1: Add route-level timeout support**
+
+In `main.js`, change `onMessageHTTP` to look up the matched route's `__timeout`
+property before falling back to the default:
+
+```javascript
+async function onMessageHTTP(req) {
+  let results = await browser.storage.sync.get("browser_id");
+
+  if (results === undefined || results["browser_id"] === undefined) {
+    // TODO ERROR
+  } else {
+    req.browser_id = {
+      browser: browserType,
+      id: results["browser_id"],
+    };
+  }
+
+  let routeTimeout = getRouteTimeout(req.path);
+  let response = await Promise.race([timeout(routeTimeout), runRoute(req)]);
+
+  response.headers = {
+    "X-Chrest-Startup-Time": now.toISOString(),
+    "X-Chrest-Browser-Type": browserType,
+  };
+
+  response.type = "http";
+
+  port.postMessage(response);
+}
+```
+
+Add the helper function:
+
+```javascript
+const DEFAULT_TIMEOUT = 1000;
+
+function getRouteTimeout(path) {
+  for (let route of routes.sortedRoutes) {
+    if (route.__match(path)) {
+      return route.__timeout || DEFAULT_TIMEOUT;
+    }
+  }
+  return DEFAULT_TIMEOUT;
+}
+```
+
+**Step 2: Rebuild extension and verify existing tests**
+
+Run: `just build-extension`
+Run: `just test-mcp-bats` (existing MCP tests should still pass — they use
+the default 1s timeout)
+
+**Step 3: Commit**
+
+```
+git add extension/src/main.js
+git commit -m "Support per-route timeout overrides in extension
+
+Routes can declare __timeout (ms) to override the default 1s timeout.
+Needed for CDP debugger operations that can take 10+ seconds."
+```
+
+---
+
+### Task 3: Add debugger routes to extension
 
 **Files:**
 - Modify: `extension/src/routes.js`
 
-**Important:** The extension has a 1-second timeout on route handlers
-(`main.js:47`). CDP operations like `Page.printToPDF` can take longer. The
-`/debugger/command` route must handle this — either by increasing the timeout
-for debugger routes or by accepting that the timeout applies. For now, keep the
-existing timeout; if it becomes a problem, we'll increase it later.
-
 **Step 1: Add the three routes**
 
 Append before the regex compilation block (before `for (let key in Routes)` at
-line 486) in `routes.js`:
+line 486) in `routes.js`. The `/debugger/command` route uses a 30-second timeout
+since CDP operations like `Page.printToPDF` can be slow:
 
 ```javascript
 //  ____       _
@@ -95,6 +164,7 @@ Routes["/debugger/attach"] = {
 };
 
 Routes["/debugger/command"] = {
+  __timeout: 30000,
   async post(req) {
     const tabId = parseInt(req.body.tabId);
     const method = req.body.method;
@@ -131,7 +201,7 @@ Three routes for transparent CDP proxy:
 
 ---
 
-### Task 3: Extension Session implementation (`charlie/extension/`)
+### Task 4: Extension Session implementation (`charlie/extension/`)
 
 **Files:**
 - Create: `go/src/charlie/extension/session.go`
@@ -334,7 +404,7 @@ Attach on NewSession, sendCommand for each operation, detach on Close."
 
 ---
 
-### Task 4: Add `--tab-id` flag to capture commands
+### Task 5: Add `--tab-id` flag to capture commands
 
 **Files:**
 - Modify: `go/src/delta/tools/capture.go`
@@ -429,7 +499,7 @@ URL before capturing."
 
 ---
 
-### Task 5: Update gomod2nix and verify nix build
+### Task 6: Update gomod2nix and verify nix build
 
 **Step 1: Update gomod2nix.toml**
 
@@ -449,7 +519,7 @@ git commit -m "Update gomod2nix.toml"
 
 ---
 
-### Task 6: MCP validation and test updates
+### Task 7: MCP validation and test updates
 
 **Step 1: Run MCP validation**
 
