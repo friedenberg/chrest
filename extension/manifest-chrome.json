@@ -9,7 +9,8 @@
     "management",
     "storage",
     "unlimitedStorage",
-    "notifications"
+    "notifications",
+    "debugger"
   ],
   "background": {
     "service_worker": "main.js",
