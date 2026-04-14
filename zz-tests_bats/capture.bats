@@ -1,11 +1,22 @@
 #!/usr/bin/env bats
 
 # Integration tests for CDP capture commands.
-# Requires chromium on PATH.
+# Requires a working headless Chrome/Chromium on PATH.
+# Tests are skipped if headless Chrome crashes (e.g. kernel 6.17 + Chrome
+# seccomp/crashpad incompatibility).
 
 setup() {
   load "$(dirname "$BATS_TEST_FILE")/common.bash"
   FIXTURE="file://$(cd "$(dirname "$BATS_TEST_FILE")" && pwd)/fixtures/test.html"
+
+  # Skip all capture tests if headless Chrome is non-functional.
+  chrome="$(command -v chromium || command -v google-chrome-stable || command -v google-chrome || true)"
+  if [ -z "$chrome" ]; then
+    skip "no Chrome/Chromium found on PATH"
+  fi
+  if ! timeout 5 "$chrome" --headless=new --no-sandbox --dump-dom about:blank >/dev/null 2>&1; then
+    skip "headless Chrome not functional (crash or timeout)"
+  fi
 }
 
 function capture_pdf_returns_pdf_bytes { # @test
