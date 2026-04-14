@@ -7,7 +7,6 @@ import (
 	"os"
 	"path/filepath"
 
-	"code.linenisgreat.com/chrest/go/src/alfa/symlink"
 	"code.linenisgreat.com/chrest/go/src/bravo/config"
 	"code.linenisgreat.com/chrest/go/src/charlie/install"
 	"github.com/amarbel-llc/purse-first/libs/dewey/bravo/errors"
@@ -130,19 +129,6 @@ func cmdInit(ctx context.Context, args json.RawMessage, p command.Prompter) (err
 		return
 	}
 
-	serverPath := initConfig.ServerPath()
-
-	if err = symlink.Symlink(serverBinary, serverPath); err != nil {
-		w.NotOk(
-			fmt.Sprintf("Symlink chrest-server to %s", serverPath),
-			map[string]string{"error": err.Error()},
-		)
-		err = errors.Wrap(err)
-		return
-	}
-
-	w.Ok(fmt.Sprintf("Symlinked chrest-server to %s", serverPath))
-
 	var idSet install.IdSet
 
 	if err = idSet.Browser.Set(params.Browser); err != nil {
@@ -162,7 +148,7 @@ func cmdInit(ctx context.Context, args json.RawMessage, p command.Prompter) (err
 		extensionId = idSet.GetDefaultId()
 	}
 
-	if _, _, err = idSet.Install(initConfig); err != nil {
+	if _, _, err = idSet.Install(initConfig, serverBinary); err != nil {
 		w.NotOk(
 			fmt.Sprintf("Install native messaging host for %s", params.Browser),
 			map[string]string{"error": err.Error()},

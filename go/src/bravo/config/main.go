@@ -15,10 +15,6 @@ type Config struct {
 	Home           string      `json:"-"`
 }
 
-func (config Config) ServerPath() string {
-	return filepath.Join(config.Home, ".local", "bin", "chrest-server")
-}
-
 func StateDirectory() (value string, err error) {
 	value = os.Getenv("XDG_STATE_HOME")
 

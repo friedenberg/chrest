@@ -73,6 +73,7 @@ type (
 
 func (idSet *IdSet) Install(
 	config config.Config,
+	serverPath string,
 ) (loc string, insallJSON any, err error) {
 	dir := path.Join(
 		config.Home,
@@ -102,8 +103,6 @@ func (idSet *IdSet) Install(
 	dec := json.NewDecoder(bufferedReader)
 
 	defer errors.DeferredCloser(&err, file)
-
-	serverPath := config.ServerPath()
 
 	idSet.Ids = append(idSet.Ids, idSet.GetDefaultId())
 
