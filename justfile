@@ -13,7 +13,7 @@ build-go:
 build-extension:
   just extension/build
 
-test: test-go test-mcp
+test: test-go test-mcp test-mcp-bats
 
 test-go:
   just go/tests-go
@@ -42,6 +42,9 @@ test-mcp: build
       || { echo "FAIL: $tool missing destructiveHint"; exit 1; }
   done
   echo "All MCP validations passed"
+
+test-mcp-bats:
+  bats --bin-dir go/build/release/ --allow-unix-sockets --allow-local-binding zz-tests_bats/
 
 dev-install-mcp: build
   go/build/release/chrest install-mcp
