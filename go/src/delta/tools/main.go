@@ -14,4 +14,5 @@ func RegisterAll(app *command.Utility, p *proxy.BrowserProxy) {
 	registerTabCommands(app, p)
 	registerItemCommands(app, p, itemsProxy)
 	registerStateCommands(app, p)
+	registerCaptureCommands(app)
 }
