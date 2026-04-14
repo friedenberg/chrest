@@ -32,6 +32,17 @@ async function onMessage(req, messageSender) {
   await mutex.runExclusive(async () => onMessageHTTP(req));
 }
 
+const DEFAULT_TIMEOUT = 1000;
+
+function getRouteTimeout(path) {
+  for (let route of routes.sortedRoutes) {
+    if (route.__match(path)) {
+      return route.__timeout || DEFAULT_TIMEOUT;
+    }
+  }
+  return DEFAULT_TIMEOUT;
+}
+
 async function onMessageHTTP(req) {
   let results = await browser.storage.sync.get("browser_id");
 
@@ -44,7 +55,8 @@ async function onMessageHTTP(req) {
     };
   }
 
-  let response = await Promise.race([timeout(1000), runRoute(req)]);
+  let routeTimeout = getRouteTimeout(req.path);
+  let response = await Promise.race([timeout(routeTimeout), runRoute(req)]);
 
   response.headers = {
     "X-Chrest-Startup-Time": now.toISOString(),
