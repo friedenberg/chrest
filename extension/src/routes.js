@@ -483,6 +483,41 @@ Routes["/history"] = {
   },
 };
 
+//  ____       _
+// |  _ \  ___| |__  _   _  __ _  __ _  ___ _ __
+// | | | |/ _ \ '_ \| | | |/ _` |/ _` |/ _ \ '__|
+// | |_| |  __/ |_) | |_| | (_| | (_| |  __/ |
+// |____/ \___|_.__/ \__,_|\__, |\__, |\___|_|
+//                         |___/ |___/
+//
+
+Routes["/debugger/attach"] = {
+  async post(req) {
+    const tabId = parseInt(req.body.tabId);
+    await browser.debugger.attach({ tabId }, "1.3");
+    return { status: 200, body: { tabId, attached: true } };
+  },
+};
+
+Routes["/debugger/command"] = {
+  __timeout: 30000,
+  async post(req) {
+    const tabId = parseInt(req.body.tabId);
+    const method = req.body.method;
+    const params = req.body.params || {};
+    const result = await browser.debugger.sendCommand({ tabId }, method, params);
+    return { status: 200, body: result };
+  },
+};
+
+Routes["/debugger/detach"] = {
+  async post(req) {
+    const tabId = parseInt(req.body.tabId);
+    await browser.debugger.detach({ tabId });
+    return { status: 200, body: { tabId, detached: true } };
+  },
+};
+
 for (let key in Routes) {
   // /tabs/by-id/#TAB_ID/url.txt -> RegExp \/tabs\/by-id\/(?<int$TAB_ID>[0-9]+)\/url.txt
   Routes[key].__matchVarCount = 0;
