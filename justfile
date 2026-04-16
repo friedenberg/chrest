@@ -53,12 +53,18 @@ demo:
   vhs demo/demo.tape
 
 [group: 'explore']
-explore-setup:
+explore-setup browser="chrome":
   just build
-  go/build/release/chrest init --browser chrome --name primary
+  go/build/release/chrest init --browser {{browser}} --name primary
 
-explore-run:
-  web-ext run --target chromium --source-dir extension/dist-chrome --start-url "chrome://extensions"
+explore-run browser="chrome":
+  #!/usr/bin/env bash
+  set -euo pipefail
+  if [ "{{browser}}" = "firefox" ]; then
+    web-ext run --target firefox-desktop --source-dir extension/dist-firefox
+  else
+    web-ext run --target chromium --source-dir extension/dist-chrome --start-url "chrome://extensions"
+  fi
 
 explore-client +httpie_args:
   go/build/release/chrest client {{httpie_args}}
