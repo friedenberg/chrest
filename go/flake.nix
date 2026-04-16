@@ -4,8 +4,10 @@
     nixpkgs.url = "github:NixOS/nixpkgs/23d72dabcb3b12469f57b37170fcbc1789bd7457";
     utils.url = "https://flakehub.com/f/numtide/flake-utils/0.1.102";
 
-    devenv-go.url = "github:amarbel-llc/purse-first?dir=devenvs/go";
-    devenv-shell.url = "github:amarbel-llc/purse-first?dir=devenvs/shell";
+    gomod2nix = {
+      url = "github:nix-community/gomod2nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs =
@@ -14,24 +16,22 @@
       nixpkgs,
       nixpkgs-master,
       utils,
-      devenv-go,
-      devenv-shell,
+      gomod2nix,
     }:
     (utils.lib.eachDefaultSystem (
       system:
       let
         pkgs = import nixpkgs {
           inherit system;
-
           overlays = [
-            devenv-go.overlays.default
+            gomod2nix.overlays.default
           ];
         };
 
         pkgs-master = import nixpkgs-master {
           inherit system;
           overlays = [
-            devenv-go.overlays.default
+            gomod2nix.overlays.default
           ];
         };
 
@@ -66,15 +66,24 @@
             with pkgs-master;
             [
               bats
+              delve
               fish
               gnumake
+              go_1_26
+              gofumpt
+              golangci-lint
+              golines
+              gopls
+              gotools
+              govulncheck
               just
+              nodePackages.bash-language-server
+              parallel
+              shellcheck
+              shfmt
             ]
-          );
-
-          inputsFrom = [
-            devenv-go.devShells.${system}.default
-            devenv-shell.devShells.${system}.default
+          ) ++ [
+            gomod2nix.packages.${system}.default
           ];
         };
       }
