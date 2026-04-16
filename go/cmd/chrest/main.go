@@ -2,14 +2,13 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"log"
 	"os"
 	"syscall"
 
-	"encoding/json"
-
-	"github.com/amarbel-llc/purse-first/libs/dewey/golf/command"
 	"code.linenisgreat.com/chrest/go/src/alfa/prompter"
+	"github.com/amarbel-llc/purse-first/libs/dewey/golf/command"
 	"github.com/amarbel-llc/purse-first/libs/dewey/golf/protocol"
 	"github.com/amarbel-llc/purse-first/libs/dewey/golf/server"
 	"github.com/amarbel-llc/purse-first/libs/dewey/golf/transport"
@@ -79,6 +78,26 @@ func run(ctx errors.Context) (err error) {
 
 	if len(os.Args) > 1 && os.Args[1] == "mcp" {
 		if err = runMCP(ctx, app, p); err != nil {
+			err = errors.Wrap(err)
+			return
+		}
+		return
+	}
+
+	// Bypass dewey for client command — variadic StringArg
+	// serialization is broken (purse-first#44)
+	if len(os.Args) > 1 && os.Args[1] == "client" {
+		if err = cmdClient(c, os.Getenv("CHREST_BROWSER"), false, os.Args[2:]); err != nil {
+			err = errors.Wrap(err)
+			return
+		}
+		return
+	}
+
+	// Bypass dewey for init command — flag parsing may also
+	// be affected (purse-first#44)
+	if len(os.Args) > 1 && os.Args[1] == "init" {
+		if err = cmdInitDirect(ctx); err != nil {
 			err = errors.Wrap(err)
 			return
 		}

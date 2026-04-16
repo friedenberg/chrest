@@ -51,3 +51,14 @@ dev-install-mcp: build
 
 demo:
   vhs demo/demo.tape
+
+[group: 'explore']
+explore-setup:
+  just build
+  go/build/release/chrest init --browser chrome --name primary
+
+explore-run:
+  web-ext run --target chromium --source-dir extension/dist-chrome --start-url "chrome://extensions"
+
+explore-client +httpie_args:
+  go/build/release/chrest client {{httpie_args}}
