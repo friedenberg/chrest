@@ -184,16 +184,15 @@ func (s *Session) ExtractText(ctx context.Context) (io.ReadCloser, error) {
 
 	var parsed struct {
 		Result struct {
-			Value struct {
-				Value string `json:"value"`
-			} `json:"value"`
+			Type  string `json:"type"`
+			Value string `json:"value"`
 		} `json:"result"`
 	}
 	if err := json.Unmarshal(result, &parsed); err != nil {
-		return nil, errors.Wrap(err)
+		return nil, errors.Wrapf(err, "raw BiDi result: %s", string(result))
 	}
 
-	return io.NopCloser(strings.NewReader(parsed.Result.Value.Value)), nil
+	return io.NopCloser(strings.NewReader(parsed.Result.Value)), nil
 }
 
 func (s *Session) Close() error {

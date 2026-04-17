@@ -66,5 +66,8 @@ explore-run browser="chrome":
     web-ext run --target chromium --source-dir extension/dist-chrome --start-url "chrome://extensions"
   fi
 
+explore-capture command="capture-text" browser="firefox" url="https://example.com": build-go
+  timeout 30 go/build/release/chrest {{command}} --browser {{browser}} --url {{url}}
+
 explore-client +httpie_args:
   go/build/release/chrest client {{httpie_args}}
