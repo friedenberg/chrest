@@ -62,8 +62,31 @@
             })
           ];
         };
+        chrest = pkgs-master.buildGoApplication {
+          pname = "chrest";
+          version = "0.0.1";
+          src = ./go;
+          subPackages = [
+            "cmd/chrest"
+            "cmd/chrest-server"
+          ];
+          modules = ./go/gomod2nix.toml;
+          go = pkgs-master.go_1_26;
+          GOTOOLCHAIN = "local";
+          postInstall = ''
+            $out/bin/chrest generate-plugin $out
+          '';
+        };
       in
       {
+        packages.chrest = chrest;
+        packages.default = chrest;
+
+        apps.default = {
+          type = "app";
+          program = "${chrest}/bin/chrest";
+        };
+
         devShells.default = pkgs-master.mkShell {
           packages = [
             bob.packages.${system}.batman
