@@ -8,7 +8,7 @@ setup() {
 
   # Inline a minimal HTML fixture so it works inside the sandbox without
   # depending on file path resolution.
-  cat > "$BATS_TEST_TMPDIR/test.html" <<'EOF'
+  cat >"$BATS_TEST_TMPDIR/test.html" <<'EOF'
 <!doctype html>
 <html><head><title>Test</title></head>
 <body><h1>Hello from chrest</h1></body>

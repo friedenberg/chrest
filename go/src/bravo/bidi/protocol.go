@@ -3,6 +3,7 @@ package bidi
 import (
 	"bufio"
 	"crypto/rand"
+	"crypto/sha1"
 	"encoding/base64"
 	"encoding/binary"
 	"encoding/json"
@@ -14,6 +15,7 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
+	"time"
 )
 
 type request struct {
@@ -23,12 +25,28 @@ type request struct {
 }
 
 type response struct {
-	Type    string          `json:"type"`
-	ID      int64           `json:"id"`
-	Result  json.RawMessage `json:"result,omitempty"`
-	Error   string          `json:"error,omitempty"`
-	Message string          `json:"message,omitempty"`
+	Type      string          `json:"type"`
+	ID        int64           `json:"id"`
+	Result    json.RawMessage `json:"result,omitempty"`
+	ErrorType string          `json:"error,omitempty"`
+	Message   string          `json:"message,omitempty"`
 }
+
+const (
+	opcodeText  = 0x1
+	opcodeClose = 0x8
+	opcodePing  = 0x9
+	opcodePong  = 0xA
+
+	wsGUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
+
+	// Maximum frames to skip (events, non-matching responses) before
+	// giving up. Prevents infinite loops if the server never responds.
+	maxSkippedFrames = 1000
+
+	dialTimeout = 5 * time.Second
+	readTimeout = 30 * time.Second
+)
 
 // Conn wraps a raw TCP connection with WebSocket framing for BiDi JSON-RPC.
 type Conn struct {
@@ -54,7 +72,7 @@ func Dial(baseURL string) (*Conn, error) {
 		path = host[pathIdx:]
 	}
 
-	conn, err := net.Dial("tcp", hostPort)
+	conn, err := net.DialTimeout("tcp", hostPort, dialTimeout)
 	if err != nil {
 		return nil, fmt.Errorf("bidi tcp dial: %w", err)
 	}
@@ -88,21 +106,35 @@ func Dial(baseURL string) (*Conn, error) {
 		conn.Close()
 		return nil, fmt.Errorf("bidi upgrade read: %w", err)
 	}
+	resp.Body.Close()
 
 	if resp.StatusCode != 101 {
-		resp.Body.Close()
 		conn.Close()
 		return nil, fmt.Errorf("bidi upgrade failed: HTTP %d %s", resp.StatusCode, resp.Status)
+	}
+
+	// Validate Sec-WebSocket-Accept per RFC 6455 section 4.1.
+	expectedAccept := computeAcceptKey(wsKey)
+	if got := resp.Header.Get("Sec-WebSocket-Accept"); got != expectedAccept {
+		conn.Close()
+		return nil, fmt.Errorf("bidi: invalid Sec-WebSocket-Accept: got %q, want %q", got, expectedAccept)
 	}
 
 	log.Printf("bidi: connected")
 	return &Conn{conn: conn, br: br}, nil
 }
 
+// computeAcceptKey computes the expected Sec-WebSocket-Accept value.
+func computeAcceptKey(key string) string {
+	h := sha1.New()
+	h.Write([]byte(key + wsGUID))
+	return base64.StdEncoding.EncodeToString(h.Sum(nil))
+}
+
 // writeFrame writes a WebSocket text frame with masking (client must mask).
 func (c *Conn) writeFrame(payload []byte) error {
 	// Text frame, FIN bit set.
-	header := []byte{0x81}
+	header := []byte{0x80 | opcodeText}
 
 	// Payload length with mask bit set.
 	length := len(payload)
@@ -138,52 +170,95 @@ func (c *Conn) writeFrame(payload []byte) error {
 	return err
 }
 
-// readFrame reads a WebSocket frame and returns the payload.
+// writePong sends a WebSocket pong frame with the given payload.
+func (c *Conn) writePong(payload []byte) error {
+	header := []byte{0x80 | opcodePong}
+
+	length := len(payload)
+	if length > 125 {
+		length = 125
+	}
+	header = append(header, byte(length)|0x80)
+
+	mask := make([]byte, 4)
+	if _, err := rand.Read(mask); err != nil {
+		return err
+	}
+	header = append(header, mask...)
+
+	masked := make([]byte, length)
+	for i := 0; i < length; i++ {
+		masked[i] = payload[i] ^ mask[i%4]
+	}
+
+	if _, err := c.conn.Write(header); err != nil {
+		return err
+	}
+	_, err := c.conn.Write(masked)
+	return err
+}
+
+// readFrame reads a WebSocket frame, handling control frames (close, ping).
+// Returns the payload for data frames only.
 func (c *Conn) readFrame() ([]byte, error) {
-	// Read first 2 bytes: FIN/opcode + mask/length.
-	hdr := make([]byte, 2)
-	if _, err := io.ReadFull(c.br, hdr); err != nil {
-		return nil, err
-	}
-
-	masked := hdr[1]&0x80 != 0
-	length := uint64(hdr[1] & 0x7F)
-
-	switch length {
-	case 126:
-		buf := make([]byte, 2)
-		if _, err := io.ReadFull(c.br, buf); err != nil {
+	for {
+		hdr := make([]byte, 2)
+		if _, err := io.ReadFull(c.br, hdr); err != nil {
 			return nil, err
 		}
-		length = uint64(binary.BigEndian.Uint16(buf))
-	case 127:
-		buf := make([]byte, 8)
-		if _, err := io.ReadFull(c.br, buf); err != nil {
+
+		opcode := hdr[0] & 0x0F
+		masked := hdr[1]&0x80 != 0
+		length := uint64(hdr[1] & 0x7F)
+
+		switch length {
+		case 126:
+			buf := make([]byte, 2)
+			if _, err := io.ReadFull(c.br, buf); err != nil {
+				return nil, err
+			}
+			length = uint64(binary.BigEndian.Uint16(buf))
+		case 127:
+			buf := make([]byte, 8)
+			if _, err := io.ReadFull(c.br, buf); err != nil {
+				return nil, err
+			}
+			length = binary.BigEndian.Uint64(buf)
+		}
+
+		var mask []byte
+		if masked {
+			mask = make([]byte, 4)
+			if _, err := io.ReadFull(c.br, mask); err != nil {
+				return nil, err
+			}
+		}
+
+		payload := make([]byte, length)
+		if _, err := io.ReadFull(c.br, payload); err != nil {
 			return nil, err
 		}
-		length = binary.BigEndian.Uint64(buf)
-	}
 
-	var mask []byte
-	if masked {
-		mask = make([]byte, 4)
-		if _, err := io.ReadFull(c.br, mask); err != nil {
-			return nil, err
+		if masked {
+			for i := range payload {
+				payload[i] ^= mask[i%4]
+			}
+		}
+
+		switch opcode {
+		case opcodeClose:
+			return nil, fmt.Errorf("bidi: server sent close frame")
+		case opcodePing:
+			if err := c.writePong(payload); err != nil {
+				return nil, fmt.Errorf("bidi: pong failed: %w", err)
+			}
+			continue
+		case opcodePong:
+			continue
+		default:
+			return payload, nil
 		}
 	}
-
-	payload := make([]byte, length)
-	if _, err := io.ReadFull(c.br, payload); err != nil {
-		return nil, err
-	}
-
-	if masked {
-		for i := range payload {
-			payload[i] ^= mask[i%4]
-		}
-	}
-
-	return payload, nil
 }
 
 // Send sends a BiDi method call and returns the result.
@@ -207,11 +282,15 @@ func (c *Conn) Send(method string, params any) (json.RawMessage, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
+	// Set a read deadline so we don't block forever.
+	c.conn.SetReadDeadline(time.Now().Add(readTimeout))
+	defer c.conn.SetReadDeadline(time.Time{})
+
 	if err := c.writeFrame(payload); err != nil {
 		return nil, fmt.Errorf("bidi send: %w", err)
 	}
 
-	for {
+	for skipped := 0; skipped < maxSkippedFrames; skipped++ {
 		frame, err := c.readFrame()
 		if err != nil {
 			return nil, fmt.Errorf("bidi receive: %w", err)
@@ -227,11 +306,13 @@ func (c *Conn) Send(method string, params any) (json.RawMessage, error) {
 		}
 
 		if resp.Type == "error" {
-			return nil, fmt.Errorf("bidi error %s: %s", resp.Error, resp.Message)
+			return nil, fmt.Errorf("bidi error %s: %s", resp.ErrorType, resp.Message)
 		}
 
 		return resp.Result, nil
 	}
+
+	return nil, fmt.Errorf("bidi: exceeded %d skipped frames waiting for response to %s (id=%d)", maxSkippedFrames, method, id)
 }
 
 // Close closes the underlying connection.

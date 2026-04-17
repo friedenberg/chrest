@@ -71,7 +71,6 @@
           ] ++ (
             with pkgs;
             [
-              firefox
               fish
               gnumake
               jq
@@ -79,6 +78,10 @@
               nodejs_latest
               vhs
               zip
+            ]
+          ) ++ (
+            pkgs.lib.optionals pkgs.stdenv.isLinux [
+              pkgs.firefox
             ]
           ) ++ (
             with pkgs-master;

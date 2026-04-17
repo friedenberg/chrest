@@ -110,12 +110,24 @@ func (f *Firefox) WSURL() string {
 
 // Close kills the Firefox process and removes the temporary profile.
 func (f *Firefox) Close() error {
+	var firstErr error
+
 	if f.cmd.Process != nil {
 		_ = f.cmd.Process.Kill()
-		_ = f.cmd.Wait()
+		if err := f.cmd.Wait(); err != nil {
+			// Wait returns an error when the process is killed, which is
+			// expected. Only capture unexpected errors.
+			if _, ok := err.(*exec.ExitError); !ok {
+				firstErr = err
+			}
+		}
 	}
+
 	if f.profileDir != "" {
-		os.RemoveAll(f.profileDir)
+		if err := os.RemoveAll(f.profileDir); err != nil && firstErr == nil {
+			firstErr = errors.Wrapf(err, "removing temp profile %s", f.profileDir)
+		}
 	}
-	return nil
+
+	return firstErr
 }

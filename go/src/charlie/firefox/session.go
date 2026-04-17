@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"io"
+	"log"
 	"strings"
 
 	"code.linenisgreat.com/chrest/go/src/bravo/bidi"
@@ -91,8 +92,14 @@ func (s *Session) Navigate(ctx context.Context, url string) error {
 }
 
 func (s *Session) PrintToPDF(ctx context.Context, opts cdp.PDFOptions) (io.ReadCloser, error) {
+	// BiDi browsingContext.print does not support DisplayHeaderFooter.
+	if opts.DisplayHeaderFooter {
+		log.Printf("bidi: DisplayHeaderFooter is not supported by Firefox/BiDi, ignoring")
+	}
+
 	params := map[string]any{
-		"context": s.contextID,
+		"context":     s.contextID,
+		"shrinkToFit": true,
 	}
 
 	if opts.Landscape {
@@ -104,30 +111,34 @@ func (s *Session) PrintToPDF(ctx context.Context, opts cdp.PDFOptions) (io.ReadC
 	if opts.PageRanges != "" {
 		params["pageRanges"] = []string{opts.PageRanges}
 	}
-	if opts.PaperWidth > 0 || opts.PaperHeight > 0 {
-		page := map[string]any{}
-		if opts.PaperWidth > 0 {
-			page["width"] = opts.PaperWidth
-		}
-		if opts.PaperHeight > 0 {
-			page["height"] = opts.PaperHeight
-		}
+
+	// BiDi uses centimeters; CDP uses inches. Convert if set.
+	// A value of 0 is valid (borderless), so use pointers or always set.
+	page := map[string]any{}
+	if opts.PaperWidth > 0 {
+		page["width"] = opts.PaperWidth * 2.54
+	}
+	if opts.PaperHeight > 0 {
+		page["height"] = opts.PaperHeight * 2.54
+	}
+	if len(page) > 0 {
 		params["page"] = page
 	}
-	if opts.MarginTop > 0 || opts.MarginBottom > 0 || opts.MarginLeft > 0 || opts.MarginRight > 0 {
-		margin := map[string]any{}
-		if opts.MarginTop > 0 {
-			margin["top"] = opts.MarginTop
-		}
-		if opts.MarginBottom > 0 {
-			margin["bottom"] = opts.MarginBottom
-		}
-		if opts.MarginLeft > 0 {
-			margin["left"] = opts.MarginLeft
-		}
-		if opts.MarginRight > 0 {
-			margin["right"] = opts.MarginRight
-		}
+
+	margin := map[string]any{}
+	if opts.MarginTop > 0 {
+		margin["top"] = opts.MarginTop * 2.54
+	}
+	if opts.MarginBottom > 0 {
+		margin["bottom"] = opts.MarginBottom * 2.54
+	}
+	if opts.MarginLeft > 0 {
+		margin["left"] = opts.MarginLeft * 2.54
+	}
+	if opts.MarginRight > 0 {
+		margin["right"] = opts.MarginRight * 2.54
+	}
+	if len(margin) > 0 {
 		params["margin"] = margin
 	}
 
