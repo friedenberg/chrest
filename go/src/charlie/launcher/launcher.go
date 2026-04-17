@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"regexp"
 	"time"
 
@@ -67,11 +68,17 @@ func (p *Process) Close() error {
 
 func findBinary(names []string) (string, error) {
 	for _, name := range names {
+		if filepath.IsAbs(name) {
+			if _, err := os.Stat(name); err == nil {
+				return name, nil
+			}
+			continue
+		}
 		if path, err := exec.LookPath(name); err == nil {
 			return path, nil
 		}
 	}
-	return "", errors.Errorf("no browser binary found on PATH (tried %v)", names)
+	return "", errors.Errorf("no browser binary found (tried %v)", names)
 }
 
 func freePort() (int, error) {
@@ -113,7 +120,10 @@ func Launch(ctx context.Context, cfg BrowserConfig) (*Process, error) {
 			}
 			return nil, errors.Wrap(err)
 		}
-		args = append(args, fmt.Sprintf("--remote-debugging-port=%d", port))
+		args = append(args,
+			fmt.Sprintf("--remote-debugging-port=%d", port),
+			"--remote-allow-origins=*",
+		)
 	}
 
 	args = append(args, cfg.URL)
@@ -143,6 +153,15 @@ func Launch(ctx context.Context, cfg BrowserConfig) (*Process, error) {
 		if cleanup != nil {
 			cleanup()
 		}
+	}
+
+	if cfg.Discovery.Kind == HTTPEndpoint {
+		go func() {
+			scanner := bufio.NewScanner(stderr)
+			for scanner.Scan() {
+				log.Printf("browser stderr: %s", scanner.Text())
+			}
+		}()
 	}
 
 	var wsURL string
@@ -203,20 +222,8 @@ func discoverHTTP(ctx context.Context, port int) (string, error) {
 	deadline := time.After(10 * time.Second)
 
 	for {
-		resp, err := client.Get(url)
-		if err == nil {
-			defer resp.Body.Close()
-			var entries []struct {
-				Type                string `json:"type"`
-				WebSocketDebuggerURL string `json:"webSocketDebuggerUrl"`
-			}
-			if err := json.NewDecoder(resp.Body).Decode(&entries); err == nil {
-				for _, e := range entries {
-					if e.Type == "page" && e.WebSocketDebuggerURL != "" {
-						return e.WebSocketDebuggerURL, nil
-					}
-				}
-			}
+		if wsURL, found := pollDevToolsEndpoint(client, url); found {
+			return wsURL, nil
 		}
 
 		select {
@@ -230,4 +237,27 @@ func discoverHTTP(ctx context.Context, port int) (string, error) {
 			}
 		}
 	}
+}
+
+func pollDevToolsEndpoint(client *http.Client, url string) (string, bool) {
+	resp, err := client.Get(url)
+	if err != nil {
+		return "", false
+	}
+	defer resp.Body.Close()
+
+	var entries []struct {
+		Type                 string `json:"type"`
+		WebSocketDebuggerURL string `json:"webSocketDebuggerUrl"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&entries); err != nil {
+		return "", false
+	}
+
+	for _, e := range entries {
+		if e.Type == "page" && e.WebSocketDebuggerURL != "" {
+			return e.WebSocketDebuggerURL, true
+		}
+	}
+	return "", false
 }

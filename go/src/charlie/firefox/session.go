@@ -10,12 +10,13 @@ import (
 
 	"code.linenisgreat.com/chrest/go/src/bravo/bidi"
 	"code.linenisgreat.com/chrest/go/src/bravo/cdp"
+	"code.linenisgreat.com/chrest/go/src/charlie/launcher"
 	"github.com/amarbel-llc/purse-first/libs/dewey/bravo/errors"
 )
 
 // Session implements cdp.Session using a headless Firefox process via BiDi.
 type Session struct {
-	firefox   *Firefox
+	firefox   *launcher.Process
 	conn      *bidi.Conn
 	contextID string
 }

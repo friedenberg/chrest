@@ -9,12 +9,13 @@ import (
 	"strings"
 
 	"code.linenisgreat.com/chrest/go/src/bravo/cdp"
+	"code.linenisgreat.com/chrest/go/src/charlie/launcher"
 	"github.com/amarbel-llc/purse-first/libs/dewey/bravo/errors"
 )
 
 // Session implements cdp.Session using a headless Chrome process.
 type Session struct {
-	chrome *Chrome
+	chrome *launcher.Process
 	conn   *cdp.Conn
 }
 
