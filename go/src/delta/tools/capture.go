@@ -7,6 +7,7 @@ import (
 
 	"code.linenisgreat.com/chrest/go/src/bravo/cdp"
 	"code.linenisgreat.com/chrest/go/src/charlie/extension"
+	"code.linenisgreat.com/chrest/go/src/charlie/firefox"
 	"code.linenisgreat.com/chrest/go/src/charlie/headless"
 	"code.linenisgreat.com/chrest/go/src/delta/proxy"
 	"github.com/amarbel-llc/purse-first/libs/dewey/bravo/errors"
@@ -16,7 +17,8 @@ import (
 
 func registerCaptureCommands(app *command.Utility, p *proxy.BrowserProxy) {
 	url := command.StringFlag{Name: "url", Description: "URL to capture"}
-	tabID := command.StringFlag{Name: "tab-id", Description: "Tab ID to capture (uses extension debugger instead of headless Chrome)"}
+	tabID := command.StringFlag{Name: "tab-id", Description: "Tab ID to capture (uses extension debugger instead of headless)"}
+	browser := command.StringFlag{Name: "browser", Description: "Browser backend: chrome (default) or firefox"}
 
 	// capture-pdf
 	app.AddCommand(&command.Command{
@@ -24,7 +26,7 @@ func registerCaptureCommands(app *command.Utility, p *proxy.BrowserProxy) {
 		Description: command.Description{Short: "Capture a web page as PDF"},
 		Annotations: &protocol.ToolAnnotations{ReadOnlyHint: protocol.BoolPtr(true)},
 		Params: []command.Param{
-			url, tabID,
+			url, tabID, browser,
 			command.BoolFlag{Name: "landscape", Description: "Use landscape orientation"},
 			command.BoolFlag{Name: "no-headers", Description: "Disable header and footer"},
 			command.BoolFlag{Name: "background", Description: "Print background graphics"},
@@ -33,6 +35,7 @@ func registerCaptureCommands(app *command.Utility, p *proxy.BrowserProxy) {
 			var p0 struct {
 				URL        string `json:"url"`
 				TabID      string `json:"tab-id"`
+				Browser    string `json:"browser"`
 				Landscape  bool   `json:"landscape"`
 				NoHeaders  bool   `json:"no-headers"`
 				Background bool   `json:"background"`
@@ -41,7 +44,7 @@ func registerCaptureCommands(app *command.Utility, p *proxy.BrowserProxy) {
 				return command.TextErrorResult(err.Error()), nil
 			}
 
-			return withSession(ctx, p, p0.URL, p0.TabID, func(s cdp.Session) (io.ReadCloser, error) {
+			return withSession(ctx, p, p0.URL, p0.TabID, p0.Browser, func(s cdp.Session) (io.ReadCloser, error) {
 				return s.PrintToPDF(ctx, cdp.PDFOptions{
 					Landscape:           p0.Landscape,
 					DisplayHeaderFooter: !p0.NoHeaders,
@@ -57,7 +60,7 @@ func registerCaptureCommands(app *command.Utility, p *proxy.BrowserProxy) {
 		Description: command.Description{Short: "Capture a web page as an image"},
 		Annotations: &protocol.ToolAnnotations{ReadOnlyHint: protocol.BoolPtr(true)},
 		Params: []command.Param{
-			url, tabID,
+			url, tabID, browser,
 			command.StringFlag{Name: "format", Description: "Image format: png (default) or jpeg"},
 			command.IntFlag{Name: "quality", Description: "JPEG quality (0-100)"},
 			command.BoolFlag{Name: "full-page", Description: "Capture the full scrollable page"},
@@ -66,6 +69,7 @@ func registerCaptureCommands(app *command.Utility, p *proxy.BrowserProxy) {
 			var p0 struct {
 				URL      string `json:"url"`
 				TabID    string `json:"tab-id"`
+				Browser  string `json:"browser"`
 				Format   string `json:"format"`
 				Quality  int    `json:"quality"`
 				FullPage bool   `json:"full-page"`
@@ -74,7 +78,7 @@ func registerCaptureCommands(app *command.Utility, p *proxy.BrowserProxy) {
 				return command.TextErrorResult(err.Error()), nil
 			}
 
-			return withSession(ctx, p, p0.URL, p0.TabID, func(s cdp.Session) (io.ReadCloser, error) {
+			return withSession(ctx, p, p0.URL, p0.TabID, p0.Browser, func(s cdp.Session) (io.ReadCloser, error) {
 				return s.CaptureScreenshot(ctx, cdp.ScreenshotOptions{
 					Format:   p0.Format,
 					Quality:  p0.Quality,
@@ -89,17 +93,18 @@ func registerCaptureCommands(app *command.Utility, p *proxy.BrowserProxy) {
 		Name:        "capture-mhtml",
 		Description: command.Description{Short: "Capture a web page as MHTML archive"},
 		Annotations: &protocol.ToolAnnotations{ReadOnlyHint: protocol.BoolPtr(true)},
-		Params:      []command.Param{url, tabID},
+		Params:      []command.Param{url, tabID, browser},
 		Run: func(ctx context.Context, args json.RawMessage, _ command.Prompter) (*command.Result, error) {
 			var p0 struct {
-				URL   string `json:"url"`
-				TabID string `json:"tab-id"`
+				URL     string `json:"url"`
+				TabID   string `json:"tab-id"`
+				Browser string `json:"browser"`
 			}
 			if err := json.Unmarshal(args, &p0); err != nil {
 				return command.TextErrorResult(err.Error()), nil
 			}
 
-			return withSession(ctx, p, p0.URL, p0.TabID, func(s cdp.Session) (io.ReadCloser, error) {
+			return withSession(ctx, p, p0.URL, p0.TabID, p0.Browser, func(s cdp.Session) (io.ReadCloser, error) {
 				return s.CaptureSnapshot(ctx)
 			})
 		},
@@ -110,17 +115,18 @@ func registerCaptureCommands(app *command.Utility, p *proxy.BrowserProxy) {
 		Name:        "capture-a11y",
 		Description: command.Description{Short: "Capture the accessibility tree of a web page"},
 		Annotations: &protocol.ToolAnnotations{ReadOnlyHint: protocol.BoolPtr(true)},
-		Params:      []command.Param{url, tabID},
+		Params:      []command.Param{url, tabID, browser},
 		Run: func(ctx context.Context, args json.RawMessage, _ command.Prompter) (*command.Result, error) {
 			var p0 struct {
-				URL   string `json:"url"`
-				TabID string `json:"tab-id"`
+				URL     string `json:"url"`
+				TabID   string `json:"tab-id"`
+				Browser string `json:"browser"`
 			}
 			if err := json.Unmarshal(args, &p0); err != nil {
 				return command.TextErrorResult(err.Error()), nil
 			}
 
-			return withSession(ctx, p, p0.URL, p0.TabID, func(s cdp.Session) (io.ReadCloser, error) {
+			return withSession(ctx, p, p0.URL, p0.TabID, p0.Browser, func(s cdp.Session) (io.ReadCloser, error) {
 				return s.AccessibilityTree(ctx)
 			})
 		},
@@ -131,30 +137,34 @@ func registerCaptureCommands(app *command.Utility, p *proxy.BrowserProxy) {
 		Name:        "capture-text",
 		Description: command.Description{Short: "Extract plain text from a web page"},
 		Annotations: &protocol.ToolAnnotations{ReadOnlyHint: protocol.BoolPtr(true)},
-		Params:      []command.Param{url, tabID},
+		Params:      []command.Param{url, tabID, browser},
 		Run: func(ctx context.Context, args json.RawMessage, _ command.Prompter) (*command.Result, error) {
 			var p0 struct {
-				URL   string `json:"url"`
-				TabID string `json:"tab-id"`
+				URL     string `json:"url"`
+				TabID   string `json:"tab-id"`
+				Browser string `json:"browser"`
 			}
 			if err := json.Unmarshal(args, &p0); err != nil {
 				return command.TextErrorResult(err.Error()), nil
 			}
 
-			return withSession(ctx, p, p0.URL, p0.TabID, func(s cdp.Session) (io.ReadCloser, error) {
+			return withSession(ctx, p, p0.URL, p0.TabID, p0.Browser, func(s cdp.Session) (io.ReadCloser, error) {
 				return s.ExtractText(ctx)
 			})
 		},
 	})
 }
 
-// withSession creates a CDP session (headless or extension debugger), optionally
-// navigates to a URL, runs the capture function, and returns the result.
+// withSession creates a capture session, optionally navigates to a URL, runs
+// the capture function, and returns the result.
+// Session selection: --tab-id uses extension debugger, --browser=firefox uses
+// headless Firefox via BiDi, otherwise headless Chrome via CDP.
 func withSession(
 	ctx context.Context,
 	p *proxy.BrowserProxy,
 	url string,
 	tabID string,
+	browserBackend string,
 	capture func(cdp.Session) (io.ReadCloser, error),
 ) (*command.Result, error) {
 	var session cdp.Session
@@ -166,7 +176,11 @@ func withSession(
 		if url == "" {
 			return command.TextErrorResult("--url is required when --tab-id is not specified"), nil
 		}
-		session, err = headless.NewSession(ctx)
+		if browserBackend == "firefox" {
+			session, err = firefox.NewSession(ctx)
+		} else {
+			session, err = headless.NewSession(ctx)
+		}
 	}
 
 	if err != nil {
