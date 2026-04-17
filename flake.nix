@@ -84,9 +84,22 @@
           modules = ./go/gomod2nix.toml;
           go = pkgs-master.go_1_26;
           GOTOOLCHAIN = "local";
+          nativeBuildInputs = [ pkgs.makeWrapper ];
           postInstall = ''
             $out/bin/chrest generate-plugin $out
           '';
+          postFixup =
+            let
+              firefoxBinPath =
+                if pkgs.stdenv.isDarwin then
+                  "${pkgs.firefox}/Applications/Firefox.app/Contents/MacOS"
+                else
+                  "${pkgs.firefox}/bin";
+            in
+            ''
+              wrapProgram $out/bin/chrest \
+                --prefix PATH : ${firefoxBinPath}
+            '';
         };
       in
       {
@@ -113,11 +126,9 @@
               vhs
               zip
             ]
-          ) ++ (
-            pkgs.lib.optionals pkgs.stdenv.isLinux [
-              pkgs.firefox
-            ]
-          ) ++ (
+          ) ++ [
+            pkgs.firefox
+          ] ++ (
             with pkgs-master;
             [
               bats
