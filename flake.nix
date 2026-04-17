@@ -39,7 +39,6 @@
       let
         pkgs = import nixpkgs {
           inherit system;
-          config.allowUnfree = true;
           overlays = [
             gomod2nix.overlays.default
           ];
@@ -91,27 +90,15 @@
           '';
           postFixup =
             let
-              browserBinDir = pkgs.runCommand "chrest-browser-bins" { } (
-                ''
-                  mkdir -p $out/bin
-                ''
-                + (
-                  if pkgs.stdenv.isDarwin then
-                    ''
-                      ln -s "${pkgs.firefox}/Applications/Firefox.app/Contents/MacOS/firefox" $out/bin/firefox
-                      ln -s "${pkgs.google-chrome}/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" $out/bin/google-chrome
-                    ''
-                  else
-                    ''
-                      ln -s "${pkgs.firefox}/bin/firefox" $out/bin/firefox
-                      ln -s "${pkgs.google-chrome}/bin/google-chrome-stable" $out/bin/google-chrome-stable
-                    ''
-                )
-              );
+              firefoxBinPath =
+                if pkgs.stdenv.isDarwin then
+                  "${pkgs.firefox}/Applications/Firefox.app/Contents/MacOS"
+                else
+                  "${pkgs.firefox}/bin";
             in
             ''
               wrapProgram $out/bin/chrest \
-                --prefix PATH : ${browserBinDir}/bin
+                --prefix PATH : ${firefoxBinPath}
             '';
         };
       in
