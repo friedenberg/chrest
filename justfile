@@ -66,9 +66,16 @@ explore-run browser="chrome":
     web-ext run --target chromium --source-dir extension/dist-chrome --start-url "chrome://extensions"
   fi
 
-explore-capture command="capture-text" browser="firefox" url="https://example.com":
+explore-capture command="capture-text" browser="firefox" url="https://example.com" output="":
+  #!/usr/bin/env bash
+  set -euo pipefail
   nix build
-  timeout 30 result/bin/chrest {{command}} --browser {{browser}} --url {{url}}
+  if [ -n "{{output}}" ]; then
+    timeout 30 result/bin/chrest {{command}} --browser {{browser}} --url "{{url}}" > "{{output}}"
+    echo "wrote {{output}}"
+  else
+    timeout 30 result/bin/chrest {{command}} --browser {{browser}} --url "{{url}}"
+  fi
 
 explore-client +httpie_args:
   go/build/release/chrest client {{httpie_args}}
