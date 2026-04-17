@@ -3,6 +3,7 @@ package firefox
 import (
 	"bufio"
 	"context"
+	"log"
 	"os/exec"
 	"regexp"
 	"time"
@@ -35,6 +36,8 @@ func Launch(ctx context.Context) (*Firefox, error) {
 		return nil, err
 	}
 
+	log.Printf("launching: %s --headless --remote-debugging-port=0 --no-remote about:blank", firefoxPath)
+
 	cmd := exec.CommandContext(ctx, firefoxPath,
 		"--headless",
 		"--remote-debugging-port=0",
@@ -51,21 +54,35 @@ func Launch(ctx context.Context) (*Firefox, error) {
 		return nil, errors.Wrap(err)
 	}
 
+	log.Printf("firefox started (pid %d), waiting for BiDi WebSocket URL...", cmd.Process.Pid)
+
 	found := make(chan string, 1)
+	done := make(chan error, 1)
 
 	go func() {
 		scanner := bufio.NewScanner(stderr)
 		for scanner.Scan() {
-			if m := wsURLPattern.FindStringSubmatch(scanner.Text()); len(m) > 1 {
+			line := scanner.Text()
+			log.Printf("firefox stderr: %s", line)
+			if m := wsURLPattern.FindStringSubmatch(line); len(m) > 1 {
 				found <- m[1]
 				return
 			}
+		}
+		if err := scanner.Err(); err != nil {
+			done <- err
+		} else {
+			done <- errors.Errorf("firefox stderr closed without emitting BiDi URL")
 		}
 	}()
 
 	select {
 	case wsURL := <-found:
+		log.Printf("firefox BiDi URL: %s", wsURL)
 		return &Firefox{cmd: cmd, wsURL: wsURL}, nil
+	case err := <-done:
+		_ = cmd.Process.Kill()
+		return nil, errors.Wrapf(err, "firefox exited before emitting BiDi URL")
 	case <-time.After(10 * time.Second):
 		_ = cmd.Process.Kill()
 		return nil, errors.Errorf("timed out waiting for Firefox BiDi WebSocket URL")

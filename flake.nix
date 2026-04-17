@@ -71,6 +71,7 @@
           ] ++ (
             with pkgs;
             [
+              firefox
               fish
               gnumake
               jq
