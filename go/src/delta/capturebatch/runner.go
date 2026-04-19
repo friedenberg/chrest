@@ -129,7 +129,7 @@ func runOne(ctx context.Context, r Resolved, opts Options, host HostFingerprint)
 // Gates the split=true path per-format during the staged rollout of #22.
 func splitSupported(format string) bool {
 	switch format {
-	case "text":
+	case "text", "screenshot":
 		return true
 	default:
 		return false

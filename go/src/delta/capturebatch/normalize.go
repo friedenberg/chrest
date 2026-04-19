@@ -20,7 +20,9 @@ func Normalize(format string, raw []byte) (normalized []byte, stripped map[strin
 	switch format {
 	case "text":
 		return normalizeText(raw), nil, nil
-	case "pdf", "screenshot", "mhtml", "a11y":
+	case "screenshot":
+		return normalizePNG(raw)
+	case "pdf", "mhtml", "a11y":
 		return nil, nil, fmt.Errorf("split=true normalization not implemented for %s (tracked in chrest#22 follow-up)", format)
 	default:
 		return nil, nil, fmt.Errorf("unknown capture format %q", format)

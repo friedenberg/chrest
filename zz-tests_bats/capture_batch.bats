@@ -63,6 +63,30 @@ JSON
   echo "$result" | jq -e '.captures[0].error.kind == "not-implemented"'
 }
 
+function capture_batch_split_true_screenshot_emits_all_three_artifacts { # @test
+  # Stage 2 of chrest#22: PNG normalizer. Expect payload (normalized),
+  # envelope, and spec refs all populated. Normalized payload should
+  # differ in size from the raw capture because chunks get stripped.
+  input=$(
+    cat <<JSON
+{
+  "schema": "web-capture-archive/v1",
+  "writer": {"cmd": ["$STUB_WRITER"]},
+  "url": "$FIXTURE",
+  "defaults": {"browser": "firefox", "split": true},
+  "captures": [{"name": "shot", "format": "screenshot"}]
+}
+JSON
+  )
+  result=$(echo "$input" | timeout 30 "$CHREST_BIN" capture-batch)
+  echo "$result" | jq -e '.captures[0].error == null'
+  echo "$result" | jq -e '.captures[0].payload.normalized == true'
+  echo "$result" | jq -e '.captures[0].payload.media_type  == "image/png"'
+  echo "$result" | jq -e '.captures[0].envelope.media_type == "application/vnd.web-capture-archive.envelope+json"'
+  echo "$result" | jq -e '.captures[0].spec.media_type     == "application/vnd.web-capture-archive.spec+json"'
+  echo "$result" | jq -e '.captures[0].payload.size > 100'
+}
+
 function capture_batch_split_true_text_emits_all_three_artifacts { # @test
   # Stage 1 of chrest#22: text normalizer + partial envelope.
   # Expect payload (normalized), envelope, and spec refs all populated.
