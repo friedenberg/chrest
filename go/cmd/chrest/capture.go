@@ -2,15 +2,19 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"code.linenisgreat.com/chrest/go/src/delta/proxy"
 	"code.linenisgreat.com/chrest/go/src/delta/tools"
 )
+
+const defaultCaptureTimeout = 60 * time.Second
 
 // cmdCapture is the CLI-side handler for `chrest capture`. It bypasses
 // command.RunCLI so the capture bytes can stream straight to os.Stdout
@@ -40,6 +44,7 @@ func cmdCapture(ctx context.Context, p *proxy.BrowserProxy, args []string) error
 	}
 
 	var params tools.CaptureParams
+	var timeout time.Duration
 	fs.StringVar(&params.Format, "format", "", "Output format: pdf, screenshot-png, screenshot-jpeg, mhtml, a11y, text")
 	fs.StringVar(&params.URL, "url", "", "URL to capture")
 	fs.StringVar(&params.TabID, "tab-id", "", "Tab ID to capture (uses extension debugger instead of headless)")
@@ -49,6 +54,7 @@ func cmdCapture(ctx context.Context, p *proxy.BrowserProxy, args []string) error
 	fs.BoolVar(&params.Background, "background", false, "PDF only: print background graphics")
 	fs.IntVar(&params.Quality, "quality", 0, "screenshot-jpeg only: JPEG quality (0-100)")
 	fs.BoolVar(&params.FullPage, "full-page", false, "screenshot-png / screenshot-jpeg: capture the full scrollable page")
+	fs.DurationVar(&timeout, "timeout", defaultCaptureTimeout, "Abort and tear down the browser if the capture takes longer than this (0 disables)")
 
 	if err := fs.Parse(args); err != nil {
 		return err
@@ -63,5 +69,21 @@ func cmdCapture(ctx context.Context, p *proxy.BrowserProxy, args []string) error
 		return err
 	}
 
-	return tools.StreamCapture(ctx, p, params, os.Stdout)
+	// Self-contained deadline. When it fires, ctx cancels — which
+	// propagates into exec.CommandContext (SIGKILL to the browser
+	// parent) and into any ctx-aware I/O inside StreamCapture. This
+	// guards against hangs the external test harness doesn't notice:
+	// Navigate stuck on a loading page, BiDi read stuck waiting for a
+	// browser response, etc.
+	if timeout > 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, timeout)
+		defer cancel()
+	}
+
+	err := tools.StreamCapture(ctx, p, params, os.Stdout)
+	if errors.Is(err, context.DeadlineExceeded) {
+		return fmt.Errorf("capture timed out after %s", timeout)
+	}
+	return err
 }
