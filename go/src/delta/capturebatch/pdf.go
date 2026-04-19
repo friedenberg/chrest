@@ -12,9 +12,9 @@ import (
 // pdfStripKeys is the list of /Info dictionary entries the normalizer
 // removes when split=true. Per RFC 0001 §pdf:
 //
-//	- /CreationDate and /ModDate — timestamps of the generation run.
-//	- /Producer — the PDF library + version that emitted the file.
-//	- /Creator — the browser / UA that requested the PDF.
+//   - /CreationDate and /ModDate — timestamps of the generation run.
+//   - /Producer — the PDF library + version that emitted the file.
+//   - /Creator — the browser / UA that requested the PDF.
 //
 // /Title, /Subject, /Author, /Keywords are left in place: those are
 // typically set by the document author, not by the browser or PDF

@@ -134,3 +134,30 @@ explore-help subcommand="":
   else
     go/build/release/chrest --help
   fi
+
+# Run chrest-jcs on a shared byte-stability fixture and compare the
+# sha256 against the remote implementation's hash. Output file lives
+# next to the input in the aim/ directory so other sessions can diff
+# it. Hash printed to stdout and written beside the output file.
+explore-jcs-fixture vector="jcs-spec-vector-1" expected="":
+  #!/usr/bin/env bash
+  set -euo pipefail
+  fixtures=/home/sasha/eng/aim/fixtures
+  input="$fixtures/{{vector}}.input.json"
+  output="$fixtures/{{vector}}.chrest.canonical.json"
+  if [ ! -f "$input" ]; then
+    echo "missing input: $input" >&2
+    exit 1
+  fi
+  go/build/release/chrest-jcs < "$input" > "$output"
+  got=$(sha256sum "$output" | awk '{print $1}')
+  echo "output=$output"
+  echo "sha256=$got"
+  if [ -n "{{expected}}" ]; then
+    if [ "$got" = "{{expected}}" ]; then
+      echo "MATCH (expected $got)"
+    else
+      echo "MISMATCH (expected {{expected}}, got $got)" >&2
+      exit 2
+    fi
+  fi
