@@ -44,7 +44,34 @@ test-mcp: build
   echo "All MCP validations passed"
 
 test-mcp-bats:
-  bats --bin-dir go/build/release/ --allow-unix-sockets --allow-local-binding zz-tests_bats/
+  #!/usr/bin/env bash
+  # Wrap bats in a hard wall-clock timeout because bats has been observed
+  # to hang on post-test shutdown in bwrap --unshare-pid sandboxes after
+  # several Firefox captures, even though every individual test passes.
+  # Root cause is still open; this guard keeps `just test` finite.
+  # We validate the TAP output ourselves: if the plan line `1..N` is
+  # present and every line 1..N is `ok`, the suite succeeded regardless
+  # of whether bats itself exited cleanly.
+  set +e
+  out=$(mktemp)
+  trap 'rm -f "$out"' EXIT
+  timeout --preserve-status 120 \
+    bats --bin-dir go/build/release/ --allow-unix-sockets --allow-local-binding zz-tests_bats/ \
+    > >(tee "$out") 2>&1
+  bats_rc=$?
+  expected=$(grep -m1 -E '^1\.\.[0-9]+$' "$out" | sed 's/^1\.\.//')
+  passing=$(grep -cE '^ok [0-9]+ ' "$out")
+  failing=$(grep -cE '^not ok [0-9]+ ' "$out")
+  if [ -z "$expected" ]; then
+    echo "FAIL: no TAP plan line (bats exit $bats_rc)"; exit 1
+  fi
+  if [ "$failing" -gt 0 ]; then
+    echo "FAIL: $failing test(s) failed"; exit 1
+  fi
+  if [ "$passing" -ne "$expected" ]; then
+    echo "FAIL: expected $expected, saw $passing ok (bats exit $bats_rc)"; exit 1
+  fi
+  echo "PASS: $expected tests ok (bats exit $bats_rc)"
 
 dev-install-mcp: build
   go/build/release/chrest install-mcp
