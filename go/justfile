@@ -21,7 +21,19 @@ build-go: build-go-generate \
     (build-go-binary "" "build/release")
 
 build-nix-gomod:
+  #!/usr/bin/env bash
+  set -euo pipefail
   gomod2nix
+  # Fail loud if gomod2nix regenerated the manifest, rather than let a
+  # downstream hook (e.g. sc merge's pre-merge check) report success
+  # and then silently drop the regenerated file from the committed
+  # tree. Happened once with the pdfcpu add; the fix was a trailing
+  # commit to stage the regenerated file.
+  if ! git diff --quiet -- gomod2nix.toml; then
+    echo "gomod2nix.toml is dirty after regeneration — stage and commit it, then re-run." >&2
+    git --no-pager diff --stat -- gomod2nix.toml >&2
+    exit 1
+  fi
 
 build-nix: build-nix-gomod
   nix build
