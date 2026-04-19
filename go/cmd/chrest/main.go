@@ -104,6 +104,18 @@ func run(ctx errors.Context) (err error) {
 		return
 	}
 
+	// Bypass dewey for capture: the Result/TextResult path in golf/command
+	// buffers everything and appends a trailing newline via fmt.Println,
+	// which corrupts binary output and bloats memory. See chrest#21 and the
+	// upstream dewey gap in amarbel-llc/purse-first#55.
+	if len(os.Args) > 1 && os.Args[1] == "capture" {
+		if err = cmdCapture(ctx, p, os.Args[2:]); err != nil {
+			err = errors.Wrap(err)
+			return
+		}
+		return
+	}
+
 	if err = app.RunCLI(ctx, os.Args[1:], prompter.Prompter{}); err != nil {
 		err = errors.Wrap(err)
 		return

@@ -1,6 +1,7 @@
 package tools
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -34,6 +35,37 @@ var captureFormats = []string{
 	formatText,
 }
 
+// CaptureParams is the shared parameter struct for the `capture` command,
+// used by both the MCP tool handler and the CLI bypass in
+// go/cmd/chrest/capture.go.
+type CaptureParams struct {
+	Format     string `json:"format"`
+	URL        string `json:"url"`
+	TabID      string `json:"tab-id"`
+	Browser    string `json:"browser"`
+	Landscape  bool   `json:"landscape"`
+	NoHeaders  bool   `json:"no-headers"`
+	Background bool   `json:"background"`
+	Quality    int    `json:"quality"`
+	FullPage   bool   `json:"full-page"`
+}
+
+// Validate rejects format-specific flags used with an incompatible --format,
+// so mistakes surface instead of being silently ignored.
+func (p CaptureParams) Validate() error {
+	pdfOnly := p.Landscape || p.NoHeaders || p.Background
+	if pdfOnly && p.Format != formatPDF {
+		return fmt.Errorf("--landscape, --no-headers, --background are only valid with --format %s", formatPDF)
+	}
+	if p.Quality != 0 && p.Format != formatScreenshotJPEG {
+		return fmt.Errorf("--quality is only valid with --format %s", formatScreenshotJPEG)
+	}
+	if p.FullPage && p.Format != formatScreenshotPNG && p.Format != formatScreenshotJPEG {
+		return fmt.Errorf("--full-page is only valid with --format %s or %s", formatScreenshotPNG, formatScreenshotJPEG)
+	}
+	return nil
+}
+
 func registerCaptureCommands(app *command.Utility, p *proxy.BrowserProxy) {
 	app.AddCommand(&command.Command{
 		Name:        "capture",
@@ -56,123 +88,108 @@ func registerCaptureCommands(app *command.Utility, p *proxy.BrowserProxy) {
 			command.BoolFlag{Name: "full-page", Description: "screenshot-png / screenshot-jpeg: capture the full scrollable page"},
 		},
 		Run: func(ctx context.Context, args json.RawMessage, _ command.Prompter) (*command.Result, error) {
-			var p0 struct {
-				Format     string `json:"format"`
-				URL        string `json:"url"`
-				TabID      string `json:"tab-id"`
-				Browser    string `json:"browser"`
-				Landscape  bool   `json:"landscape"`
-				NoHeaders  bool   `json:"no-headers"`
-				Background bool   `json:"background"`
-				Quality    int    `json:"quality"`
-				FullPage   bool   `json:"full-page"`
-			}
+			var p0 CaptureParams
 			if err := json.Unmarshal(args, &p0); err != nil {
 				return command.TextErrorResult(err.Error()), nil
 			}
-
-			if err := validateCaptureFlags(p0.Format, p0.Landscape, p0.NoHeaders, p0.Background, p0.Quality, p0.FullPage); err != nil {
+			if err := p0.Validate(); err != nil {
 				return command.TextErrorResult(err.Error()), nil
 			}
 
-			return withSession(ctx, p, p0.URL, p0.TabID, p0.Browser, func(s cdp.Session) (io.ReadCloser, error) {
-				switch p0.Format {
-				case formatPDF:
-					return s.PrintToPDF(ctx, cdp.PDFOptions{
-						Landscape:           p0.Landscape,
-						DisplayHeaderFooter: !p0.NoHeaders,
-						PrintBackground:     p0.Background,
-					})
-				case formatScreenshotPNG:
-					return s.CaptureScreenshot(ctx, cdp.ScreenshotOptions{
-						Format:   "png",
-						FullPage: p0.FullPage,
-					})
-				case formatScreenshotJPEG:
-					return s.CaptureScreenshot(ctx, cdp.ScreenshotOptions{
-						Format:   "jpeg",
-						Quality:  p0.Quality,
-						FullPage: p0.FullPage,
-					})
-				case formatMHTML:
-					return s.CaptureSnapshot(ctx)
-				case formatA11y:
-					return s.AccessibilityTree(ctx)
-				case formatText:
-					return s.ExtractText(ctx)
-				default:
-					return nil, fmt.Errorf("unknown --format value %q; expected one of %v", p0.Format, captureFormats)
-				}
-			})
+			// MCP path: buffer into memory since Result carries bytes as a
+			// text block. CLI goes through cmd/chrest's bypass, which streams
+			// directly to os.Stdout.
+			var buf bytes.Buffer
+			if err := StreamCapture(ctx, p, p0, &buf); err != nil {
+				return nil, err
+			}
+			return command.TextResult(buf.String()), nil
 		},
 	})
 }
 
-// validateCaptureFlags rejects format-specific flags used with an incompatible
-// --format, so mistakes surface instead of being silently ignored.
-func validateCaptureFlags(format string, landscape, noHeaders, background bool, quality int, fullPage bool) error {
-	pdfOnly := landscape || noHeaders || background
-	if pdfOnly && format != formatPDF {
-		return fmt.Errorf("--landscape, --no-headers, --background are only valid with --format %s", formatPDF)
+// StreamCapture runs a capture with the given parameters and copies the raw
+// output bytes to w. The session is established, the URL (if any) navigated
+// to, the capture performed, and the session closed before returning.
+//
+// Callers that need the bytes as a Go value (e.g. the MCP handler) can pass
+// a *bytes.Buffer. Callers that want zero-copy output (e.g. the CLI) can
+// pass os.Stdout.
+func StreamCapture(
+	ctx context.Context,
+	p *proxy.BrowserProxy,
+	params CaptureParams,
+	w io.Writer,
+) error {
+	session, err := openCaptureSession(ctx, p, params.URL, params.TabID, params.Browser)
+	if err != nil {
+		return errors.Wrap(err)
 	}
-	if quality != 0 && format != formatScreenshotJPEG {
-		return fmt.Errorf("--quality is only valid with --format %s", formatScreenshotJPEG)
+	defer session.Close()
+
+	if params.URL != "" {
+		if err := session.Navigate(ctx, params.URL); err != nil {
+			return errors.Wrap(err)
+		}
 	}
-	if fullPage && format != formatScreenshotPNG && format != formatScreenshotJPEG {
-		return fmt.Errorf("--full-page is only valid with --format %s or %s", formatScreenshotPNG, formatScreenshotJPEG)
+
+	rc, err := runCapture(ctx, session, params)
+	if err != nil {
+		return errors.Wrap(err)
+	}
+	defer rc.Close()
+
+	if _, err := io.Copy(w, rc); err != nil {
+		return errors.Wrap(err)
 	}
 	return nil
 }
 
-// withSession creates a capture session, optionally navigates to a URL, runs
-// the capture function, and returns the result.
-// Session selection: --tab-id uses extension debugger, --browser=firefox uses
-// headless Firefox via BiDi, otherwise headless Chrome via CDP.
-func withSession(
+func openCaptureSession(
 	ctx context.Context,
 	p *proxy.BrowserProxy,
 	url string,
 	tabID string,
 	browserBackend string,
-	capture func(cdp.Session) (io.ReadCloser, error),
-) (*command.Result, error) {
-	var session cdp.Session
-	var err error
-
+) (cdp.Session, error) {
 	if tabID != "" {
-		session, err = extension.NewSession(ctx, p, tabID)
-	} else {
-		if url == "" {
-			return command.TextErrorResult("--url is required when --tab-id is not specified"), nil
-		}
-		if browserBackend == "firefox" {
-			session, err = firefox.NewSession(ctx)
-		} else {
-			session, err = headless.NewSession(ctx)
-		}
+		return extension.NewSession(ctx, p, tabID)
 	}
-
-	if err != nil {
-		return nil, errors.Wrap(err)
+	if url == "" {
+		return nil, fmt.Errorf("--url is required when --tab-id is not specified")
 	}
-	defer session.Close()
-
-	if url != "" {
-		if err := session.Navigate(ctx, url); err != nil {
-			return nil, errors.Wrap(err)
-		}
+	if browserBackend == "firefox" {
+		return firefox.NewSession(ctx)
 	}
+	return headless.NewSession(ctx)
+}
 
-	rc, err := capture(session)
-	if err != nil {
-		return nil, errors.Wrap(err)
+func runCapture(ctx context.Context, s cdp.Session, params CaptureParams) (io.ReadCloser, error) {
+	switch params.Format {
+	case formatPDF:
+		return s.PrintToPDF(ctx, cdp.PDFOptions{
+			Landscape:           params.Landscape,
+			DisplayHeaderFooter: !params.NoHeaders,
+			PrintBackground:     params.Background,
+		})
+	case formatScreenshotPNG:
+		return s.CaptureScreenshot(ctx, cdp.ScreenshotOptions{
+			Format:   "png",
+			FullPage: params.FullPage,
+		})
+	case formatScreenshotJPEG:
+		return s.CaptureScreenshot(ctx, cdp.ScreenshotOptions{
+			Format:   "jpeg",
+			Quality:  params.Quality,
+			FullPage: params.FullPage,
+		})
+	case formatMHTML:
+		return s.CaptureSnapshot(ctx)
+	case formatA11y:
+		return s.AccessibilityTree(ctx)
+	case formatText:
+		return s.ExtractText(ctx)
+	default:
+		return nil, fmt.Errorf("unknown --format value %q; expected one of %v", params.Format, captureFormats)
 	}
-	defer rc.Close()
-
-	data, err := io.ReadAll(rc)
-	if err != nil {
-		return nil, errors.Wrap(err)
-	}
-
-	return command.TextResult(string(data)), nil
 }
