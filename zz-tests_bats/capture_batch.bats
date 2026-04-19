@@ -43,7 +43,9 @@ function capture_batch_rejects_bad_schema { # @test
   echo "$output" | grep -qi "schema"
 }
 
-function capture_batch_split_true_returns_not_implemented { # @test
+function capture_batch_split_true_pdf_returns_not_implemented { # @test
+  # PDF's split=true normalizer isn't yet implemented; expect per-capture
+  # not-implemented error while the rest of the batch pipeline passes.
   input=$(
     cat <<JSON
 {
@@ -59,6 +61,33 @@ JSON
   echo "$result" | jq -e '.schema == "web-capture-archive/v1"'
   echo "$result" | jq -e '.capturer.name == "chrest"'
   echo "$result" | jq -e '.captures[0].error.kind == "not-implemented"'
+}
+
+function capture_batch_split_true_text_emits_all_three_artifacts { # @test
+  # Stage 1 of chrest#22: text normalizer + partial envelope.
+  # Expect payload (normalized), envelope, and spec refs all populated.
+  input=$(
+    cat <<JSON
+{
+  "schema": "web-capture-archive/v1",
+  "writer": {"cmd": ["$STUB_WRITER"]},
+  "url": "$FIXTURE",
+  "defaults": {"browser": "firefox", "split": true},
+  "captures": [{"name": "txt", "format": "text"}]
+}
+JSON
+  )
+  result=$(echo "$input" | timeout 30 "$CHREST_BIN" capture-batch)
+  echo "$result" | jq -e '.captures[0].error == null'
+  # All three artifact refs populated.
+  echo "$result" | jq -e '.captures[0].payload.id  | startswith("blake2b256-stub-")'
+  echo "$result" | jq -e '.captures[0].envelope.id | startswith("blake2b256-stub-")'
+  echo "$result" | jq -e '.captures[0].spec.id     | startswith("blake2b256-stub-")'
+  # Payload normalized flag set true.
+  echo "$result" | jq -e '.captures[0].payload.normalized == true'
+  echo "$result" | jq -e '.captures[0].payload.media_type  == "text/plain; charset=utf-8"'
+  echo "$result" | jq -e '.captures[0].envelope.media_type == "application/vnd.web-capture-archive.envelope+json"'
+  echo "$result" | jq -e '.captures[0].spec.media_type     == "application/vnd.web-capture-archive.spec+json"'
 }
 
 function capture_batch_split_false_text_emits_payload_and_spec { # @test

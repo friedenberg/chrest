@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"time"
 
 	"code.linenisgreat.com/chrest/go/src/bravo/cdp"
 	"code.linenisgreat.com/chrest/go/src/charlie/firefox"
@@ -66,19 +67,21 @@ func Run(ctx context.Context, inputCaptures []InputCapture, opts Options) (Outpu
 func runOne(ctx context.Context, r Resolved, opts Options, host HostFingerprint) OutputCapture {
 	entry := OutputCapture{Name: r.Name}
 
-	if r.Split {
-		entry.Error = &CaptureError{
-			Kind:    "not-implemented",
-			Message: "split=true normalization will land in follow-up",
-		}
-		return entry
-	}
-
 	mediaType, ok := PayloadMediaTypes[r.Format]
 	if !ok {
 		entry.Error = &CaptureError{
 			Kind:    "bad-format",
 			Message: fmt.Sprintf("unknown capture format %q", r.Format),
+		}
+		return entry
+	}
+
+	// Stage gate: split=true is only supported for formats that have
+	// a normalizer. Unsupported formats get a per-capture error.
+	if r.Split && !splitSupported(r.Format) {
+		entry.Error = &CaptureError{
+			Kind:    "not-implemented",
+			Message: fmt.Sprintf("split=true normalization for %s not yet implemented (chrest#22 follow-up)", r.Format),
 		}
 		return entry
 	}
@@ -90,17 +93,27 @@ func runOne(ctx context.Context, r Resolved, opts Options, host HostFingerprint)
 	}
 	defer session.Close()
 
+	capturedAt := time.Now()
 	if err := session.Navigate(ctx, opts.URL); err != nil {
 		entry.Error = &CaptureError{Kind: "navigate-failed", Message: err.Error()}
 		return entry
 	}
 
-	payloadRef, err := streamPayload(ctx, session, r, opts.Writer, mediaType)
+	payloadRef, stripped, err := writePayload(ctx, session, r, opts.Writer, mediaType)
 	if err != nil {
 		entry.Error = &CaptureError{Kind: "payload-write-failed", Message: err.Error()}
 		return entry
 	}
 	entry.Payload = payloadRef
+
+	if r.Split {
+		envelopeRef, err := writeEnvelope(ctx, opts, capturedAt, stripped)
+		if err != nil {
+			entry.Error = &CaptureError{Kind: "envelope-write-failed", Message: err.Error()}
+			return entry
+		}
+		entry.Envelope = envelopeRef
+	}
 
 	specRef, err := writeSpec(ctx, session, r, host, opts)
 	if err != nil {
@@ -110,6 +123,17 @@ func runOne(ctx context.Context, r Resolved, opts Options, host HostFingerprint)
 	entry.Spec = specRef
 
 	return entry
+}
+
+// splitSupported returns true for formats whose normalizer is implemented.
+// Gates the split=true path per-format during the staged rollout of #22.
+func splitSupported(format string) bool {
+	switch format {
+	case "text":
+		return true
+	default:
+		return false
+	}
 }
 
 func openSession(ctx context.Context, browser string) (cdp.Session, error) {
@@ -123,27 +147,85 @@ func openSession(ctx context.Context, browser string) (cdp.Session, error) {
 	}
 }
 
-func streamPayload(
+// writePayload runs the capture, optionally applies split=true
+// normalization, streams the resulting bytes to the writer, and returns
+// the artifact ref + any `stripped.<format>` entries for the envelope.
+//
+// When split=false: raw capture bytes go straight to the writer,
+// stripped is nil, and the returned ArtifactRef has no `normalized` field.
+// When split=true: raw bytes are fully read, normalized per format, then
+// streamed; stripped contains the normalizer's output; the ref has
+// `normalized: true`.
+//
+// The split=true path buffers in memory. Per-format normalizers need the
+// full document (e.g. PDF trailer parsing), so streaming for them is
+// architecturally impossible. The split=false path remains streaming.
+func writePayload(
 	ctx context.Context,
 	session cdp.Session,
 	r Resolved,
 	writer WriterSpec,
 	mediaType string,
-) (*ArtifactRef, error) {
+) (*ArtifactRef, map[string]any, error) {
 	rc, err := runCaptureFormat(ctx, session, r)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	defer rc.Close()
 
-	res, err := WriteThrough(ctx, writer.Cmd, rc)
+	if !r.Split {
+		res, err := WriteThrough(ctx, writer.Cmd, rc)
+		if err != nil {
+			return nil, nil, err
+		}
+		return &ArtifactRef{
+			ID:        res.ID,
+			Size:      res.Size,
+			MediaType: mediaType,
+		}, nil, nil
+	}
+
+	normalized, stripped, err := NormalizeStream(r.Format, rc)
+	if err != nil {
+		return nil, nil, err
+	}
+	res, err := WriteThrough(ctx, writer.Cmd, normalized)
+	if err != nil {
+		return nil, nil, err
+	}
+	yes := true
+	return &ArtifactRef{
+		ID:         res.ID,
+		Size:       res.Size,
+		MediaType:  mediaType,
+		Normalized: &yes,
+	}, stripped, nil
+}
+
+// writeEnvelope builds and writes the envelope artifact for a
+// split=true capture. Stage 1 emits a partial envelope: url and
+// captured_at only, plus any stripped.<format> the normalizer
+// produced. The RFC-required http.* fields are deferred to chrest#24
+// (bidi event-subscription refactor).
+func writeEnvelope(
+	ctx context.Context,
+	opts Options,
+	capturedAt time.Time,
+	stripped map[string]any,
+) (*ArtifactRef, error) {
+	envBytes, err := BuildEnvelope(opts.URL, capturedAt, stripped)
+	if err != nil {
+		return nil, fmt.Errorf("build envelope: %w", err)
+	}
+
+	res, err := WriteThrough(ctx, opts.Writer.Cmd, bytes.NewReader(envBytes))
 	if err != nil {
 		return nil, err
 	}
 	return &ArtifactRef{
 		ID:        res.ID,
 		Size:      res.Size,
-		MediaType: mediaType,
+		MediaType: EnvelopeMediaType,
 	}, nil
 }
 
