@@ -12,6 +12,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"syscall"
 	"time"
 
 	"github.com/amarbel-llc/purse-first/libs/dewey/bravo/errors"
@@ -51,7 +52,7 @@ func (p *Process) Close() error {
 	var firstErr error
 
 	if p.cmd.Process != nil {
-		_ = p.cmd.Process.Kill()
+		killProcessGroup(p.cmd.Process.Pid)
 		if err := p.cmd.Wait(); err != nil {
 			if _, ok := err.(*exec.ExitError); !ok {
 				firstErr = err
@@ -64,6 +65,21 @@ func (p *Process) Close() error {
 	}
 
 	return firstErr
+}
+
+// killProcessGroup sends SIGKILL to the entire process group led by pid.
+// Browsers fork many helper processes (content, tab, utility, crashhelper).
+// Killing only the direct parent orphans the helpers, which survive until
+// init reaps them — a problem inside PID namespaces (bwrap --unshare-pid)
+// where there's no init. killProcessGroup kills the whole tree in one go.
+func killProcessGroup(pid int) {
+	pgid, err := syscall.Getpgid(pid)
+	if err != nil {
+		// Fall back to single-process kill if we can't get the pgid.
+		_ = syscall.Kill(pid, syscall.SIGKILL)
+		return
+	}
+	_ = syscall.Kill(-pgid, syscall.SIGKILL)
 }
 
 func findBinary(names []string) (string, error) {
@@ -129,6 +145,11 @@ func Launch(ctx context.Context, cfg BrowserConfig) (*Process, error) {
 	args = append(args, cfg.URL)
 
 	cmd := exec.CommandContext(ctx, binaryPath, args...)
+	// New process group so we can SIGKILL the whole tree in Close.
+	// Without this, browser helper processes (content, tab, utility, ...)
+	// become orphans when we kill the parent and leak until init reaps
+	// them — which never happens inside bwrap --unshare-pid sandboxes.
+	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 	log.Printf("launching: %s %v", binaryPath, args)
 
 	stderr, err := cmd.StderrPipe()
@@ -148,7 +169,7 @@ func Launch(ctx context.Context, cfg BrowserConfig) (*Process, error) {
 	log.Printf("browser started (pid %d)", cmd.Process.Pid)
 
 	killAndCleanup := func() {
-		_ = cmd.Process.Kill()
+		killProcessGroup(cmd.Process.Pid)
 		_ = cmd.Wait()
 		if cleanup != nil {
 			cleanup()
