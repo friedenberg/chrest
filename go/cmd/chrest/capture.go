@@ -5,6 +5,8 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"os/signal"
+	"syscall"
 
 	"code.linenisgreat.com/chrest/go/src/delta/proxy"
 	"code.linenisgreat.com/chrest/go/src/delta/tools"
@@ -21,6 +23,14 @@ import (
 // and the capture command can rely on a single Run handler for both CLI
 // and MCP transports.
 func cmdCapture(ctx context.Context, p *proxy.BrowserProxy, args []string) error {
+	// Ignore SIGPIPE so that a downstream reader closing the pipe early
+	// (e.g. `chrest capture | head -c 4`) turns into an EPIPE on the next
+	// write instead of killing the program. Without this, Go's default
+	// SIGPIPE handler on fd 1/2 terminates chrest before StreamCapture's
+	// deferred session.Close runs — leaving Firefox and its content
+	// processes orphaned and blocking the bats shutdown.
+	signal.Ignore(syscall.SIGPIPE)
+
 	fs := flag.NewFlagSet("capture", flag.ContinueOnError)
 	fs.SetOutput(os.Stderr)
 	fs.Usage = func() {

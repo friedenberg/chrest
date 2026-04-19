@@ -199,6 +199,25 @@ func Launch(ctx context.Context, cfg BrowserConfig) (*Process, error) {
 	// become orphans when we kill the parent and leak until init reaps
 	// them — which never happens inside bwrap --unshare-pid sandboxes.
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+
+	// Disconnect the browser's stdin/stdout from our fds. If we inherit
+	// them, the browser forks content processes that also inherit them
+	// — including a pipe write-end when chrest is invoked via bash's
+	// `run` / command substitution. That pipe never sees EOF until the
+	// last content-process dies, which causes the bats harness to hang
+	// on shutdown even after every test passes. stderr stays on a pipe
+	// because the launcher scrapes it for the WebSocket URL.
+	devNull, err := os.OpenFile(os.DevNull, os.O_RDWR, 0)
+	if err != nil {
+		if cleanup != nil {
+			cleanup()
+		}
+		return nil, errors.Wrap(err)
+	}
+	defer devNull.Close()
+	cmd.Stdin = devNull
+	cmd.Stdout = devNull
+
 	log.Printf("launching: %s %v", binaryPath, args)
 
 	stderr, err := cmd.StderrPipe()
