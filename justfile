@@ -32,7 +32,7 @@ test-mcp: build
   echo "$resources" | jq -e '.resources | length > 0'
   echo "$templates" | jq -e '.resourceTemplates | length > 0'
   # Verify readOnlyHint annotations
-  for tool in browser-info list-windows get-window list-tabs get-tab list-extensions items-get state-get read-resource capture-pdf capture-screenshot capture-mhtml capture-a11y capture-text; do
+  for tool in browser-info list-windows get-window list-tabs get-tab list-extensions items-get state-get read-resource capture; do
     echo "$tools" | jq -e --arg t "$tool" '.tools[] | select(.name == $t) | .annotations.readOnlyHint == true' \
       || { echo "FAIL: $tool missing readOnlyHint"; exit 1; }
   done
@@ -66,15 +66,15 @@ explore-run browser="chrome":
     web-ext run --target chromium --source-dir extension/dist-chrome --start-url "chrome://extensions"
   fi
 
-explore-capture command="capture-text" browser="firefox" url="https://example.com" output="":
+explore-capture format="text" browser="firefox" url="https://example.com" output="":
   #!/usr/bin/env bash
   set -euo pipefail
   nix build
   if [ -n "{{output}}" ]; then
-    timeout 30 result/bin/chrest {{command}} --browser {{browser}} --url "{{url}}" > "{{output}}"
+    timeout 30 result/bin/chrest capture --format {{format}} --browser {{browser}} --url "{{url}}" > "{{output}}"
     echo "wrote {{output}}"
   else
-    timeout 30 result/bin/chrest {{command}} --browser {{browser}} --url "{{url}}"
+    timeout 30 result/bin/chrest capture --format {{format}} --browser {{browser}} --url "{{url}}"
   fi
 
 explore-client +httpie_args:

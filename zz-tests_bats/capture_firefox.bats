@@ -26,26 +26,26 @@ EOF
 }
 
 function firefox_capture_text_extracts_text { # @test
-  result=$("$CHREST_BIN" capture-text --browser firefox --url "$FIXTURE")
+  result=$("$CHREST_BIN" capture --format text --browser firefox --url "$FIXTURE")
   echo "$result" | grep -q "Hello from chrest"
 }
 
 function firefox_capture_pdf_returns_pdf_bytes { # @test
-  result=$("$CHREST_BIN" capture-pdf --browser firefox --url "$FIXTURE" | head -c 5)
+  result=$("$CHREST_BIN" capture --format pdf --browser firefox --url "$FIXTURE" | head -c 5)
   [ "$result" = "%PDF-" ]
 }
 
 function firefox_capture_screenshot_returns_png_bytes { # @test
-  result=$("$CHREST_BIN" capture-screenshot --browser firefox --url "$FIXTURE" | head -c 4 | xxd -p)
+  result=$("$CHREST_BIN" capture --format screenshot-png --browser firefox --url "$FIXTURE" | head -c 4 | xxd -p)
   [ "$result" = "89504e47" ]
 }
 
 function firefox_capture_mhtml_returns_unsupported_error { # @test
-  run "$CHREST_BIN" capture-mhtml --browser firefox --url "$FIXTURE"
+  run "$CHREST_BIN" capture --format mhtml --browser firefox --url "$FIXTURE"
   echo "$output" | grep -qi "not supported"
 }
 
 function firefox_capture_a11y_returns_unsupported_error { # @test
-  run "$CHREST_BIN" capture-a11y --browser firefox --url "$FIXTURE"
+  run "$CHREST_BIN" capture --format a11y --browser firefox --url "$FIXTURE"
   echo "$output" | grep -qi "not supported"
 }

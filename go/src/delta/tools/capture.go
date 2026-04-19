@@ -3,6 +3,7 @@ package tools
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 
 	"code.linenisgreat.com/chrest/go/src/bravo/cdp"
@@ -15,144 +16,112 @@ import (
 	"github.com/amarbel-llc/purse-first/libs/dewey/golf/protocol"
 )
 
-func registerCaptureCommands(app *command.Utility, p *proxy.BrowserProxy) {
-	url := command.StringFlag{Name: "url", Description: "URL to capture"}
-	tabID := command.StringFlag{Name: "tab-id", Description: "Tab ID to capture (uses extension debugger instead of headless)"}
-	browser := command.StringFlag{Name: "browser", Description: "Browser backend: chrome (default) or firefox"}
+const (
+	formatPDF            = "pdf"
+	formatScreenshotPNG  = "screenshot-png"
+	formatScreenshotJPEG = "screenshot-jpeg"
+	formatMHTML          = "mhtml"
+	formatA11y           = "a11y"
+	formatText           = "text"
+)
 
-	// capture-pdf
+var captureFormats = []string{
+	formatPDF,
+	formatScreenshotPNG,
+	formatScreenshotJPEG,
+	formatMHTML,
+	formatA11y,
+	formatText,
+}
+
+func registerCaptureCommands(app *command.Utility, p *proxy.BrowserProxy) {
 	app.AddCommand(&command.Command{
-		Name:        "capture-pdf",
-		Description: command.Description{Short: "Capture a web page as PDF"},
+		Name:        "capture",
+		Description: command.Description{Short: "Capture a web page in a given format"},
 		Annotations: &protocol.ToolAnnotations{ReadOnlyHint: protocol.BoolPtr(true)},
 		Params: []command.Param{
-			url, tabID, browser,
-			command.BoolFlag{Name: "landscape", Description: "Use landscape orientation"},
-			command.BoolFlag{Name: "no-headers", Description: "Disable header and footer"},
-			command.BoolFlag{Name: "background", Description: "Print background graphics"},
+			command.StringFlag{
+				Name:        "format",
+				Description: "Output format: pdf, screenshot-png, screenshot-jpeg, mhtml, a11y, text",
+				Required:    true,
+				EnumValues:  captureFormats,
+			},
+			command.StringFlag{Name: "url", Description: "URL to capture"},
+			command.StringFlag{Name: "tab-id", Description: "Tab ID to capture (uses extension debugger instead of headless)"},
+			command.StringFlag{Name: "browser", Description: "Browser backend: chrome (default) or firefox"},
+			command.BoolFlag{Name: "landscape", Description: "PDF only: use landscape orientation"},
+			command.BoolFlag{Name: "no-headers", Description: "PDF only: disable header and footer"},
+			command.BoolFlag{Name: "background", Description: "PDF only: print background graphics"},
+			command.IntFlag{Name: "quality", Description: "screenshot-jpeg only: JPEG quality (0-100)"},
+			command.BoolFlag{Name: "full-page", Description: "screenshot-png / screenshot-jpeg: capture the full scrollable page"},
 		},
 		Run: func(ctx context.Context, args json.RawMessage, _ command.Prompter) (*command.Result, error) {
 			var p0 struct {
+				Format     string `json:"format"`
 				URL        string `json:"url"`
 				TabID      string `json:"tab-id"`
 				Browser    string `json:"browser"`
 				Landscape  bool   `json:"landscape"`
 				NoHeaders  bool   `json:"no-headers"`
 				Background bool   `json:"background"`
+				Quality    int    `json:"quality"`
+				FullPage   bool   `json:"full-page"`
 			}
 			if err := json.Unmarshal(args, &p0); err != nil {
 				return command.TextErrorResult(err.Error()), nil
 			}
 
-			return withSession(ctx, p, p0.URL, p0.TabID, p0.Browser, func(s cdp.Session) (io.ReadCloser, error) {
-				return s.PrintToPDF(ctx, cdp.PDFOptions{
-					Landscape:           p0.Landscape,
-					DisplayHeaderFooter: !p0.NoHeaders,
-					PrintBackground:     p0.Background,
-				})
-			})
-		},
-	})
-
-	// capture-screenshot
-	app.AddCommand(&command.Command{
-		Name:        "capture-screenshot",
-		Description: command.Description{Short: "Capture a web page as an image"},
-		Annotations: &protocol.ToolAnnotations{ReadOnlyHint: protocol.BoolPtr(true)},
-		Params: []command.Param{
-			url, tabID, browser,
-			command.StringFlag{Name: "format", Description: "Image format: png (default) or jpeg"},
-			command.IntFlag{Name: "quality", Description: "JPEG quality (0-100)"},
-			command.BoolFlag{Name: "full-page", Description: "Capture the full scrollable page"},
-		},
-		Run: func(ctx context.Context, args json.RawMessage, _ command.Prompter) (*command.Result, error) {
-			var p0 struct {
-				URL      string `json:"url"`
-				TabID    string `json:"tab-id"`
-				Browser  string `json:"browser"`
-				Format   string `json:"format"`
-				Quality  int    `json:"quality"`
-				FullPage bool   `json:"full-page"`
-			}
-			if err := json.Unmarshal(args, &p0); err != nil {
+			if err := validateCaptureFlags(p0.Format, p0.Landscape, p0.NoHeaders, p0.Background, p0.Quality, p0.FullPage); err != nil {
 				return command.TextErrorResult(err.Error()), nil
 			}
 
 			return withSession(ctx, p, p0.URL, p0.TabID, p0.Browser, func(s cdp.Session) (io.ReadCloser, error) {
-				return s.CaptureScreenshot(ctx, cdp.ScreenshotOptions{
-					Format:   p0.Format,
-					Quality:  p0.Quality,
-					FullPage: p0.FullPage,
-				})
+				switch p0.Format {
+				case formatPDF:
+					return s.PrintToPDF(ctx, cdp.PDFOptions{
+						Landscape:           p0.Landscape,
+						DisplayHeaderFooter: !p0.NoHeaders,
+						PrintBackground:     p0.Background,
+					})
+				case formatScreenshotPNG:
+					return s.CaptureScreenshot(ctx, cdp.ScreenshotOptions{
+						Format:   "png",
+						FullPage: p0.FullPage,
+					})
+				case formatScreenshotJPEG:
+					return s.CaptureScreenshot(ctx, cdp.ScreenshotOptions{
+						Format:   "jpeg",
+						Quality:  p0.Quality,
+						FullPage: p0.FullPage,
+					})
+				case formatMHTML:
+					return s.CaptureSnapshot(ctx)
+				case formatA11y:
+					return s.AccessibilityTree(ctx)
+				case formatText:
+					return s.ExtractText(ctx)
+				default:
+					return nil, fmt.Errorf("unknown --format value %q; expected one of %v", p0.Format, captureFormats)
+				}
 			})
 		},
 	})
+}
 
-	// capture-mhtml
-	app.AddCommand(&command.Command{
-		Name:        "capture-mhtml",
-		Description: command.Description{Short: "Capture a web page as MHTML archive"},
-		Annotations: &protocol.ToolAnnotations{ReadOnlyHint: protocol.BoolPtr(true)},
-		Params:      []command.Param{url, tabID, browser},
-		Run: func(ctx context.Context, args json.RawMessage, _ command.Prompter) (*command.Result, error) {
-			var p0 struct {
-				URL     string `json:"url"`
-				TabID   string `json:"tab-id"`
-				Browser string `json:"browser"`
-			}
-			if err := json.Unmarshal(args, &p0); err != nil {
-				return command.TextErrorResult(err.Error()), nil
-			}
-
-			return withSession(ctx, p, p0.URL, p0.TabID, p0.Browser, func(s cdp.Session) (io.ReadCloser, error) {
-				return s.CaptureSnapshot(ctx)
-			})
-		},
-	})
-
-	// capture-a11y
-	app.AddCommand(&command.Command{
-		Name:        "capture-a11y",
-		Description: command.Description{Short: "Capture the accessibility tree of a web page"},
-		Annotations: &protocol.ToolAnnotations{ReadOnlyHint: protocol.BoolPtr(true)},
-		Params:      []command.Param{url, tabID, browser},
-		Run: func(ctx context.Context, args json.RawMessage, _ command.Prompter) (*command.Result, error) {
-			var p0 struct {
-				URL     string `json:"url"`
-				TabID   string `json:"tab-id"`
-				Browser string `json:"browser"`
-			}
-			if err := json.Unmarshal(args, &p0); err != nil {
-				return command.TextErrorResult(err.Error()), nil
-			}
-
-			return withSession(ctx, p, p0.URL, p0.TabID, p0.Browser, func(s cdp.Session) (io.ReadCloser, error) {
-				return s.AccessibilityTree(ctx)
-			})
-		},
-	})
-
-	// capture-text
-	app.AddCommand(&command.Command{
-		Name:        "capture-text",
-		Description: command.Description{Short: "Extract plain text from a web page"},
-		Annotations: &protocol.ToolAnnotations{ReadOnlyHint: protocol.BoolPtr(true)},
-		Params:      []command.Param{url, tabID, browser},
-		Run: func(ctx context.Context, args json.RawMessage, _ command.Prompter) (*command.Result, error) {
-			var p0 struct {
-				URL     string `json:"url"`
-				TabID   string `json:"tab-id"`
-				Browser string `json:"browser"`
-			}
-			if err := json.Unmarshal(args, &p0); err != nil {
-				return command.TextErrorResult(err.Error()), nil
-			}
-
-			return withSession(ctx, p, p0.URL, p0.TabID, p0.Browser, func(s cdp.Session) (io.ReadCloser, error) {
-				return s.ExtractText(ctx)
-			})
-		},
-	})
+// validateCaptureFlags rejects format-specific flags used with an incompatible
+// --format, so mistakes surface instead of being silently ignored.
+func validateCaptureFlags(format string, landscape, noHeaders, background bool, quality int, fullPage bool) error {
+	pdfOnly := landscape || noHeaders || background
+	if pdfOnly && format != formatPDF {
+		return fmt.Errorf("--landscape, --no-headers, --background are only valid with --format %s", formatPDF)
+	}
+	if quality != 0 && format != formatScreenshotJPEG {
+		return fmt.Errorf("--quality is only valid with --format %s", formatScreenshotJPEG)
+	}
+	if fullPage && format != formatScreenshotPNG && format != formatScreenshotJPEG {
+		return fmt.Errorf("--full-page is only valid with --format %s or %s", formatScreenshotPNG, formatScreenshotJPEG)
+	}
+	return nil
 }
 
 // withSession creates a capture session, optionally navigates to a URL, runs
