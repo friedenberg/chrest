@@ -41,6 +41,8 @@ func cmdCapture(ctx context.Context, p *proxy.BrowserProxy, args []string) error
 		fmt.Fprintln(os.Stderr, "Usage: chrest capture --format <kind> [flags]")
 		fmt.Fprintln(os.Stderr, "  Formats: pdf, screenshot-png, screenshot-jpeg, mhtml, a11y, text")
 		fs.PrintDefaults()
+		fmt.Fprintln(os.Stderr)
+		fmt.Fprintln(os.Stderr, "See also: chrest capture-batch  (JSON-stdin batch interface per RFC 0001)")
 	}
 
 	var params tools.CaptureParams

@@ -123,3 +123,14 @@ explore-capture-batch input="/home/sasha/eng/aim/fixtures/batch-input.example.js
     echo "--- chrest stderr ---" >&2
     cat "$err" >&2
   fi
+
+# Print chrest's help text (both top-level and per-command) so we can
+# verify command discoverability after any registration changes.
+explore-help subcommand="":
+  #!/usr/bin/env bash
+  set -euo pipefail
+  if [ -n "{{subcommand}}" ]; then
+    go/build/release/chrest {{subcommand}} --help
+  else
+    go/build/release/chrest --help
+  fi

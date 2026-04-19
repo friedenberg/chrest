@@ -75,6 +75,7 @@ func run(ctx errors.Context) (err error) {
 	registerInitCommand(app)
 	registerInstallMCPCommand(app)
 	registerGeneratePluginCommand(app)
+	registerCaptureBatchCommand(app)
 
 	if len(os.Args) > 1 && os.Args[1] == "mcp" {
 		if err = runMCP(ctx, app, p); err != nil {
@@ -122,7 +123,7 @@ func run(ctx errors.Context) (err error) {
 	// orchestrator distinguishes them from per-capture errors in the
 	// output JSON.
 	if len(os.Args) > 1 && os.Args[1] == "capture-batch" {
-		if err = cmdCaptureBatch(ctx, app.Version); err != nil {
+		if err = cmdCaptureBatch(ctx, app.Version, os.Args[2:]); err != nil {
 			ui.Err().Printf("%s", err)
 			os.Exit(1)
 		}
