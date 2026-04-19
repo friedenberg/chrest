@@ -43,9 +43,11 @@ function capture_batch_rejects_bad_schema { # @test
   echo "$output" | grep -qi "schema"
 }
 
-function capture_batch_split_true_pdf_returns_not_implemented { # @test
-  # PDF's split=true normalizer isn't yet implemented; expect per-capture
-  # not-implemented error while the rest of the batch pipeline passes.
+function capture_batch_split_true_pdf_emits_all_three_artifacts { # @test
+  # Stage 3 of chrest#22: PDF normalizer via pdfcpu. Expect payload
+  # (normalized), envelope, and spec refs all populated. Normalized
+  # PDF has /CreationDate, /ModDate, /Producer, /Creator stripped
+  # plus the trailer /ID zeroed.
   input=$(
     cat <<JSON
 {
@@ -57,9 +59,29 @@ function capture_batch_split_true_pdf_returns_not_implemented { # @test
 }
 JSON
   )
+  result=$(echo "$input" | timeout 60 "$CHREST_BIN" capture-batch)
+  echo "$result" | jq -e '.captures[0].error == null'
+  echo "$result" | jq -e '.captures[0].payload.normalized == true'
+  echo "$result" | jq -e '.captures[0].payload.media_type  == "application/pdf"'
+  echo "$result" | jq -e '.captures[0].envelope.media_type == "application/vnd.web-capture-archive.envelope+json"'
+  echo "$result" | jq -e '.captures[0].spec.media_type     == "application/vnd.web-capture-archive.spec+json"'
+  echo "$result" | jq -e '.captures[0].payload.size > 100'
+}
+
+function capture_batch_split_true_mhtml_returns_not_implemented { # @test
+  # mhtml and a11y are the only formats left unimplemented for split=true.
+  input=$(
+    cat <<JSON
+{
+  "schema": "web-capture-archive/v1",
+  "writer": {"cmd": ["$STUB_WRITER"]},
+  "url": "$FIXTURE",
+  "defaults": {"browser": "firefox", "split": true},
+  "captures": [{"name": "m", "format": "mhtml"}]
+}
+JSON
+  )
   result=$(echo "$input" | timeout 30 "$CHREST_BIN" capture-batch)
-  echo "$result" | jq -e '.schema == "web-capture-archive/v1"'
-  echo "$result" | jq -e '.capturer.name == "chrest"'
   echo "$result" | jq -e '.captures[0].error.kind == "not-implemented"'
 }
 
