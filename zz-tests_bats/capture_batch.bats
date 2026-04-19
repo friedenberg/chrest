@@ -68,8 +68,41 @@ JSON
   echo "$result" | jq -e '.captures[0].payload.size > 100'
 }
 
-function capture_batch_split_true_mhtml_returns_not_implemented { # @test
-  # mhtml and a11y are the only formats left unimplemented for split=true.
+function capture_batch_split_true_mhtml_emits_all_three_artifacts { # @test
+  # Stage 4 of chrest#22: MHTML normalizer. Chrome-only because Firefox
+  # BiDi does not support MHTML capture. Skips if headless Chrome is
+  # non-functional on this host (e.g. kernel 6.17 SIGTRAP per chrest#14).
+  chrome="$(command -v chromium || command -v google-chrome-stable || command -v google-chrome || true)"
+  if [ -z "$chrome" ]; then
+    skip "no Chrome/Chromium found on PATH"
+  fi
+  if ! timeout 5 "$chrome" --headless=new --no-sandbox --dump-dom about:blank >/dev/null 2>&1; then
+    skip "headless Chrome not functional (chrest#14)"
+  fi
+  input=$(
+    cat <<JSON
+{
+  "schema": "web-capture-archive/v1",
+  "writer": {"cmd": ["$STUB_WRITER"]},
+  "url": "$FIXTURE",
+  "defaults": {"browser": "chrome", "split": true},
+  "captures": [{"name": "m", "format": "mhtml"}]
+}
+JSON
+  )
+  result=$(echo "$input" | timeout 60 "$CHREST_BIN" capture-batch)
+  echo "$result" | jq -e '.captures[0].error == null'
+  echo "$result" | jq -e '.captures[0].payload.normalized == true'
+  echo "$result" | jq -e '.captures[0].payload.media_type  == "multipart/related"'
+  echo "$result" | jq -e '.captures[0].envelope.media_type == "application/vnd.web-capture-archive.envelope+json"'
+  echo "$result" | jq -e '.captures[0].spec.media_type     == "application/vnd.web-capture-archive.spec+json"'
+  echo "$result" | jq -e '.captures[0].payload.size > 100'
+}
+
+function capture_batch_split_true_a11y_returns_not_implemented { # @test
+  # a11y is the last format unimplemented for split=true (blocked on
+  # chrest#14 Chrome SIGTRAP; without a working Chrome we can't even
+  # produce raw a11y captures to test a normalizer against).
   input=$(
     cat <<JSON
 {
@@ -77,7 +110,7 @@ function capture_batch_split_true_mhtml_returns_not_implemented { # @test
   "writer": {"cmd": ["$STUB_WRITER"]},
   "url": "$FIXTURE",
   "defaults": {"browser": "firefox", "split": true},
-  "captures": [{"name": "m", "format": "mhtml"}]
+  "captures": [{"name": "a", "format": "a11y"}]
 }
 JSON
   )

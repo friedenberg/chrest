@@ -13,9 +13,9 @@ import (
 // a not-implemented error so the runner can surface it as a
 // per-capture error.
 //
-// MVP scope: only "text" is implemented here. "screenshot", "pdf",
-// "mhtml", and "a11y" are subsequent stages; for now they return the
-// not-implemented error.
+// MVP scope: "text", "screenshot", "pdf", and "mhtml" are implemented.
+// "a11y" is blocked on chrest#14 (Chrome SIGTRAP on kernel 6.17) and
+// returns the not-implemented error until that lifts.
 func Normalize(format string, raw []byte) (normalized []byte, stripped map[string]any, err error) {
 	switch format {
 	case "text":
@@ -24,7 +24,9 @@ func Normalize(format string, raw []byte) (normalized []byte, stripped map[strin
 		return normalizePNG(raw)
 	case "pdf":
 		return normalizePDF(raw)
-	case "mhtml", "a11y":
+	case "mhtml":
+		return normalizeMHTML(raw)
+	case "a11y":
 		return nil, nil, fmt.Errorf("split=true normalization not implemented for %s (tracked in chrest#22 follow-up)", format)
 	default:
 		return nil, nil, fmt.Errorf("unknown capture format %q", format)
