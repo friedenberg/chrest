@@ -16,9 +16,20 @@ import (
 
 // Session implements cdp.Session using a headless Firefox process via BiDi.
 type Session struct {
-	firefox   *launcher.Process
-	conn      *bidi.Conn
-	contextID string
+	firefox      *launcher.Process
+	conn         *bidi.Conn
+	contextID    string
+	capabilities bidiCapabilities
+}
+
+// bidiCapabilities captures the subset of the session.new response we
+// carry forward into BrowserInfo. See WebDriver BiDi §6.4.1 for the
+// full shape.
+type bidiCapabilities struct {
+	BrowserName    string `json:"browserName"`
+	BrowserVersion string `json:"browserVersion"`
+	PlatformName   string `json:"platformName"`
+	UserAgent      string `json:"userAgent"`
 }
 
 // Verify interface compliance at compile time.
@@ -50,15 +61,22 @@ func NewSession(ctx context.Context) (*Session, error) {
 // initSession creates a BiDi session and discovers the default browsing context.
 func (s *Session) initSession() error {
 	// Create session.
-	_, err := s.conn.Send("session.new", map[string]any{
+	result, err := s.conn.Send("session.new", map[string]any{
 		"capabilities": map[string]any{},
 	})
 	if err != nil {
 		return errors.Wrap(err)
 	}
+	// Preserve capabilities for BrowserInfo. Non-fatal if shape surprises us.
+	var sessResp struct {
+		Capabilities bidiCapabilities `json:"capabilities"`
+	}
+	if err := json.Unmarshal(result, &sessResp); err == nil {
+		s.capabilities = sessResp.Capabilities
+	}
 
 	// Get the default browsing context.
-	result, err := s.conn.Send("browsingContext.getTree", map[string]any{})
+	result, err = s.conn.Send("browsingContext.getTree", map[string]any{})
 	if err != nil {
 		return errors.Wrap(err)
 	}
@@ -205,6 +223,20 @@ func (s *Session) ExtractText(ctx context.Context) (io.ReadCloser, error) {
 	}
 
 	return io.NopCloser(strings.NewReader(parsed.Result.Value)), nil
+}
+
+func (s *Session) BrowserInfo(ctx context.Context) (cdp.BrowserInfo, error) {
+	info := cdp.BrowserInfo{
+		Name:      "firefox",
+		Version:   s.capabilities.BrowserVersion,
+		UserAgent: s.capabilities.UserAgent,
+		Platform:  s.capabilities.PlatformName,
+		JSEngine:  "SpiderMonkey",
+	}
+	if s.firefox != nil {
+		info.CommandLine = s.firefox.Args()
+	}
+	return info, nil
 }
 
 func (s *Session) Close() error {

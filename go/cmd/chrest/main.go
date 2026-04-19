@@ -116,6 +116,19 @@ func run(ctx errors.Context) (err error) {
 		return
 	}
 
+	// Bypass dewey for capture-batch: the contract is JSON-on-stdin and
+	// JSON-on-stdout per RFC 0001, neither of which fits the Result path.
+	// Batch-level failures MUST surface as non-zero exit so the
+	// orchestrator distinguishes them from per-capture errors in the
+	// output JSON.
+	if len(os.Args) > 1 && os.Args[1] == "capture-batch" {
+		if err = cmdCaptureBatch(ctx, app.Version); err != nil {
+			ui.Err().Printf("%s", err)
+			os.Exit(1)
+		}
+		return
+	}
+
 	if err = app.RunCLI(ctx, os.Args[1:], prompter.Prompter{}); err != nil {
 		err = errors.Wrap(err)
 		return

@@ -132,6 +132,32 @@ func (s *Session) ExtractText(ctx context.Context) (io.ReadCloser, error) {
 	return io.NopCloser(strings.NewReader(parsed.Result.Value)), nil
 }
 
+// BrowserInfo queries CDP's Browser.getVersion for identity fields.
+// Best-effort — returns a populated Name even if CDP errors, so the
+// spec artifact always has at least the backend label.
+func (s *Session) BrowserInfo(ctx context.Context) (cdp.BrowserInfo, error) {
+	info := cdp.BrowserInfo{Name: "chrome", JSEngine: "V8"}
+	result, err := s.conn.Send("Browser.getVersion", nil)
+	if err != nil {
+		return info, errors.Wrap(err)
+	}
+	var parsed struct {
+		Product         string `json:"product"`
+		UserAgent       string `json:"userAgent"`
+		JSVersion       string `json:"jsVersion"`
+		ProtocolVersion string `json:"protocolVersion"`
+	}
+	if err := json.Unmarshal(result, &parsed); err != nil {
+		return info, errors.Wrap(err)
+	}
+	info.Version = parsed.Product
+	info.UserAgent = parsed.UserAgent
+	if s.chrome != nil {
+		info.CommandLine = s.chrome.Args()
+	}
+	return info, nil
+}
+
 func (s *Session) Close() error {
 	if s.conn != nil {
 		s.conn.Close()

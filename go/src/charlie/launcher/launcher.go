@@ -44,6 +44,15 @@ type Process struct {
 	cmd     *exec.Cmd
 	wsURL   string
 	cleanup func()
+	// args is the full argv passed to the browser (minus argv[0]).
+	// Recorded so capture-batch can emit it in the spec artifact's
+	// browser.command_line field.
+	args []string
+}
+
+// Args returns the argv (excluding argv[0]) the browser was launched with.
+func (p *Process) Args() []string {
+	return p.args
 }
 
 func (p *Process) WSURL() string {
@@ -268,7 +277,7 @@ func Launch(ctx context.Context, cfg BrowserConfig) (*Process, error) {
 	}
 
 	log.Printf("browser WebSocket URL: %s", wsURL)
-	return &Process{cmd: cmd, wsURL: wsURL, cleanup: cleanup}, nil
+	return &Process{cmd: cmd, wsURL: wsURL, cleanup: cleanup, args: args}, nil
 }
 
 func discoverStderr(ctx context.Context, stderr interface{ Read([]byte) (int, error) }, pattern *regexp.Regexp) (string, error) {

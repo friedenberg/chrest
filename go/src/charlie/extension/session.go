@@ -143,6 +143,15 @@ func (s *Session) ExtractText(ctx context.Context) (io.ReadCloser, error) {
 	return io.NopCloser(strings.NewReader(parsed.Result.Value)), nil
 }
 
+// BrowserInfo returns a minimal identity for the extension-proxied
+// session. We don't know which browser is driving the extension from
+// here, so Name is empty and callers should fall back to their own
+// context. This keeps the extension backend interface-compatible
+// without lying about fields we can't populate.
+func (s *Session) BrowserInfo(ctx context.Context) (cdp.BrowserInfo, error) {
+	return cdp.BrowserInfo{}, nil
+}
+
 func (s *Session) Close() error {
 	// Best-effort detach — ignore errors since the tab may already be closed.
 	_, _ = s.proxy.RequestAllBrowsers(context.Background(), "POST", "/debugger/detach", map[string]any{

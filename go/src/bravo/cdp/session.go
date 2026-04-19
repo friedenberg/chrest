@@ -14,7 +14,22 @@ type Session interface {
 	CaptureSnapshot(ctx context.Context) (io.ReadCloser, error)
 	AccessibilityTree(ctx context.Context) (io.ReadCloser, error)
 	ExtractText(ctx context.Context) (io.ReadCloser, error)
+	// BrowserInfo returns identity fields for the live browser. Used by
+	// capture-batch to populate the spec artifact fingerprint. Fields
+	// may be empty if the backend didn't advertise them; callers treat
+	// empty strings as "not available."
+	BrowserInfo(ctx context.Context) (BrowserInfo, error)
 	Close() error
+}
+
+// BrowserInfo is the identity surface of the live browser.
+type BrowserInfo struct {
+	Name        string // "firefox" | "chrome"
+	Version     string
+	UserAgent   string
+	Platform    string
+	JSEngine    string   // "SpiderMonkey" | "V8"
+	CommandLine []string // argv the browser was launched with (excludes argv[0]); may be nil
 }
 
 type PDFOptions struct {
