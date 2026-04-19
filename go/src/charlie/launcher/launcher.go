@@ -12,6 +12,8 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"strconv"
+	"strings"
 	"syscall"
 	"time"
 
@@ -52,7 +54,7 @@ func (p *Process) Close() error {
 	var firstErr error
 
 	if p.cmd.Process != nil {
-		killProcessGroup(p.cmd.Process.Pid)
+		killProcessTree(p.cmd.Process.Pid)
 		if err := p.cmd.Wait(); err != nil {
 			if _, ok := err.(*exec.ExitError); !ok {
 				firstErr = err
@@ -67,19 +69,66 @@ func (p *Process) Close() error {
 	return firstErr
 }
 
-// killProcessGroup sends SIGKILL to the entire process group led by pid.
-// Browsers fork many helper processes (content, tab, utility, crashhelper).
-// Killing only the direct parent orphans the helpers, which survive until
-// init reaps them — a problem inside PID namespaces (bwrap --unshare-pid)
-// where there's no init. killProcessGroup kills the whole tree in one go.
-func killProcessGroup(pid int) {
-	pgid, err := syscall.Getpgid(pid)
-	if err != nil {
-		// Fall back to single-process kill if we can't get the pgid.
+// killProcessTree SIGKILLs the root process and every descendant.
+//
+// Two strategies, belt-and-suspenders:
+//  1. Walk /proc/<pid>/task/<tid>/children recursively to catch descendants
+//     even when they live in their own process groups (Firefox content
+//     processes detach into their own groups, so a bare -pgid kill misses
+//     them).
+//  2. Also SIGKILL the root's process group, picking up anything the /proc
+//     walk missed due to reparenting races.
+//
+// The root is stopped first so it cannot spawn new children during the walk.
+// On a normal system, orphaned helpers would be reaped by init; inside
+// bwrap --unshare-pid sandboxes there is no init, so unkilled descendants
+// linger forever and block the sandbox from exiting.
+func killProcessTree(rootPid int) {
+	// Freeze the root so its listed children are stable during the walk.
+	_ = syscall.Kill(rootPid, syscall.SIGSTOP)
+
+	for _, pid := range collectDescendants(rootPid) {
 		_ = syscall.Kill(pid, syscall.SIGKILL)
-		return
 	}
-	_ = syscall.Kill(-pgid, syscall.SIGKILL)
+
+	if pgid, err := syscall.Getpgid(rootPid); err == nil {
+		_ = syscall.Kill(-pgid, syscall.SIGKILL)
+	}
+
+	_ = syscall.Kill(rootPid, syscall.SIGKILL)
+}
+
+// collectDescendants returns every descendant PID of root, using Linux's
+// /proc/<pid>/task/<tid>/children interface. Requires CONFIG_PROC_CHILDREN
+// (default-y on recent kernels).
+func collectDescendants(root int) []int {
+	var result []int
+	seen := make(map[int]bool)
+
+	var walk func(int)
+	walk = func(pid int) {
+		tasks, err := os.ReadDir(fmt.Sprintf("/proc/%d/task", pid))
+		if err != nil {
+			return
+		}
+		for _, task := range tasks {
+			data, err := os.ReadFile(fmt.Sprintf("/proc/%d/task/%s/children", pid, task.Name()))
+			if err != nil {
+				continue
+			}
+			for _, s := range strings.Fields(string(data)) {
+				child, err := strconv.Atoi(s)
+				if err != nil || seen[child] {
+					continue
+				}
+				seen[child] = true
+				result = append(result, child)
+				walk(child)
+			}
+		}
+	}
+	walk(root)
+	return result
 }
 
 func findBinary(names []string) (string, error) {
@@ -169,7 +218,7 @@ func Launch(ctx context.Context, cfg BrowserConfig) (*Process, error) {
 	log.Printf("browser started (pid %d)", cmd.Process.Pid)
 
 	killAndCleanup := func() {
-		killProcessGroup(cmd.Process.Pid)
+		killProcessTree(cmd.Process.Pid)
 		_ = cmd.Wait()
 		if cleanup != nil {
 			cleanup()
