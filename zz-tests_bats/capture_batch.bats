@@ -44,7 +44,8 @@ function capture_batch_rejects_bad_schema { # @test
 }
 
 function capture_batch_split_true_returns_not_implemented { # @test
-  input=$(cat <<JSON
+  input=$(
+    cat <<JSON
 {
   "schema": "web-capture-archive/v1",
   "writer": {"cmd": ["$STUB_WRITER"]},
@@ -53,7 +54,7 @@ function capture_batch_split_true_returns_not_implemented { # @test
   "captures": [{"name": "pdf", "format": "pdf"}]
 }
 JSON
-)
+  )
   result=$(echo "$input" | timeout 30 "$CHREST_BIN" capture-batch)
   echo "$result" | jq -e '.schema == "web-capture-archive/v1"'
   echo "$result" | jq -e '.capturer.name == "chrest"'
@@ -61,7 +62,8 @@ JSON
 }
 
 function capture_batch_split_false_text_emits_payload_and_spec { # @test
-  input=$(cat <<JSON
+  input=$(
+    cat <<JSON
 {
   "schema": "web-capture-archive/v1",
   "writer": {"cmd": ["$STUB_WRITER"]},
@@ -70,7 +72,7 @@ function capture_batch_split_false_text_emits_payload_and_spec { # @test
   "captures": [{"name": "txt", "format": "text"}]
 }
 JSON
-)
+  )
   result=$(echo "$input" | timeout 30 "$CHREST_BIN" capture-batch)
   echo "$result" | jq -e '.captures[0].name == "txt"'
   echo "$result" | jq -e '.captures[0].payload.id | startswith("blake2b256-stub-")'
@@ -83,7 +85,8 @@ JSON
 }
 
 function capture_batch_split_false_screenshot_emits_png { # @test
-  input=$(cat <<JSON
+  input=$(
+    cat <<JSON
 {
   "schema": "web-capture-archive/v1",
   "writer": {"cmd": ["$STUB_WRITER"]},
@@ -92,7 +95,7 @@ function capture_batch_split_false_screenshot_emits_png { # @test
   "captures": [{"name": "shot", "format": "screenshot"}]
 }
 JSON
-)
+  )
   result=$(echo "$input" | timeout 30 "$CHREST_BIN" capture-batch)
   echo "$result" | jq -e '.captures[0].payload.media_type == "image/png"'
   echo "$result" | jq -e '.captures[0].payload.size > 100'

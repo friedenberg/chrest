@@ -106,3 +106,20 @@ explore-capture format="text" browser="firefox" url="https://example.com" output
 
 explore-client +httpie_args:
   go/build/release/chrest client {{httpie_args}}
+
+# End-to-end sanity for `chrest capture-batch` using the RFC 0001
+# fixture + writer stub landed in ~/eng/aim/ by the nebulous session.
+# Pipes the example batch input through chrest, pretty-prints the
+# output JSON, and echoes any stderr chrest emitted. Intended to be
+# re-run after chrest changes to verify the cross-session contract
+# still matches.
+explore-capture-batch input="/home/sasha/eng/aim/fixtures/batch-input.example.json":
+  #!/usr/bin/env bash
+  set -euo pipefail
+  err=$(mktemp)
+  trap 'rm -f "$err"' EXIT
+  go/build/release/chrest capture-batch < "{{input}}" 2>"$err" | jq '.'
+  if [ -s "$err" ]; then
+    echo "--- chrest stderr ---" >&2
+    cat "$err" >&2
+  fi

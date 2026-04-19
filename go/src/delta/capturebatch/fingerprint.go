@@ -10,14 +10,14 @@ import (
 // capture's spec artifact. Only `os`, `kernel`, `arch` are required
 // by RFC 0001; other fields are best-effort and omitted on failure.
 type HostFingerprint struct {
-	OS           string
-	Arch         string
-	Kernel       string
-	Libc         string
-	FontsDigest  string
-	GPUVendor    string
-	GPUModel     string
-	GPUDriver    string
+	OS          string
+	Arch        string
+	Kernel      string
+	Libc        string
+	FontsDigest string
+	GPUVendor   string
+	GPUModel    string
+	GPUDriver   string
 }
 
 // GatherHost samples the host once at the start of a batch.
