@@ -85,7 +85,7 @@ func registerCaptureCommands(app *command.Utility, p *proxy.BrowserProxy) {
 			},
 			command.StringFlag{Name: "url", Description: "URL to capture"},
 			command.StringFlag{Name: "tab-id", Description: "Tab ID to capture (uses extension debugger instead of headless)"},
-			command.StringFlag{Name: "browser", Description: "Browser backend: chrome (default) or firefox"},
+			command.StringFlag{Name: "browser", Description: "Browser backend: firefox (default) or chrome"},
 			command.BoolFlag{Name: "landscape", Description: "PDF only: use landscape orientation"},
 			command.BoolFlag{Name: "no-headers", Description: "PDF only: disable header and footer"},
 			command.BoolFlag{Name: "background", Description: "PDF only: print background graphics"},
@@ -163,10 +163,14 @@ func openCaptureSession(
 	if url == "" {
 		return nil, fmt.Errorf("--url is required when --tab-id is not specified")
 	}
-	if browserBackend == "firefox" {
+	switch browserBackend {
+	case "", "firefox":
 		return firefox.NewSession(ctx)
+	case "chrome", "headless":
+		return headless.NewSession(ctx)
+	default:
+		return nil, fmt.Errorf("unknown --browser value %q; expected firefox, chrome, or headless", browserBackend)
 	}
-	return headless.NewSession(ctx)
 }
 
 func runCapture(ctx context.Context, s cdp.Session, params CaptureParams) (io.ReadCloser, error) {

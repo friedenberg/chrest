@@ -124,6 +124,7 @@
               jq
               just
               nodejs_latest
+              unixtools.xxd
               vhs
               zip
             ]
@@ -152,6 +153,31 @@
           ) ++ [
             gomod2nix.packages.${system}.default
           ];
+
+          # Passthru: use the outer-shell git (user's nix profile, NixOS
+          # system path, or distro). Respects the user's gitconfig,
+          # signing keys, and hooks, and keeps `git` behavior identical
+          # inside and outside the devshell. Without this,
+          # `just go/build-nix-gomod`'s drift guard fails with
+          # `git: command not found` under `nix develop --command`.
+          #
+          # Only prepends the single directory the located git lives in
+          # — avoids polluting PATH with /usr/bin wholesale.
+          shellHook = ''
+            if ! command -v git >/dev/null 2>&1; then
+              for candidate in \
+                "$HOME/.nix-profile/bin/git" \
+                /run/current-system/sw/bin/git \
+                /etc/profiles/per-user/"$USER"/bin/git \
+                /usr/bin/git \
+                /bin/git; do
+                if [ -x "$candidate" ]; then
+                  export PATH="$(dirname "$candidate"):$PATH"
+                  break
+                fi
+              done
+            fi
+          '';
         };
       }
     ));

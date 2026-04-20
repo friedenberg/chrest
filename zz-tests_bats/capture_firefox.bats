@@ -100,3 +100,34 @@ function firefox_capture_html_monolith_has_no_trailing_newline { # @test
   tail=$(tail -c 8 "$BATS_TEST_TMPDIR/out.html" | od -An -t x1 | tr -d ' \n')
   [ "$tail" = "3c2f68746d6c3e0a" ]
 }
+
+# Default backend is firefox (no --browser flag). Proves a user can reach
+# the firefox path without explicit opt-in.
+function capture_default_backend_is_firefox { # @test
+  result=$(timeout "$FIREFOX_TEST_TIMEOUT" "$CHREST_BIN" capture --format text --url "$FIXTURE")
+  echo "$result" | grep -q "Hello from chrest"
+}
+
+# --output writes the capture to a file atomically and exits 0 on success.
+function capture_output_flag_writes_file { # @test
+  out="$BATS_TEST_TMPDIR/out.txt"
+  timeout "$FIREFOX_TEST_TIMEOUT" "$CHREST_BIN" capture --format text --browser firefox --url "$FIXTURE" --output "$out"
+  [ -f "$out" ]
+  grep -q "Hello from chrest" "$out"
+  # No leftover tmpfile next to the target.
+  tmp_count=$(find "$BATS_TEST_TMPDIR" -maxdepth 1 -name '.chrest-capture-*' | wc -l)
+  [ "$tmp_count" = "0" ]
+}
+
+# --output with a failing capture (unknown browser backend) must:
+#   - exit non-zero (proves the top-level exit-code fix)
+#   - leave no file at the target path
+#   - leave no tmpfile behind
+function capture_output_atomic_cleanup_on_failure { # @test
+  out="$BATS_TEST_TMPDIR/should-not-exist.txt"
+  run timeout "$FIREFOX_TEST_TIMEOUT" "$CHREST_BIN" capture --format text --browser bogus --url "$FIXTURE" --output "$out"
+  [ "$status" -ne 0 ]
+  [ ! -f "$out" ]
+  tmp_count=$(find "$BATS_TEST_TMPDIR" -maxdepth 1 -name '.chrest-capture-*' | wc -l)
+  [ "$tmp_count" = "0" ]
+}

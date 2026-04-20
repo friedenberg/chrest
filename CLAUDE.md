@@ -105,8 +105,11 @@ just deploy-firefox     # sign and deploy to Firefox AMO
 - `chrest init` - Initialize configuration (browser, name, extension-id)
 - `chrest mcp` - Start MCP server (stdio transport)
 - `chrest capture --format <kind>` - Single-page capture. Formats: `pdf`,
-  `screenshot-png`, `screenshot-jpeg`, `mhtml`, `a11y`, `text`. Has a
-  `--timeout` flag (default 60s) backed by a deadline context.
+  `screenshot-png`, `screenshot-jpeg`, `mhtml`, `a11y`, `text`,
+  `html-monolith`. Default backend is `firefox`; pass `--browser chrome`
+  (alias `headless`) for the headless-CDP path. Has `--timeout` (default
+  60s, deadline-backed context) and `--output <path>` (atomic tmpfile +
+  rename; unlinks on failure). The CLI exits non-zero on any error.
 - `chrest capture-batch` - RFC 0001 capturer role (MVP, `split=false`). Reads
   a batch input JSON on stdin, runs captures sequentially, streams each
   artifact to a writer subprocess, and emits a result envelope on stdout.
