@@ -104,6 +104,44 @@ explore-capture format="text" browser="firefox" url="https://example.com" output
     timeout 30 result/bin/chrest capture --format {{format}} --browser {{browser}} --url "{{url}}"
   fi
 
+# Capture a small diverse page set across the three markdown variants so
+# the output can be visually compared. Writes results to /tmp/md-samples/
+# and echoes the list at the end. Uses the debug-tagged binary
+# (go/build/release/chrest) because it's already built in the dev loop
+# and firefox is on the dev shell PATH.
+explore-markdown-samples:
+  #!/usr/bin/env bash
+  set -uo pipefail
+  out_dir=/tmp/md-samples
+  mkdir -p "$out_dir"
+  CHREST=go/build/release/chrest
+  capture() {
+    local src=$1 url=$2 fmt=$3 sel=${4:-}
+    local out="$out_dir/${src}-${fmt}.md"
+    local -a selflag=()
+    if [ -n "$sel" ]; then selflag=(--selector "$sel"); fi
+    echo "== $src $fmt ==" >&2
+    if timeout 45 "$CHREST" capture --format "$fmt" --browser firefox --url "$url" \
+         "${selflag[@]}" --output "$out" >"$out_dir/${src}-${fmt}.stderr" 2>&1; then
+      echo "  ok $(wc -c <"$out") bytes" >&2
+    else
+      echo "  FAIL (see $out_dir/${src}-${fmt}.stderr)" >&2
+    fi
+  }
+  for fmt in markdown-full markdown-reader; do
+    capture swblog https://simonwillison.net/2026/Feb/15/gwtar/ "$fmt"
+    capture wiki   https://en.wikipedia.org/wiki/Markdown                                                                  "$fmt"
+    capture mdn    https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/map              "$fmt"
+    capture hn     https://news.ycombinator.com/item?id=46762667                                                            "$fmt"
+  done
+  capture swblog https://simonwillison.net/2026/Feb/15/gwtar/ markdown-selector article
+  capture wiki   https://en.wikipedia.org/wiki/Markdown       markdown-selector '#bodyContent'
+  capture mdn    https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/map markdown-selector main
+  capture hn     https://news.ycombinator.com/item?id=46762667 markdown-selector '#hnmain'
+  echo >&2
+  echo "=== outputs ===" >&2
+  ls -la "$out_dir"/*.md 2>/dev/null >&2 || true
+
 explore-client +httpie_args:
   go/build/release/chrest client {{httpie_args}}
 

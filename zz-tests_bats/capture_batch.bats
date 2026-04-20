@@ -244,7 +244,11 @@ JSON
       break
     fi
   done
-  [ -n "$spec_path" ] || { echo "no spec artifact"; ls -la "$rec_dir"; exit 1; }
+  [ -n "$spec_path" ] || {
+    echo "no spec artifact"
+    ls -la "$rec_dir"
+    exit 1
+  }
   jq -e '.capture.options.selector == "h1"' <"$spec_path"
 }
 

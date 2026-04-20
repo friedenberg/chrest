@@ -113,4 +113,3 @@ func TestConvertSelector_InvalidSyntax(t *testing.T) {
 		t.Fatal("expected error for invalid selector syntax")
 	}
 }
-
