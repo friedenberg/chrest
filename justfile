@@ -214,6 +214,29 @@ explore-envelope-review format="text" browser="firefox" split="true":
   echo >&2
   echo "artifact files kept in: $rec_dir" >&2
 
+# Decompress every FlateDecode stream in a PDF looking for one that
+# contains the /Info dict fields (Producer / CreationDate / ModDate).
+# Used while investigating chrest#27 — lets us see whether pdfcpu put
+# the re-stamped /Info entries in plain text or inside a compressed
+# object stream (answer: compressed). Keep as a debug tool.
+explore-pdf-inspect-info pdf:
+  #!/usr/bin/env python3
+  import zlib, re
+  with open("{{pdf}}", "rb") as f:
+      b = f.read()
+  found = False
+  for m in re.finditer(rb"stream\r?\n(.*?)\r?\nendstream", b, re.DOTALL):
+      try:
+          dec = zlib.decompress(m.group(1))
+      except Exception:
+          continue
+      if b"pdfcpu" in dec or b"CreationDate" in dec or b"ModDate" in dec:
+          print("--- decompressed stream (len={} bytes) ---".format(len(dec)))
+          print(dec[:2000].decode("latin-1", errors="replace"))
+          found = True
+  if not found:
+      print("(no decompressed stream contained pdfcpu/CreationDate/ModDate)")
+
 # Print chrest's help text (both top-level and per-command) so we can
 # verify command discoverability after any registration changes.
 explore-help subcommand="":

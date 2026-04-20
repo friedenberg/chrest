@@ -38,10 +38,16 @@ func BuildSpec(
 	}
 
 	capture := map[string]any{
-		"format":    r.Format,
-		"options":   options,
-		"isolation": r.Isolation,
-		"split":     r.Split,
+		"format":  r.Format,
+		"options": options,
+		"split":   r.Split,
+	}
+	// `isolation` is optional — omit when unset rather than emitting
+	// `""`, which would hash differently from the same capture with
+	// the key absent and give consumers a value that isn't really
+	// there (see #28).
+	if r.Isolation != "" {
+		capture["isolation"] = r.Isolation
 	}
 
 	browserObj := map[string]any{
