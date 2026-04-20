@@ -107,7 +107,11 @@ func runOne(ctx context.Context, r Resolved, opts Options, host HostFingerprint)
 	entry.Payload = payloadRef
 
 	if r.Split {
-		envelopeRef, err := writeEnvelope(ctx, opts, capturedAt, stripped)
+		var httpResp *cdp.HTTPResponse
+		if resp, ok := session.LastNavigationHTTP(); ok {
+			httpResp = &resp
+		}
+		envelopeRef, err := writeEnvelope(ctx, opts, capturedAt, stripped, httpResp)
 		if err != nil {
 			entry.Error = &CaptureError{Kind: "envelope-write-failed", Message: err.Error()}
 			return entry
@@ -203,17 +207,17 @@ func writePayload(
 }
 
 // writeEnvelope builds and writes the envelope artifact for a
-// split=true capture. Stage 1 emits a partial envelope: url and
-// captured_at only, plus any stripped.<format> the normalizer
-// produced. The RFC-required http.* fields are deferred to chrest#24
-// (bidi event-subscription refactor).
+// split=true capture. Emits the v1 envelope schema when httpResp is
+// non-nil (http.* populated from backend-provided network events);
+// otherwise emits v1-preview with http.* omitted.
 func writeEnvelope(
 	ctx context.Context,
 	opts Options,
 	capturedAt time.Time,
 	stripped map[string]any,
+	httpResp *cdp.HTTPResponse,
 ) (*ArtifactRef, error) {
-	envBytes, err := BuildEnvelope(opts.URL, capturedAt, stripped)
+	envBytes, err := BuildEnvelope(opts.URL, capturedAt, stripped, httpResp)
 	if err != nil {
 		return nil, fmt.Errorf("build envelope: %w", err)
 	}

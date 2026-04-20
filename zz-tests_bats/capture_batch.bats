@@ -208,3 +208,70 @@ JSON
   echo "$result" | jq -e '.captures[0].payload.media_type == "image/png"'
   echo "$result" | jq -e '.captures[0].payload.size > 100'
 }
+
+function capture_batch_split_true_text_envelope_has_http_fields { # @test
+  # Stage 1b of chrest#22: envelope http.* populated from BiDi
+  # network.responseCompleted events. Uses a recording writer that
+  # saves every artifact's raw bytes to disk so we can inspect the
+  # envelope JSON rather than the stub's synthesized ref.
+  #
+  # Needs HTTP (not file://) because BiDi network events only fire
+  # for real network requests. We serve the fixture over a throwaway
+  # Python HTTP server on an ephemeral port.
+  port=$(python3 -c 'import socket;s=socket.socket();s.bind(("127.0.0.1",0));print(s.getsockname()[1]);s.close()')
+  rec_dir="$BATS_TEST_TMPDIR/rec"
+  mkdir -p "$rec_dir"
+  cat >"$BATS_TEST_TMPDIR/recording-writer.sh" <<EOF
+#!/usr/bin/env bash
+out=\$(mktemp "$rec_dir/artifact.XXXXXX")
+cat > "\$out"
+size=\$(wc -c < "\$out")
+echo "{\"id\":\"blake2b256-rec-\$(basename \$out)\",\"size\":\$size}"
+EOF
+  chmod +x "$BATS_TEST_TMPDIR/recording-writer.sh"
+  REC_WRITER="$BATS_TEST_TMPDIR/recording-writer.sh"
+
+  (cd "$BATS_TEST_TMPDIR" && timeout 30 python3 -m http.server "$port" >/dev/null 2>&1) &
+  srv_pid=$!
+  trap "kill $srv_pid 2>/dev/null || true" EXIT
+  # Wait up to 5s for port to come up.
+  for _ in $(seq 1 50); do
+    if curl -sf "http://127.0.0.1:$port/test.html" >/dev/null; then break; fi
+    sleep 0.1
+  done
+
+  input=$(
+    cat <<JSON
+{
+  "schema": "web-capture-archive/v1",
+  "writer": {"cmd": ["$REC_WRITER"]},
+  "url": "http://127.0.0.1:$port/test.html",
+  "defaults": {"browser": "firefox", "split": true},
+  "captures": [{"name": "txt", "format": "text"}]
+}
+JSON
+  )
+  result=$(echo "$input" | timeout 30 "$CHREST_BIN" capture-batch)
+  echo "$result" | jq -e '.captures[0].error == null'
+
+  # Find the envelope artifact by content sniffing — it's the one that
+  # parses as JSON with a "schema" key starting with "web-capture-archive.envelope".
+  envelope_path=""
+  for f in "$rec_dir"/artifact.*; do
+    if jq -e '.schema | startswith("web-capture-archive.envelope")' <"$f" >/dev/null 2>&1; then
+      envelope_path="$f"
+      break
+    fi
+  done
+  [ -n "$envelope_path" ] || {
+    echo "no envelope artifact found"
+    ls -la "$rec_dir"
+    exit 1
+  }
+
+  # Schema should be v1 (not v1-preview) now that http.* is populated.
+  jq -e '.schema == "web-capture-archive.envelope/v1"' <"$envelope_path"
+  jq -e '.http.status == 200' <"$envelope_path"
+  jq -e '.http.headers | length > 0' <"$envelope_path"
+  jq -e '.http.headers | map(.name) | any(ascii_downcase == "content-type")' <"$envelope_path"
+}

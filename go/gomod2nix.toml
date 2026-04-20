@@ -1,194 +1,193 @@
 schema = 3
 
 [mod]
-
-[mod.'github.com/amarbel-llc/bob/packages/tap-dancer/go']
+  [mod.'github.com/amarbel-llc/bob/packages/tap-dancer/go']
     version = 'v0.0.0-20260315134819-f7c6cbb2c6f2'
     hash = 'sha256-ayN35kfrro9EUW3+11zPSwt/VZcKxAIp0a4o5crk5Os='
 
-[mod.'github.com/amarbel-llc/purse-first/libs/dewey']
+  [mod.'github.com/amarbel-llc/purse-first/libs/dewey']
     version = 'v0.0.4'
     hash = 'sha256-brPKvZ+XTIarw2a1RfgiYaS6ZL+tXzT8kwfJB3rogWM='
 
-[mod.'github.com/amarbel-llc/purse-first/libs/go-mcp']
+  [mod.'github.com/amarbel-llc/purse-first/libs/go-mcp']
     version = 'v0.0.4'
     hash = 'sha256-xEmWi8sABzRWp8fbPavpZKznx943HWqVcLv6pckTP+k='
 
-[mod.'github.com/amarbel-llc/tommy']
+  [mod.'github.com/amarbel-llc/tommy']
     version = 'v0.0.0-20260405143331-87255e87bf37'
     hash = 'sha256-ElzACYuPmWpNk7bm4V8de18P+PqG+92X9aSxJg8gRUI='
 
-[mod.'github.com/atotto/clipboard']
+  [mod.'github.com/atotto/clipboard']
     version = 'v0.1.4'
     hash = 'sha256-ZZ7U5X0gWOu8zcjZcWbcpzGOGdycwq0TjTFh/eZHjXk='
 
-[mod.'github.com/aymanbagabas/go-osc52/v2']
+  [mod.'github.com/aymanbagabas/go-osc52/v2']
     version = 'v2.0.1'
     hash = 'sha256-6Bp0jBZ6npvsYcKZGHHIUSVSTAMEyieweAX2YAKDjjg='
 
-[mod.'github.com/catppuccin/go']
+  [mod.'github.com/catppuccin/go']
     version = 'v0.3.0'
     hash = 'sha256-otcMhI62ezoKGqzG7Owi/NROep7O0voJxp6bwXYg9+Q='
 
-[mod.'github.com/charmbracelet/bubbles']
+  [mod.'github.com/charmbracelet/bubbles']
     version = 'v1.0.0'
     hash = 'sha256-Vz9QgctlzJqggPwfi48Lbn38ZJXu3Y71byp5uuuzUvU='
 
-[mod.'github.com/charmbracelet/bubbletea']
+  [mod.'github.com/charmbracelet/bubbletea']
     version = 'v1.3.10'
     hash = 'sha256-7wr85TLszu1CHNEMv+o4w+r24Z0xdzCgecPv+ZtRX/A='
 
-[mod.'github.com/charmbracelet/colorprofile']
+  [mod.'github.com/charmbracelet/colorprofile']
     version = 'v0.4.1'
     hash = 'sha256-d/NjM/ybG+bGRRRMMcjbPCFGFS5noZRMaL05Ix5r/II='
 
-[mod.'github.com/charmbracelet/huh']
+  [mod.'github.com/charmbracelet/huh']
     version = 'v0.8.0'
     hash = 'sha256-QMn6Ki/p7e4H1fcxGLKhR+Ja28NVm/44nDqeWS4fzEE='
 
-[mod.'github.com/charmbracelet/lipgloss']
+  [mod.'github.com/charmbracelet/lipgloss']
     version = 'v1.1.0'
     hash = 'sha256-RHsRT2EZ1nDOElxAK+6/DC9XAaGVjDTgPvRh3pyCfY4='
 
-[mod.'github.com/charmbracelet/x/ansi']
+  [mod.'github.com/charmbracelet/x/ansi']
     version = 'v0.11.6'
     hash = 'sha256-UToZIkqXl9MEppcRgbeBqaaMeAzRkGa0w3lVUs6sxWI='
 
-[mod.'github.com/charmbracelet/x/cellbuf']
+  [mod.'github.com/charmbracelet/x/cellbuf']
     version = 'v0.0.15'
     hash = 'sha256-0S60XaWhKZG+TB3Kqe1oMn2Okwdq53nym8XayVSHHiM='
 
-[mod.'github.com/charmbracelet/x/exp/strings']
+  [mod.'github.com/charmbracelet/x/exp/strings']
     version = 'v0.1.0'
     hash = 'sha256-unEwCLaKdabzuQGdq75AwWLEuXcWXajF2h891UIWvpc='
 
-[mod.'github.com/charmbracelet/x/term']
+  [mod.'github.com/charmbracelet/x/term']
     version = 'v0.2.2'
     hash = 'sha256-KF7IU1Luxl/sZP6XjomWB2e3lxSUS4/5AahhapGir/4='
 
-[mod.'github.com/clipperhouse/displaywidth']
+  [mod.'github.com/clipperhouse/displaywidth']
     version = 'v0.9.0'
     hash = 'sha256-9CNyTZPSncKQ7Y0my9DR4WYXDjtDHYNL512D691WDAM='
 
-[mod.'github.com/clipperhouse/stringish']
+  [mod.'github.com/clipperhouse/stringish']
     version = 'v0.1.1'
     hash = 'sha256-Mp8M1CRbwr6dcJ4BD9tXD5I78ZgCFEm0GDxJv0GYReg='
 
-[mod.'github.com/clipperhouse/uax29/v2']
+  [mod.'github.com/clipperhouse/uax29/v2']
     version = 'v2.6.0'
     hash = 'sha256-5ZkKO0DXNfsF179i0iDjH+Ir7W78bGdQRgJdDIRoHnc='
 
-[mod.'github.com/dustin/go-humanize']
+  [mod.'github.com/dustin/go-humanize']
     version = 'v1.0.1'
     hash = 'sha256-yuvxYYngpfVkUg9yAmG99IUVmADTQA0tMbBXe0Fq0Mc='
 
-[mod.'github.com/erikgeiser/coninput']
+  [mod.'github.com/erikgeiser/coninput']
     version = 'v0.0.0-20211004153227-1c3628e74d0f'
     hash = 'sha256-OWSqN1+IoL73rWXWdbbcahZu8n2al90Y3eT5Z0vgHvU='
 
-[mod.'github.com/google/go-cmp']
+  [mod.'github.com/google/go-cmp']
     version = 'v0.7.0'
     hash = 'sha256-JbxZFBFGCh/Rj5XZ1vG94V2x7c18L8XKB0N9ZD5F2rM='
 
-[mod.'github.com/hhrutter/lzw']
+  [mod.'github.com/hhrutter/lzw']
     version = 'v1.0.0'
     hash = 'sha256-BPczsZFhGQt2XoW1GxU3cwsevLOSmyqgbzLHU1VB7Xs='
     goVersion = '1.19'
 
-[mod.'github.com/hhrutter/pkcs7']
+  [mod.'github.com/hhrutter/pkcs7']
     version = 'v0.2.0'
     hash = 'sha256-C1pPK9eHd+z1hK83tLJjrkno9t9dvw8bFPIQQlsRju8='
     goVersion = '1.23'
 
-[mod.'github.com/hhrutter/tiff']
+  [mod.'github.com/hhrutter/tiff']
     version = 'v1.0.2'
     hash = 'sha256-8trRbABNaTDA8SBAd/nfPzJBHCtewxfRIjX8YJU/Cus='
     goVersion = '1.19'
 
-[mod.'github.com/lucasb-eyer/go-colorful']
+  [mod.'github.com/lucasb-eyer/go-colorful']
     version = 'v1.3.0'
     hash = 'sha256-6BKrJsfmxie+YFAWzTYVPQfrwjQEXRo+J8LY+50C1BU='
 
-[mod.'github.com/mattn/go-isatty']
+  [mod.'github.com/mattn/go-isatty']
     version = 'v0.0.20'
     hash = 'sha256-qhw9hWtU5wnyFyuMbKx+7RB8ckQaFQ8D+8GKPkN3HHQ='
 
-[mod.'github.com/mattn/go-localereader']
+  [mod.'github.com/mattn/go-localereader']
     version = 'v0.0.1'
     hash = 'sha256-JlWckeGaWG+bXK8l8WEdZqmSiTwCA8b1qbmBKa/Fj3E='
 
-[mod.'github.com/mattn/go-runewidth']
+  [mod.'github.com/mattn/go-runewidth']
     version = 'v0.0.19'
     hash = 'sha256-GpnbKplhX410Q/eIdknvWbYZgdav1keN+7wNUeOSMHE='
 
-[mod.'github.com/mitchellh/hashstructure/v2']
+  [mod.'github.com/mitchellh/hashstructure/v2']
     version = 'v2.0.2'
     hash = 'sha256-O4Yw4pPQECWe8DoVDIH2nUMN8Zl8waS7/O1sv18M2Xs='
 
-[mod.'github.com/muesli/ansi']
+  [mod.'github.com/muesli/ansi']
     version = 'v0.0.0-20230316100256-276c6243b2f6'
     hash = 'sha256-qRKn0Bh2yvP0QxeEMeZe11Vz0BPFIkVcleKsPeybKMs='
 
-[mod.'github.com/muesli/cancelreader']
+  [mod.'github.com/muesli/cancelreader']
     version = 'v0.2.2'
     hash = 'sha256-uEPpzwRJBJsQWBw6M71FDfgJuR7n55d/7IV8MO+rpwQ='
 
-[mod.'github.com/muesli/termenv']
+  [mod.'github.com/muesli/termenv']
     version = 'v0.16.0'
     hash = 'sha256-hGo275DJlyLtcifSLpWnk8jardOksdeX9lH4lBeE3gI='
 
-[mod.'github.com/pdfcpu/pdfcpu']
+  [mod.'github.com/pdfcpu/pdfcpu']
     version = 'v0.11.1'
     hash = 'sha256-qDmR9khuGadODbBkLti7AtzjaCN4OkmUsYAVSVRyJXM='
     goVersion = '1.24.0'
 
-[mod.'github.com/pkg/errors']
+  [mod.'github.com/pkg/errors']
     version = 'v0.9.1'
     hash = 'sha256-mNfQtcrQmu3sNg/7IwiieKWOgFQOVVe2yXgKBpe/wZw='
 
-[mod.'github.com/rivo/uniseg']
+  [mod.'github.com/rivo/uniseg']
     version = 'v0.4.7'
     hash = 'sha256-rDcdNYH6ZD8KouyyiZCUEy8JrjOQoAkxHBhugrfHjFo='
 
-[mod.'github.com/xo/terminfo']
+  [mod.'github.com/xo/terminfo']
     version = 'v0.0.0-20220910002029-abceb7e1c41e'
     hash = 'sha256-GyCDxxMQhXA3Pi/TsWXpA8cX5akEoZV7CFx4RO3rARU='
 
-[mod.'golang.org/x/crypto']
+  [mod.'golang.org/x/crypto']
     version = 'v0.50.0'
     hash = 'sha256-vC1BJT7+3UBWLyEE5n3to0NKhMo6m2HGow2HiFgpQLo='
     goVersion = '1.25.0'
 
-[mod.'golang.org/x/image']
+  [mod.'golang.org/x/image']
     version = 'v0.32.0'
     hash = 'sha256-a5C5nG4IKFkqM/EXjt29wzjrkYEFLKlg5C0aBnXnlZw='
     goVersion = '1.24.0'
 
-[mod.'golang.org/x/net']
+  [mod.'golang.org/x/net']
     version = 'v0.53.0'
     hash = 'sha256-G9gKLmyaf6lIV429NKX+YlL6oUPJwlv+BrG6qGhzvmU='
 
-[mod.'golang.org/x/sys']
+  [mod.'golang.org/x/sys']
     version = 'v0.43.0'
     hash = 'sha256-aDQXqSTZES2l/132PBxhZN4ywldpPyfm7LByYCHzzwM='
 
-[mod.'golang.org/x/term']
+  [mod.'golang.org/x/term']
     version = 'v0.42.0'
     hash = 'sha256-FCiDvAfq7dgBGQuiDYDFJbj/JPawhrmPF2qdUEftQ1c='
 
-[mod.'golang.org/x/text']
+  [mod.'golang.org/x/text']
     version = 'v0.36.0'
     hash = 'sha256-/0t9C6Mc8kYjxweFB0us2lGKo8GovHhBiq5nlMOppC0='
 
-[mod.'golang.org/x/xerrors']
+  [mod.'golang.org/x/xerrors']
     version = 'v0.0.0-20240903120638-7835f813f4da'
     hash = 'sha256-bE7CcrnAvryNvM26ieJGXqbAtuLwHaGcmtVMsVnksqo='
 
-[mod.'gopkg.in/yaml.v2']
+  [mod.'gopkg.in/yaml.v2']
     version = 'v2.4.0'
     hash = 'sha256-uVEGglIedjOIGZzHW4YwN1VoRSTK8o0eGZqzd+TNdd0='
     goVersion = '1.15'
 
-[mod.'mvdan.cc/sh/v3']
+  [mod.'mvdan.cc/sh/v3']
     version = 'v3.13.1'
     hash = 'sha256-FM+2xpGELZLm4Gc09OE5Z3JeNLPMvzeb1wRcdAIeKy4='

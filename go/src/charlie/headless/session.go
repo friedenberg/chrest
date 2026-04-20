@@ -158,6 +158,14 @@ func (s *Session) BrowserInfo(ctx context.Context) (cdp.BrowserInfo, error) {
 	return info, nil
 }
 
+// LastNavigationHTTP is not yet implemented for the CDP (headless
+// Chrome) backend — CDP-side event subscription is tracked in the
+// follow-up to chrest#24. Callers get the zero-value "no info"
+// response; capturebatch omits envelope http.* fields in that case.
+func (s *Session) LastNavigationHTTP() (cdp.HTTPResponse, bool) {
+	return cdp.HTTPResponse{}, false
+}
+
 func (s *Session) Close() error {
 	if s.conn != nil {
 		s.conn.Close()

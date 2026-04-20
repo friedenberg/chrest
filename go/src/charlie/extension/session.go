@@ -152,6 +152,13 @@ func (s *Session) BrowserInfo(ctx context.Context) (cdp.BrowserInfo, error) {
 	return cdp.BrowserInfo{}, nil
 }
 
+// LastNavigationHTTP is not implemented for the extension-proxied
+// session. Event subscription over the extension debugger proxy is
+// not wired up yet; envelope http.* stays absent for this backend.
+func (s *Session) LastNavigationHTTP() (cdp.HTTPResponse, bool) {
+	return cdp.HTTPResponse{}, false
+}
+
 func (s *Session) Close() error {
 	// Best-effort detach — ignore errors since the tab may already be closed.
 	_, _ = s.proxy.RequestAllBrowsers(context.Background(), "POST", "/debugger/detach", map[string]any{

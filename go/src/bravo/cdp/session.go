@@ -19,7 +19,33 @@ type Session interface {
 	// may be empty if the backend didn't advertise them; callers treat
 	// empty strings as "not available."
 	BrowserInfo(ctx context.Context) (BrowserInfo, error)
+	// LastNavigationHTTP returns the HTTP response observed for the
+	// top-level document on the most recent Navigate call. Second
+	// return is false when no response was observed (no navigate yet,
+	// or the backend doesn't support event capture). Used by
+	// capture-batch to populate envelope http.* fields per RFC 0001.
+	LastNavigationHTTP() (HTTPResponse, bool)
 	Close() error
+}
+
+// HTTPResponse describes the top-level document response captured
+// during a Navigate. Populated by backends that support network-event
+// subscription (Firefox/BiDi today). Per RFC 0001 §Envelope Artifact
+// this becomes the envelope's `http.*` fields.
+type HTTPResponse struct {
+	URL      string       // final URL after redirects
+	Status   int          // HTTP status code of the final response
+	Headers  []HTTPHeader // preserves order and duplicates
+	TimingMs int64        // responseEnd - fetchStart in ms; 0 if not measured
+}
+
+// HTTPHeader is a single response header. Represented as a list of
+// name/value pairs rather than a map so the envelope preserves both
+// header order and duplicates (Set-Cookie commonly appears multiple
+// times).
+type HTTPHeader struct {
+	Name  string
+	Value string
 }
 
 // BrowserInfo is the identity surface of the live browser.

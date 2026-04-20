@@ -20,6 +20,37 @@ type Session struct {
 	conn         *bidi.Conn
 	contextID    string
 	capabilities bidiCapabilities
+
+	// networkSub delivers network.responseCompleted events during
+	// navigations. Registered once in initSession and drained by each
+	// Navigate call to capture top-level document HTTP metadata for
+	// the envelope artifact (RFC 0001). Closed in Close().
+	networkSub *bidi.Subscription
+	lastHTTP   *cdp.HTTPResponse
+}
+
+// responseCompletedEvent is the subset of the WebDriver BiDi
+// network.responseCompleted event params we need for the envelope.
+type responseCompletedEvent struct {
+	Context    string `json:"context"`
+	Navigation string `json:"navigation"`
+	Request    struct {
+		Timings struct {
+			RequestTime float64 `json:"requestTime"`
+			FetchStart  float64 `json:"fetchStart"`
+			ResponseEnd float64 `json:"responseEnd"`
+		} `json:"timings"`
+	} `json:"request"`
+	Response struct {
+		URL     string `json:"url"`
+		Status  int    `json:"status"`
+		Headers []struct {
+			Name  string `json:"name"`
+			Value struct {
+				Value string `json:"value"`
+			} `json:"value"`
+		} `json:"headers"`
+	} `json:"response"`
 }
 
 // bidiCapabilities captures the subset of the session.new response we
@@ -95,10 +126,32 @@ func (s *Session) initSession() error {
 	}
 
 	s.contextID = tree.Contexts[0].Context
+
+	// Register a local subscription first, then tell BiDi to start
+	// emitting the event — this order prevents losing early events on
+	// fast navigations. session.subscribe failures are non-fatal:
+	// captures still work, we just won't populate envelope.http.*.
+	s.networkSub = s.conn.Subscribe([]string{"network.responseCompleted"})
+	if _, err := s.conn.Send("session.subscribe", map[string]any{
+		"events":   []string{"network.responseCompleted"},
+		"contexts": []string{s.contextID},
+	}); err != nil {
+		log.Printf("bidi: session.subscribe failed, envelope http.* will be absent: %v", err)
+		s.networkSub.Close()
+		s.networkSub = nil
+	}
 	return nil
 }
 
 func (s *Session) Navigate(ctx context.Context, url string) error {
+	// Drain any stale events buffered from a prior navigation before
+	// issuing this one, so only the current navigation's events inform
+	// lastHTTP.
+	s.drainNetworkEvents()
+	s.lastHTTP = nil
+
+	navStart := navTimestampMs()
+
 	_, err := s.conn.Send("browsingContext.navigate", map[string]any{
 		"context": s.contextID,
 		"url":     url,
@@ -107,7 +160,92 @@ func (s *Session) Navigate(ctx context.Context, url string) error {
 	if err != nil {
 		return errors.Wrap(err)
 	}
+
+	// `wait: "complete"` returns only after the load event fires, so
+	// all navigation-tagged response events have already been queued
+	// onto the subscription channel. Drain synchronously and keep the
+	// last event for this context with a navigation id — that's the
+	// final hop if the response chain had redirects.
+	if s.networkSub != nil {
+		s.lastHTTP = s.pickLastNavigationHTTP(navStart)
+	}
 	return nil
+}
+
+// drainNetworkEvents removes any events buffered on the subscription
+// without blocking.
+func (s *Session) drainNetworkEvents() {
+	if s.networkSub == nil {
+		return
+	}
+	for {
+		select {
+		case <-s.networkSub.Events:
+		default:
+			return
+		}
+	}
+}
+
+// pickLastNavigationHTTP drains the subscription non-blockingly and
+// returns the HTTPResponse for the final navigation-tagged event
+// belonging to this session's browsing context. Returns nil if no
+// matching event was seen.
+func (s *Session) pickLastNavigationHTTP(navStart int64) *cdp.HTTPResponse {
+	var picked *responseCompletedEvent
+	for {
+		select {
+		case ev, ok := <-s.networkSub.Events:
+			if !ok {
+				break
+			}
+			var decoded responseCompletedEvent
+			if err := json.Unmarshal(ev.Params, &decoded); err != nil {
+				log.Printf("bidi: unparsable network.responseCompleted: %v", err)
+				continue
+			}
+			if decoded.Context != s.contextID || decoded.Navigation == "" {
+				continue
+			}
+			picked = &decoded
+		default:
+			if picked == nil {
+				return nil
+			}
+			headers := make([]cdp.HTTPHeader, 0, len(picked.Response.Headers))
+			for _, h := range picked.Response.Headers {
+				headers = append(headers, cdp.HTTPHeader{Name: h.Name, Value: h.Value.Value})
+			}
+			var timing int64
+			if picked.Request.Timings.ResponseEnd > 0 && picked.Request.Timings.FetchStart > 0 {
+				timing = int64(picked.Request.Timings.ResponseEnd - picked.Request.Timings.FetchStart)
+			}
+			return &cdp.HTTPResponse{
+				URL:      picked.Response.URL,
+				Status:   picked.Response.Status,
+				Headers:  headers,
+				TimingMs: timing,
+			}
+		}
+	}
+}
+
+// navTimestampMs is a monotonic wall-clock ms stamp used only to
+// disambiguate "events before this navigate" vs "events after" if
+// the drain-first-then-call sequencing ever becomes unreliable.
+// Currently unused by the filter logic but kept on hand as a hook for
+// a future refinement once we see how BiDi timings actually line up.
+func navTimestampMs() int64 {
+	return 0
+}
+
+// LastNavigationHTTP returns the response captured during the most
+// recent Navigate, or (zero, false) if none was captured.
+func (s *Session) LastNavigationHTTP() (cdp.HTTPResponse, bool) {
+	if s.lastHTTP == nil {
+		return cdp.HTTPResponse{}, false
+	}
+	return *s.lastHTTP, true
 }
 
 func (s *Session) PrintToPDF(ctx context.Context, opts cdp.PDFOptions) (io.ReadCloser, error) {
@@ -240,6 +378,10 @@ func (s *Session) BrowserInfo(ctx context.Context) (cdp.BrowserInfo, error) {
 }
 
 func (s *Session) Close() error {
+	if s.networkSub != nil {
+		s.networkSub.Close()
+		s.networkSub = nil
+	}
 	if s.conn != nil {
 		// Best-effort session end.
 		_, _ = s.conn.Send("session.end", map[string]any{})
