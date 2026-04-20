@@ -269,31 +269,31 @@ func (s *Session) PrintToPDF(ctx context.Context, opts cdp.PDFOptions) (io.ReadC
 		params["pageRanges"] = []string{opts.PageRanges}
 	}
 
-	// BiDi uses centimeters; CDP uses inches. Convert if set.
-	// A value of 0 is valid (borderless), so use pointers or always set.
+	// BiDi uses centimeters; CDP uses inches. Convert when set.
+	// nil = unset (use browser default), non-nil = explicit (0 is valid for borderless).
 	page := map[string]any{}
-	if opts.PaperWidth > 0 {
-		page["width"] = opts.PaperWidth * 2.54
+	if opts.PaperWidth != nil {
+		page["width"] = *opts.PaperWidth * 2.54
 	}
-	if opts.PaperHeight > 0 {
-		page["height"] = opts.PaperHeight * 2.54
+	if opts.PaperHeight != nil {
+		page["height"] = *opts.PaperHeight * 2.54
 	}
 	if len(page) > 0 {
 		params["page"] = page
 	}
 
 	margin := map[string]any{}
-	if opts.MarginTop > 0 {
-		margin["top"] = opts.MarginTop * 2.54
+	if opts.MarginTop != nil {
+		margin["top"] = *opts.MarginTop * 2.54
 	}
-	if opts.MarginBottom > 0 {
-		margin["bottom"] = opts.MarginBottom * 2.54
+	if opts.MarginBottom != nil {
+		margin["bottom"] = *opts.MarginBottom * 2.54
 	}
-	if opts.MarginLeft > 0 {
-		margin["left"] = opts.MarginLeft * 2.54
+	if opts.MarginLeft != nil {
+		margin["left"] = *opts.MarginLeft * 2.54
 	}
-	if opts.MarginRight > 0 {
-		margin["right"] = opts.MarginRight * 2.54
+	if opts.MarginRight != nil {
+		margin["right"] = *opts.MarginRight * 2.54
 	}
 	if len(margin) > 0 {
 		params["margin"] = margin

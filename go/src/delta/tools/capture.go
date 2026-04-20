@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"strconv"
 
 	"code.linenisgreat.com/chrest/go/src/bravo/cdp"
 	"code.linenisgreat.com/chrest/go/src/charlie/extension"
@@ -56,29 +57,73 @@ const readerEngineReadability = "readability"
 // ConvertReader currently rejects this engine with not-yet-implemented.
 const readerEngineBrowser = "browser"
 
+// flexFloat accepts both JSON numbers (1.5) and JSON strings ("1.5").
+// Needed because dewey lacks a FloatFlag type, so the MCP schema declares
+// these params as "string" while the CLI uses flag.Float64Var directly.
+type flexFloat struct {
+	Value *float64
+}
+
+func (f *flexFloat) UnmarshalJSON(b []byte) error {
+	var n float64
+	if err := json.Unmarshal(b, &n); err == nil {
+		f.Value = &n
+		return nil
+	}
+	var s string
+	if err := json.Unmarshal(b, &s); err != nil {
+		return fmt.Errorf("expected number or string, got %s", string(b))
+	}
+	if s == "" {
+		return nil
+	}
+	n, err := strconv.ParseFloat(s, 64)
+	if err != nil {
+		return fmt.Errorf("invalid number %q: %w", s, err)
+	}
+	f.Value = &n
+	return nil
+}
+
+func (f flexFloat) MarshalJSON() ([]byte, error) {
+	if f.Value == nil {
+		return []byte("null"), nil
+	}
+	return json.Marshal(*f.Value)
+}
+
 // CaptureParams is the shared parameter struct for the `capture` command,
 // used by both the MCP tool handler and the CLI bypass in
 // go/cmd/chrest/capture.go.
 type CaptureParams struct {
-	Format       string `json:"format"`
-	URL          string `json:"url"`
-	TabID        string `json:"tab-id"`
-	Browser      string `json:"browser"`
-	Landscape    bool   `json:"landscape"`
-	NoHeaders    bool   `json:"no-headers"`
-	Background   bool   `json:"background"`
-	Quality      int    `json:"quality"`
-	FullPage     bool   `json:"full-page"`
-	Selector     string `json:"selector"`
-	ReaderEngine string `json:"reader-engine"`
+	Format       string    `json:"format"`
+	URL          string    `json:"url"`
+	TabID        string    `json:"tab-id"`
+	Browser      string    `json:"browser"`
+	Landscape    bool      `json:"landscape"`
+	NoHeaders    bool      `json:"no-headers"`
+	Background   bool      `json:"background"`
+	Quality      int       `json:"quality"`
+	FullPage     bool      `json:"full-page"`
+	Selector     string    `json:"selector"`
+	ReaderEngine string    `json:"reader-engine"`
+	PaperWidth   flexFloat `json:"paper-width"`
+	PaperHeight  flexFloat `json:"paper-height"`
+	MarginTop    flexFloat `json:"margin-top"`
+	MarginBottom flexFloat `json:"margin-bottom"`
+	MarginLeft   flexFloat `json:"margin-left"`
+	MarginRight  flexFloat `json:"margin-right"`
 }
 
 // Validate rejects format-specific flags used with an incompatible --format,
 // so mistakes surface instead of being silently ignored.
 func (p CaptureParams) Validate() error {
 	pdfOnly := p.Landscape || p.NoHeaders || p.Background
+	pdfOnly = pdfOnly || p.PaperWidth.Value != nil || p.PaperHeight.Value != nil
+	pdfOnly = pdfOnly || p.MarginTop.Value != nil || p.MarginBottom.Value != nil
+	pdfOnly = pdfOnly || p.MarginLeft.Value != nil || p.MarginRight.Value != nil
 	if pdfOnly && p.Format != formatPDF {
-		return fmt.Errorf("--landscape, --no-headers, --background are only valid with --format %s", formatPDF)
+		return fmt.Errorf("--landscape, --no-headers, --background, --paper-width, --paper-height, --margin-* are only valid with --format %s", formatPDF)
 	}
 	if p.Quality != 0 && p.Format != formatScreenshotJPEG {
 		return fmt.Errorf("--quality is only valid with --format %s", formatScreenshotJPEG)
@@ -110,9 +155,48 @@ func (p CaptureParams) Validate() error {
 
 func registerCaptureCommands(app *command.Utility, p *proxy.BrowserProxy) {
 	app.AddCommand(&command.Command{
-		Name:        "capture",
-		Description: command.Description{Short: "Capture a web page in a given format"},
+		Name: "capture",
+		Description: command.Description{
+			Short: "Capture a web page in a given format",
+			Long: "Capture renders a web page and writes its content to stdout (or to a file " +
+				"with --output). The --format flag selects the output format:\n\n" +
+				"Document formats: pdf, mhtml, html-monolith, text, a11y.\n" +
+				"Screenshot formats: screenshot-png, screenshot-jpeg.\n" +
+				"Semantic formats: markdown-full, markdown-reader, markdown-selector.\n\n" +
+				"The default browser backend is Firefox (WebDriver BiDi). Pass --browser " +
+				"chrome for headless Chrome (CDP). Some formats are backend-specific: mhtml " +
+				"and a11y require Chrome; html-monolith and the markdown family require " +
+				"Firefox.\n\n" +
+				"When --output is set, the capture is written atomically via a same-directory " +
+				"tmpfile and rename. The tmpfile is cleaned up on failure.\n\n" +
+				"PDF captures accept paper dimension and margin overrides (in inches). A " +
+				"margin of 0 is valid for borderless output. When unset, the browser default " +
+				"is used (typically US Letter 8.5\"x11\" with ~0.4\" margins).",
+		},
 		Annotations: &protocol.ToolAnnotations{ReadOnlyHint: protocol.BoolPtr(true)},
+		SeeAlso:     []string{"capture-batch"},
+		Examples: []command.Example{
+			{
+				Description: "Save a page as PDF",
+				Command:     "chrest capture --format pdf --url https://example.com --output page.pdf",
+			},
+			{
+				Description: "Thermal printer: 57mm-wide paper, no side margins",
+				Command:     "chrest capture --format pdf --paper-width 2.2409 --margin-left 0 --margin-right 0 --url https://example.com",
+			},
+			{
+				Description: "Full-page screenshot",
+				Command:     "chrest capture --format screenshot-png --full-page --url https://example.com --output page.png",
+			},
+			{
+				Description: "Extract readable article content as Markdown",
+				Command:     "chrest capture --format markdown-reader --url https://example.com/article",
+			},
+			{
+				Description: "Capture with headless Chrome",
+				Command:     "chrest capture --format pdf --browser chrome --url https://example.com",
+			},
+		},
 		Params: []command.Param{
 			command.StringFlag{
 				Name:        "format",
@@ -126,6 +210,12 @@ func registerCaptureCommands(app *command.Utility, p *proxy.BrowserProxy) {
 			command.BoolFlag{Name: "landscape", Description: "PDF only: use landscape orientation"},
 			command.BoolFlag{Name: "no-headers", Description: "PDF only: disable header and footer"},
 			command.BoolFlag{Name: "background", Description: "PDF only: print background graphics"},
+			command.StringFlag{Name: "paper-width", Description: "PDF only: page width in inches (default: browser default, typically 8.5)"},
+			command.StringFlag{Name: "paper-height", Description: "PDF only: page height in inches (default: browser default, typically 11)"},
+			command.StringFlag{Name: "margin-top", Description: "PDF only: top margin in inches (0 for borderless)"},
+			command.StringFlag{Name: "margin-bottom", Description: "PDF only: bottom margin in inches (0 for borderless)"},
+			command.StringFlag{Name: "margin-left", Description: "PDF only: left margin in inches (0 for borderless)"},
+			command.StringFlag{Name: "margin-right", Description: "PDF only: right margin in inches (0 for borderless)"},
 			command.IntFlag{Name: "quality", Description: "screenshot-jpeg only: JPEG quality (0-100)"},
 			command.BoolFlag{Name: "full-page", Description: "screenshot-png / screenshot-jpeg: capture the full scrollable page"},
 			command.StringFlag{Name: "selector", Description: "markdown-selector only: CSS selector for the element to extract (first match wins)"},
@@ -219,6 +309,12 @@ func runCapture(ctx context.Context, s cdp.Session, params CaptureParams) (io.Re
 			Landscape:           params.Landscape,
 			DisplayHeaderFooter: !params.NoHeaders,
 			PrintBackground:     params.Background,
+			PaperWidth:          params.PaperWidth.Value,
+			PaperHeight:         params.PaperHeight.Value,
+			MarginTop:           params.MarginTop.Value,
+			MarginBottom:        params.MarginBottom.Value,
+			MarginLeft:          params.MarginLeft.Value,
+			MarginRight:         params.MarginRight.Value,
 		})
 	case formatScreenshotPNG:
 		return s.CaptureScreenshot(ctx, cdp.ScreenshotOptions{

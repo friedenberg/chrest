@@ -52,6 +52,8 @@ func cmdCapture(ctx context.Context, p *proxy.BrowserProxy, args []string) (err 
 	var params tools.CaptureParams
 	var timeout time.Duration
 	var output string
+	var paperWidth, paperHeight float64
+	var marginTop, marginBottom, marginLeft, marginRight float64
 	fs.StringVar(&params.Format, "format", "", "Output format: pdf, screenshot-png, screenshot-jpeg, mhtml, a11y, text, html-monolith, markdown-full, markdown-reader, markdown-selector")
 	fs.StringVar(&params.URL, "url", "", "URL to capture")
 	fs.StringVar(&params.TabID, "tab-id", "", "Tab ID to capture (uses extension debugger instead of headless)")
@@ -59,6 +61,12 @@ func cmdCapture(ctx context.Context, p *proxy.BrowserProxy, args []string) (err 
 	fs.BoolVar(&params.Landscape, "landscape", false, "PDF only: use landscape orientation")
 	fs.BoolVar(&params.NoHeaders, "no-headers", false, "PDF only: disable header and footer")
 	fs.BoolVar(&params.Background, "background", false, "PDF only: print background graphics")
+	fs.Float64Var(&paperWidth, "paper-width", 0, "PDF only: page width in inches (default: browser default, typically 8.5)")
+	fs.Float64Var(&paperHeight, "paper-height", 0, "PDF only: page height in inches (default: browser default, typically 11)")
+	fs.Float64Var(&marginTop, "margin-top", 0, "PDF only: top margin in inches (0 for borderless)")
+	fs.Float64Var(&marginBottom, "margin-bottom", 0, "PDF only: bottom margin in inches (0 for borderless)")
+	fs.Float64Var(&marginLeft, "margin-left", 0, "PDF only: left margin in inches (0 for borderless)")
+	fs.Float64Var(&marginRight, "margin-right", 0, "PDF only: right margin in inches (0 for borderless)")
 	fs.IntVar(&params.Quality, "quality", 0, "screenshot-jpeg only: JPEG quality (0-100)")
 	fs.BoolVar(&params.FullPage, "full-page", false, "screenshot-png / screenshot-jpeg: capture the full scrollable page")
 	fs.StringVar(&params.Selector, "selector", "", "markdown-selector only: CSS selector for the element to extract (first match wins)")
@@ -69,6 +77,24 @@ func cmdCapture(ctx context.Context, p *proxy.BrowserProxy, args []string) (err 
 	if err = fs.Parse(args); err != nil {
 		return err
 	}
+
+	// Only set paper/margin when explicitly passed so nil = browser default.
+	fs.Visit(func(f *flag.Flag) {
+		switch f.Name {
+		case "paper-width":
+			params.PaperWidth.Value = &paperWidth
+		case "paper-height":
+			params.PaperHeight.Value = &paperHeight
+		case "margin-top":
+			params.MarginTop.Value = &marginTop
+		case "margin-bottom":
+			params.MarginBottom.Value = &marginBottom
+		case "margin-left":
+			params.MarginLeft.Value = &marginLeft
+		case "margin-right":
+			params.MarginRight.Value = &marginRight
+		}
+	})
 
 	if params.Format == "" {
 		fs.Usage()

@@ -260,6 +260,12 @@ func runCaptureFormat(ctx context.Context, s cdp.Session, r Resolved, baseURL st
 			Landscape:           opts.Landscape,
 			DisplayHeaderFooter: !opts.NoHeaders,
 			PrintBackground:     opts.Background,
+			PaperWidth:          opts.PaperWidth.Value,
+			PaperHeight:         opts.PaperHeight.Value,
+			MarginTop:           opts.MarginTop.Value,
+			MarginBottom:        opts.MarginBottom.Value,
+			MarginLeft:          opts.MarginLeft.Value,
+			MarginRight:         opts.MarginRight.Value,
 		})
 	case "screenshot":
 		return s.CaptureScreenshot(ctx, cdp.ScreenshotOptions{

@@ -63,16 +63,16 @@ type BrowserInfo struct {
 }
 
 type PDFOptions struct {
-	Landscape           bool    `json:"landscape,omitempty"`
-	DisplayHeaderFooter bool    `json:"displayHeaderFooter,omitempty"`
-	PrintBackground     bool    `json:"printBackground,omitempty"`
-	PaperWidth          float64 `json:"paperWidth,omitempty"`
-	PaperHeight         float64 `json:"paperHeight,omitempty"`
-	MarginTop           float64 `json:"marginTop,omitempty"`
-	MarginBottom        float64 `json:"marginBottom,omitempty"`
-	MarginLeft          float64 `json:"marginLeft,omitempty"`
-	MarginRight         float64 `json:"marginRight,omitempty"`
-	PageRanges          string  `json:"pageRanges,omitempty"`
+	Landscape           bool     `json:"landscape,omitempty"`
+	DisplayHeaderFooter bool     `json:"displayHeaderFooter,omitempty"`
+	PrintBackground     bool     `json:"printBackground,omitempty"`
+	PaperWidth          *float64 `json:"paperWidth,omitempty"`
+	PaperHeight         *float64 `json:"paperHeight,omitempty"`
+	MarginTop           *float64 `json:"marginTop,omitempty"`
+	MarginBottom        *float64 `json:"marginBottom,omitempty"`
+	MarginLeft          *float64 `json:"marginLeft,omitempty"`
+	MarginRight         *float64 `json:"marginRight,omitempty"`
+	PageRanges          string   `json:"pageRanges,omitempty"`
 }
 
 type ScreenshotOptions struct {
