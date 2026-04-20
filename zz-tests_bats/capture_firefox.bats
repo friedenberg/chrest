@@ -131,3 +131,89 @@ function capture_output_atomic_cleanup_on_failure { # @test
   tmp_count=$(find "$BATS_TEST_TMPDIR" -maxdepth 1 -name '.chrest-capture-*' | wc -l)
   [ "$tmp_count" = "0" ]
 }
+
+# A richer fixture with navigation / article / footer regions so
+# readability has enough scoring signal to strip the boilerplate. The
+# default fixture from setup() is too small to give a meaningful
+# reader-mode extraction.
+function _write_markdown_fixture {
+  cat >"$BATS_TEST_TMPDIR/article.html" <<'EOF'
+<!doctype html>
+<html>
+<head><title>Chrest Markdown Fixture</title></head>
+<body>
+<nav>Site Nav - <a href="/">Home</a> - <a href="/x">X</a></nav>
+<main>
+<article>
+<h1>The Real Article Title</h1>
+<p>First paragraph of the real article body. It needs enough sentences for readability to score it as the main content region. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore.</p>
+<p>Second paragraph with more substantive text to reinforce the score. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.</p>
+<p>Third paragraph rounds out the article. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.</p>
+</article>
+</main>
+<footer>Site Footer - Copyright 2026</footer>
+</body>
+</html>
+EOF
+}
+
+function firefox_capture_markdown_full_includes_boilerplate { # @test
+  _write_markdown_fixture
+  result=$(timeout "$FIREFOX_TEST_TIMEOUT" "$CHREST_BIN" capture --format markdown-full --browser firefox --url "file://$BATS_TEST_TMPDIR/article.html")
+  # Full page markdown should contain the heading AND the boilerplate.
+  echo "$result" | grep -q "# The Real Article Title"
+  echo "$result" | grep -q "Site Nav"
+  echo "$result" | grep -q "Site Footer"
+}
+
+function firefox_capture_markdown_reader_strips_boilerplate { # @test
+  _write_markdown_fixture
+  result=$(timeout "$FIREFOX_TEST_TIMEOUT" "$CHREST_BIN" capture --format markdown-reader --browser firefox --url "file://$BATS_TEST_TMPDIR/article.html")
+  # Reader-mode should keep the article body and drop the nav / footer.
+  echo "$result" | grep -q "First paragraph of the real article body"
+  if echo "$result" | grep -q "Site Nav"; then
+    echo "reader kept nav boilerplate:" >&2
+    echo "$result" >&2
+    return 1
+  fi
+  if echo "$result" | grep -q "Site Footer"; then
+    echo "reader kept footer boilerplate:" >&2
+    echo "$result" >&2
+    return 1
+  fi
+}
+
+function firefox_capture_markdown_selector_scopes { # @test
+  _write_markdown_fixture
+  result=$(timeout "$FIREFOX_TEST_TIMEOUT" "$CHREST_BIN" capture --format markdown-selector --selector "footer" --browser firefox --url "file://$BATS_TEST_TMPDIR/article.html")
+  # Footer content should be present; article body should be absent.
+  echo "$result" | grep -q "Site Footer"
+  if echo "$result" | grep -q "First paragraph of the real article body"; then
+    echo "selector leaked article body:" >&2
+    echo "$result" >&2
+    return 1
+  fi
+}
+
+# Negative-path tests: master's exit-code fix means chrest capture now
+# returns non-zero on validation/handler errors, so we assert on both
+# $status and the diagnostic text.
+function firefox_capture_markdown_selector_rejects_empty { # @test
+  _write_markdown_fixture
+  run timeout "$FIREFOX_TEST_TIMEOUT" "$CHREST_BIN" capture --format markdown-selector --browser firefox --url "file://$BATS_TEST_TMPDIR/article.html"
+  [ "$status" -ne 0 ]
+  echo "$output" | grep -qi "selector is required"
+}
+
+function firefox_capture_markdown_selector_no_match { # @test
+  _write_markdown_fixture
+  run timeout "$FIREFOX_TEST_TIMEOUT" "$CHREST_BIN" capture --format markdown-selector --selector ".does-not-exist" --browser firefox --url "file://$BATS_TEST_TMPDIR/article.html"
+  [ "$status" -ne 0 ]
+  echo "$output" | grep -q ".does-not-exist"
+}
+
+function firefox_capture_markdown_reader_browser_engine_unimplemented { # @test
+  run timeout "$FIREFOX_TEST_TIMEOUT" "$CHREST_BIN" capture --format markdown-reader --reader-engine browser --browser firefox --url "$FIXTURE"
+  [ "$status" -ne 0 ]
+  echo "$output" | grep -qi "not yet implemented"
+}

@@ -11,6 +11,7 @@ import (
 	"code.linenisgreat.com/chrest/go/src/charlie/extension"
 	"code.linenisgreat.com/chrest/go/src/charlie/firefox"
 	"code.linenisgreat.com/chrest/go/src/charlie/headless"
+	"code.linenisgreat.com/chrest/go/src/charlie/markdown"
 	"code.linenisgreat.com/chrest/go/src/charlie/monolith"
 	"code.linenisgreat.com/chrest/go/src/delta/proxy"
 	"github.com/amarbel-llc/purse-first/libs/dewey/bravo/errors"
@@ -19,13 +20,16 @@ import (
 )
 
 const (
-	formatPDF            = "pdf"
-	formatScreenshotPNG  = "screenshot-png"
-	formatScreenshotJPEG = "screenshot-jpeg"
-	formatMHTML          = "mhtml"
-	formatA11y           = "a11y"
-	formatText           = "text"
-	formatHTMLMonolith   = "html-monolith"
+	formatPDF              = "pdf"
+	formatScreenshotPNG    = "screenshot-png"
+	formatScreenshotJPEG   = "screenshot-jpeg"
+	formatMHTML            = "mhtml"
+	formatA11y             = "a11y"
+	formatText             = "text"
+	formatHTMLMonolith     = "html-monolith"
+	formatMarkdownFull     = "markdown-full"
+	formatMarkdownReader   = "markdown-reader"
+	formatMarkdownSelector = "markdown-selector"
 )
 
 var captureFormats = []string{
@@ -36,23 +40,37 @@ var captureFormats = []string{
 	formatA11y,
 	formatText,
 	formatHTMLMonolith,
+	formatMarkdownFull,
+	formatMarkdownReader,
+	formatMarkdownSelector,
 }
 
-const captureFormatsDesc = "pdf, screenshot-png, screenshot-jpeg, mhtml, a11y, text, html-monolith"
+const captureFormatsDesc = "pdf, screenshot-png, screenshot-jpeg, mhtml, a11y, text, html-monolith, markdown-full, markdown-reader, markdown-selector"
+
+// readerEngineReadability runs extraction via the embedded Go
+// Readability port. Default and only currently-supported engine.
+const readerEngineReadability = "readability"
+
+// readerEngineBrowser would use the browser's native reader view
+// (Firefox about:reader). Declared here so the spec surface is stable;
+// ConvertReader currently rejects this engine with not-yet-implemented.
+const readerEngineBrowser = "browser"
 
 // CaptureParams is the shared parameter struct for the `capture` command,
 // used by both the MCP tool handler and the CLI bypass in
 // go/cmd/chrest/capture.go.
 type CaptureParams struct {
-	Format     string `json:"format"`
-	URL        string `json:"url"`
-	TabID      string `json:"tab-id"`
-	Browser    string `json:"browser"`
-	Landscape  bool   `json:"landscape"`
-	NoHeaders  bool   `json:"no-headers"`
-	Background bool   `json:"background"`
-	Quality    int    `json:"quality"`
-	FullPage   bool   `json:"full-page"`
+	Format       string `json:"format"`
+	URL          string `json:"url"`
+	TabID        string `json:"tab-id"`
+	Browser      string `json:"browser"`
+	Landscape    bool   `json:"landscape"`
+	NoHeaders    bool   `json:"no-headers"`
+	Background   bool   `json:"background"`
+	Quality      int    `json:"quality"`
+	FullPage     bool   `json:"full-page"`
+	Selector     string `json:"selector"`
+	ReaderEngine string `json:"reader-engine"`
 }
 
 // Validate rejects format-specific flags used with an incompatible --format,
@@ -67,6 +85,25 @@ func (p CaptureParams) Validate() error {
 	}
 	if p.FullPage && p.Format != formatScreenshotPNG && p.Format != formatScreenshotJPEG {
 		return fmt.Errorf("--full-page is only valid with --format %s or %s", formatScreenshotPNG, formatScreenshotJPEG)
+	}
+	if p.Selector != "" && p.Format != formatMarkdownSelector {
+		return fmt.Errorf("--selector is only valid with --format %s", formatMarkdownSelector)
+	}
+	if p.Format == formatMarkdownSelector && p.Selector == "" {
+		return fmt.Errorf("--selector is required with --format %s", formatMarkdownSelector)
+	}
+	if p.ReaderEngine != "" {
+		if p.Format != formatMarkdownReader {
+			return fmt.Errorf("--reader-engine is only valid with --format %s", formatMarkdownReader)
+		}
+		switch p.ReaderEngine {
+		case readerEngineReadability:
+			// ok
+		case readerEngineBrowser:
+			return fmt.Errorf("--reader-engine=%s is not yet implemented (tracked as a follow-up under chrest#29); use %s", readerEngineBrowser, readerEngineReadability)
+		default:
+			return fmt.Errorf("--reader-engine must be one of %q, %q (got %q)", readerEngineReadability, readerEngineBrowser, p.ReaderEngine)
+		}
 	}
 	return nil
 }
@@ -91,6 +128,8 @@ func registerCaptureCommands(app *command.Utility, p *proxy.BrowserProxy) {
 			command.BoolFlag{Name: "background", Description: "PDF only: print background graphics"},
 			command.IntFlag{Name: "quality", Description: "screenshot-jpeg only: JPEG quality (0-100)"},
 			command.BoolFlag{Name: "full-page", Description: "screenshot-png / screenshot-jpeg: capture the full scrollable page"},
+			command.StringFlag{Name: "selector", Description: "markdown-selector only: CSS selector for the element to extract (first match wins)"},
+			command.StringFlag{Name: "reader-engine", Description: "markdown-reader only: extraction engine (\"readability\" default; \"browser\" reserved/not-yet-implemented)"},
 		},
 		Run: func(ctx context.Context, args json.RawMessage, _ command.Prompter) (*command.Result, error) {
 			var p0 CaptureParams
@@ -205,6 +244,27 @@ func runCapture(ctx context.Context, s cdp.Session, params CaptureParams) (io.Re
 		}
 		defer dom.Close()
 		return monolith.Process(ctx, dom, params.URL)
+	case formatMarkdownFull:
+		dom, err := s.GetDocumentHTML(ctx)
+		if err != nil {
+			return nil, err
+		}
+		defer dom.Close()
+		return markdown.ConvertFull(ctx, dom)
+	case formatMarkdownReader:
+		dom, err := s.GetDocumentHTML(ctx)
+		if err != nil {
+			return nil, err
+		}
+		defer dom.Close()
+		return markdown.ConvertReader(ctx, dom, params.URL)
+	case formatMarkdownSelector:
+		dom, err := s.GetDocumentHTML(ctx)
+		if err != nil {
+			return nil, err
+		}
+		defer dom.Close()
+		return markdown.ConvertSelector(ctx, dom, params.Selector)
 	default:
 		return nil, fmt.Errorf("unknown --format value %q; expected one of %v", params.Format, captureFormats)
 	}

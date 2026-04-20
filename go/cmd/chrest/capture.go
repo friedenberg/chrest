@@ -42,7 +42,8 @@ func cmdCapture(ctx context.Context, p *proxy.BrowserProxy, args []string) (err 
 	fs.SetOutput(os.Stderr)
 	fs.Usage = func() {
 		fmt.Fprintln(os.Stderr, "Usage: chrest capture --format <kind> [flags]")
-		fmt.Fprintln(os.Stderr, "  Formats: pdf, screenshot-png, screenshot-jpeg, mhtml, a11y, text, html-monolith")
+		fmt.Fprintln(os.Stderr, "  Formats: pdf, screenshot-png, screenshot-jpeg, mhtml, a11y, text, html-monolith,")
+		fmt.Fprintln(os.Stderr, "           markdown-full, markdown-reader, markdown-selector")
 		fs.PrintDefaults()
 		fmt.Fprintln(os.Stderr)
 		fmt.Fprintln(os.Stderr, "See also: chrest capture-batch  (JSON-stdin batch interface per RFC 0001)")
@@ -51,7 +52,7 @@ func cmdCapture(ctx context.Context, p *proxy.BrowserProxy, args []string) (err 
 	var params tools.CaptureParams
 	var timeout time.Duration
 	var output string
-	fs.StringVar(&params.Format, "format", "", "Output format: pdf, screenshot-png, screenshot-jpeg, mhtml, a11y, text, html-monolith")
+	fs.StringVar(&params.Format, "format", "", "Output format: pdf, screenshot-png, screenshot-jpeg, mhtml, a11y, text, html-monolith, markdown-full, markdown-reader, markdown-selector")
 	fs.StringVar(&params.URL, "url", "", "URL to capture")
 	fs.StringVar(&params.TabID, "tab-id", "", "Tab ID to capture (uses extension debugger instead of headless)")
 	fs.StringVar(&params.Browser, "browser", "firefox", "Browser backend: firefox (default) or chrome")
@@ -60,6 +61,8 @@ func cmdCapture(ctx context.Context, p *proxy.BrowserProxy, args []string) (err 
 	fs.BoolVar(&params.Background, "background", false, "PDF only: print background graphics")
 	fs.IntVar(&params.Quality, "quality", 0, "screenshot-jpeg only: JPEG quality (0-100)")
 	fs.BoolVar(&params.FullPage, "full-page", false, "screenshot-png / screenshot-jpeg: capture the full scrollable page")
+	fs.StringVar(&params.Selector, "selector", "", "markdown-selector only: CSS selector for the element to extract (first match wins)")
+	fs.StringVar(&params.ReaderEngine, "reader-engine", "", "markdown-reader only: extraction engine (\"readability\" default; \"browser\" reserved/not-yet-implemented)")
 	fs.DurationVar(&timeout, "timeout", defaultCaptureTimeout, "Abort and tear down the browser if the capture takes longer than this (0 disables)")
 	fs.StringVar(&output, "output", "", "Write capture to this path (atomic tmpfile + rename). If unset, stream to stdout.")
 

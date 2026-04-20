@@ -90,6 +90,13 @@ just deploy-firefox     # sign and deploy to Firefox AMO
 - `charlie/headless/` - Headless Chrome/CDP capture backend. No network-event
   wiring yet, so envelopes from this backend are v1-preview.
 - `charlie/launcher/` - Browser process launching.
+- `charlie/monolith/` - Shells out to the `monolith` CLI to inline every asset
+  as `data:` URIs. Used by the `html-monolith` capture format; binary is wrapped
+  into PATH via `flake.nix` postFixup.
+- `charlie/markdown/` - Pure-Go HTML-to-markdown encoding for the `markdown-*`
+  capture formats. Wraps `JohannesKaufmann/html-to-markdown/v2` plus
+  `codeberg.org/readeck/go-readability/v2` (for the reader variant) and
+  `andybalholm/cascadia` (for the selector variant).
 - `delta/proxy/` - Multi-browser proxy (fan-out requests to all sockets)
 - `delta/tools/` - MCP tool definitions with annotations
 - `delta/resources/` - MCP paginated resources (`chrest://items`, `chrest://items/{page}`)
@@ -105,11 +112,15 @@ just deploy-firefox     # sign and deploy to Firefox AMO
 - `chrest init` - Initialize configuration (browser, name, extension-id)
 - `chrest mcp` - Start MCP server (stdio transport)
 - `chrest capture --format <kind>` - Single-page capture. Formats: `pdf`,
-  `screenshot-png`, `screenshot-jpeg`, `mhtml`, `a11y`, `text`,
-  `html-monolith`. Default backend is `firefox`; pass `--browser chrome`
-  (alias `headless`) for the headless-CDP path. Has `--timeout` (default
-  60s, deadline-backed context) and `--output <path>` (atomic tmpfile +
-  rename; unlinks on failure). The CLI exits non-zero on any error.
+  `screenshot-png`, `screenshot-jpeg`, `mhtml`, `a11y`, `text`, `html-monolith`,
+  `markdown-full`, `markdown-reader`, `markdown-selector`. Default backend is
+  `firefox`; pass `--browser chrome` (alias `headless`) for the headless-CDP
+  path. Has `--timeout` (default 60s, deadline-backed context) and
+  `--output <path>` (atomic tmpfile + rename; unlinks on failure). The CLI
+  exits non-zero on any error. The markdown variants route through
+  `charlie/markdown/` — `markdown-reader` runs go-readability on the DOM,
+  `markdown-selector` takes a `--selector` CSS selector (first match);
+  `--reader-engine` is reserved (`readability` default, `browser` NYI).
 - `chrest capture-batch` - RFC 0001 capturer role (MVP, `split=false`). Reads
   a batch input JSON on stdin, runs captures sequentially, streams each
   artifact to a writer subprocess, and emits a result envelope on stdout.

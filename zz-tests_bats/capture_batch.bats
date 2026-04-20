@@ -169,6 +169,85 @@ JSON
   echo "$result" | jq -e '.captures[0].spec.media_type     == "application/vnd.web-capture-archive.spec+json"'
 }
 
+function capture_batch_split_false_markdown_full_emits_payload_and_spec { # @test
+  input=$(
+    cat <<JSON
+{
+  "schema": "web-capture-archive/v1",
+  "writer": {"cmd": ["$STUB_WRITER"]},
+  "url": "$FIXTURE",
+  "defaults": {"browser": "firefox", "split": false},
+  "captures": [{"name": "md", "format": "markdown-full"}]
+}
+JSON
+  )
+  result=$(echo "$input" | timeout 30 "$CHREST_BIN" capture-batch)
+  echo "$result" | jq -e '.captures[0].error == null'
+  echo "$result" | jq -e '.captures[0].payload.media_type == "text/markdown; charset=utf-8"'
+  echo "$result" | jq -e '.captures[0].payload.size > 10'
+  echo "$result" | jq -e '.captures[0].envelope == null'
+}
+
+function capture_batch_split_false_markdown_reader_emits_payload_and_spec { # @test
+  input=$(
+    cat <<JSON
+{
+  "schema": "web-capture-archive/v1",
+  "writer": {"cmd": ["$STUB_WRITER"]},
+  "url": "$FIXTURE",
+  "defaults": {"browser": "firefox", "split": false},
+  "captures": [{"name": "md", "format": "markdown-reader"}]
+}
+JSON
+  )
+  result=$(echo "$input" | timeout 30 "$CHREST_BIN" capture-batch)
+  echo "$result" | jq -e '.captures[0].error == null'
+  echo "$result" | jq -e '.captures[0].payload.media_type == "text/markdown; charset=utf-8"'
+}
+
+function capture_batch_split_false_markdown_selector_echoes_selector_in_spec { # @test
+  # Write a recording writer so we can read the spec artifact back and
+  # assert capture.options.selector round-trips via JCS canonicalization.
+  rec_dir="$BATS_TEST_TMPDIR/rec-md-sel"
+  mkdir -p "$rec_dir"
+  cat >"$BATS_TEST_TMPDIR/rec-writer.sh" <<EOF
+#!/usr/bin/env bash
+out=\$(mktemp "$rec_dir/artifact.XXXXXX")
+cat > "\$out"
+size=\$(wc -c < "\$out")
+echo "{\"id\":\"blake2b256-rec-\$(basename \$out)\",\"size\":\$size}"
+EOF
+  chmod +x "$BATS_TEST_TMPDIR/rec-writer.sh"
+
+  input=$(
+    cat <<JSON
+{
+  "schema": "web-capture-archive/v1",
+  "writer": {"cmd": ["$BATS_TEST_TMPDIR/rec-writer.sh"]},
+  "url": "$FIXTURE",
+  "defaults": {"browser": "firefox", "split": false},
+  "captures": [
+    {"name": "md", "format": "markdown-selector", "options": {"selector": "h1"}}
+  ]
+}
+JSON
+  )
+  result=$(echo "$input" | timeout 30 "$CHREST_BIN" capture-batch)
+  echo "$result" | jq -e '.captures[0].error == null'
+  echo "$result" | jq -e '.captures[0].payload.media_type == "text/markdown; charset=utf-8"'
+
+  # Find the spec artifact and confirm it echoes the selector option.
+  spec_path=""
+  for f in "$rec_dir"/artifact.*; do
+    if jq -e '.schema | startswith("web-capture-archive.spec")' <"$f" >/dev/null 2>&1; then
+      spec_path="$f"
+      break
+    fi
+  done
+  [ -n "$spec_path" ] || { echo "no spec artifact"; ls -la "$rec_dir"; exit 1; }
+  jq -e '.capture.options.selector == "h1"' <"$spec_path"
+}
+
 function capture_batch_split_false_html_monolith_emits_payload_and_spec { # @test
   if ! command -v monolith >/dev/null 2>&1; then
     skip "monolith binary not found on PATH"

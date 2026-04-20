@@ -11,6 +11,7 @@ import (
 	"code.linenisgreat.com/chrest/go/src/bravo/cdp"
 	"code.linenisgreat.com/chrest/go/src/charlie/firefox"
 	"code.linenisgreat.com/chrest/go/src/charlie/headless"
+	"code.linenisgreat.com/chrest/go/src/charlie/markdown"
 	"code.linenisgreat.com/chrest/go/src/charlie/monolith"
 	"code.linenisgreat.com/chrest/go/src/delta/tools"
 )
@@ -18,12 +19,15 @@ import (
 // PayloadMediaTypes maps each supported capture format to the media
 // type recorded on the payload ArtifactRef. RFC 0001 §Payload Artifact.
 var PayloadMediaTypes = map[string]string{
-	"text":          "text/plain; charset=utf-8",
-	"pdf":           "application/pdf",
-	"screenshot":    "image/png",
-	"mhtml":         "multipart/related",
-	"a11y":          "application/json",
-	"html-monolith": "text/html; charset=utf-8",
+	"text":              "text/plain; charset=utf-8",
+	"pdf":               "application/pdf",
+	"screenshot":        "image/png",
+	"mhtml":             "multipart/related",
+	"a11y":              "application/json",
+	"html-monolith":     "text/html; charset=utf-8",
+	"markdown-full":     "text/markdown; charset=utf-8",
+	"markdown-reader":   "text/markdown; charset=utf-8",
+	"markdown-selector": "text/markdown; charset=utf-8",
 }
 
 // Options configure the runner; most come from Input.
@@ -273,6 +277,30 @@ func runCaptureFormat(ctx context.Context, s cdp.Session, r Resolved, baseURL st
 		}
 		defer dom.Close()
 		return monolith.Process(ctx, dom, baseURL)
+	case "markdown-full":
+		dom, err := s.GetDocumentHTML(ctx)
+		if err != nil {
+			return nil, err
+		}
+		defer dom.Close()
+		return markdown.ConvertFull(ctx, dom)
+	case "markdown-reader":
+		dom, err := s.GetDocumentHTML(ctx)
+		if err != nil {
+			return nil, err
+		}
+		defer dom.Close()
+		return markdown.ConvertReader(ctx, dom, baseURL)
+	case "markdown-selector":
+		if opts.Selector == "" {
+			return nil, fmt.Errorf("markdown-selector requires capture.options.selector to be set")
+		}
+		dom, err := s.GetDocumentHTML(ctx)
+		if err != nil {
+			return nil, err
+		}
+		defer dom.Close()
+		return markdown.ConvertSelector(ctx, dom, opts.Selector)
 	default:
 		return nil, fmt.Errorf("unknown capture format %q", r.Format)
 	}
