@@ -169,6 +169,30 @@ JSON
   echo "$result" | jq -e '.captures[0].spec.media_type     == "application/vnd.web-capture-archive.spec+json"'
 }
 
+function capture_batch_split_false_html_monolith_emits_payload_and_spec { # @test
+  if ! command -v monolith >/dev/null 2>&1; then
+    skip "monolith binary not found on PATH"
+  fi
+  input=$(
+    cat <<JSON
+{
+  "schema": "web-capture-archive/v1",
+  "writer": {"cmd": ["$STUB_WRITER"]},
+  "url": "$FIXTURE",
+  "defaults": {"browser": "firefox", "split": false},
+  "captures": [{"name": "m", "format": "html-monolith"}]
+}
+JSON
+  )
+  result=$(echo "$input" | timeout 60 "$CHREST_BIN" capture-batch)
+  echo "$result" | jq -e '.captures[0].error == null'
+  echo "$result" | jq -e '.captures[0].payload.media_type == "text/html; charset=utf-8"'
+  echo "$result" | jq -e '.captures[0].payload.size > 100'
+  echo "$result" | jq -e '.captures[0].spec.id | startswith("blake2b256-stub-")'
+  # split=false: envelope MUST be omitted.
+  echo "$result" | jq -e '.captures[0].envelope == null'
+}
+
 function capture_batch_split_false_text_emits_payload_and_spec { # @test
   input=$(
     cat <<JSON

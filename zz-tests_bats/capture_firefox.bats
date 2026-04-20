@@ -72,3 +72,31 @@ function firefox_capture_pdf_has_no_trailing_newline { # @test
   tail=$(tail -c 6 "$BATS_TEST_TMPDIR/out.pdf" | xxd -p)
   [ "$tail" = "2525454f460a" ]
 }
+
+# html-monolith: pipe the rendered DOM through monolith, which inlines every
+# asset as data: URIs and returns a self-contained .html document. Skip the
+# case gracefully if the monolith binary isn't on PATH (chrest#26).
+function firefox_capture_html_monolith_returns_html { # @test
+  if ! command -v monolith >/dev/null 2>&1; then
+    skip "monolith binary not found on PATH"
+  fi
+  timeout "$FIREFOX_TEST_TIMEOUT" "$CHREST_BIN" capture --format html-monolith --browser firefox --url "$FIXTURE" >"$BATS_TEST_TMPDIR/out.html"
+  # Monolith preserves the <html> tag and the document content. Look for
+  # the fixture's h1 text, not a byte prefix — monolith may emit a
+  # preamble (doctype, comments) before <html>.
+  grep -q "Hello from chrest" "$BATS_TEST_TMPDIR/out.html"
+  grep -qi "<html" "$BATS_TEST_TMPDIR/out.html"
+}
+
+# Regression: monolith emits "</html>\n" (one trailing newline from
+# the HTML itself). The CLI must not append a second newline. Mirrors
+# the PDF trailing-newline check above; see #21.
+function firefox_capture_html_monolith_has_no_trailing_newline { # @test
+  if ! command -v monolith >/dev/null 2>&1; then
+    skip "monolith binary not found on PATH"
+  fi
+  timeout "$FIREFOX_TEST_TIMEOUT" "$CHREST_BIN" capture --format html-monolith --browser firefox --url "$FIXTURE" >"$BATS_TEST_TMPDIR/out.html"
+  # last 8 bytes should be "</html>\n" (3c 2f 68 74 6d 6c 3e 0a), NOT "</html>\n\n"
+  tail=$(tail -c 8 "$BATS_TEST_TMPDIR/out.html" | od -An -t x1 | tr -d ' \n')
+  [ "$tail" = "3c2f68746d6c3e0a" ]
+}

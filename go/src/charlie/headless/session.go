@@ -132,6 +132,13 @@ func (s *Session) ExtractText(ctx context.Context) (io.ReadCloser, error) {
 	return io.NopCloser(strings.NewReader(parsed.Result.Value)), nil
 }
 
+// GetDocumentHTML is not implemented for the headless Chrome backend.
+// html-monolith currently ships Firefox-only; headless Chrome support
+// is tracked alongside chrest#14 (kernel 6.17 SIGTRAP).
+func (s *Session) GetDocumentHTML(ctx context.Context) (io.ReadCloser, error) {
+	return nil, errors.Errorf("html-monolith capture is not supported with headless Chrome yet (use --browser firefox; Chrome support tracked alongside chrest#14)")
+}
+
 // BrowserInfo queries CDP's Browser.getVersion for identity fields.
 // Best-effort — returns a populated Name even if CDP errors, so the
 // spec artifact always has at least the backend label.

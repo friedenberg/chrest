@@ -14,6 +14,10 @@ type Session interface {
 	CaptureSnapshot(ctx context.Context) (io.ReadCloser, error)
 	AccessibilityTree(ctx context.Context) (io.ReadCloser, error)
 	ExtractText(ctx context.Context) (io.ReadCloser, error)
+	// GetDocumentHTML returns the rendered DOM serialized as
+	// document.documentElement.outerHTML. Backends that do not support
+	// script evaluation return a wrapped "not supported" error.
+	GetDocumentHTML(ctx context.Context) (io.ReadCloser, error)
 	// BrowserInfo returns identity fields for the live browser. Used by
 	// capture-batch to populate the spec artifact fingerprint. Fields
 	// may be empty if the backend didn't advertise them; callers treat

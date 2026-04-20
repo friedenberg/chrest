@@ -143,6 +143,12 @@ func (s *Session) ExtractText(ctx context.Context) (io.ReadCloser, error) {
 	return io.NopCloser(strings.NewReader(parsed.Result.Value)), nil
 }
 
+// GetDocumentHTML is not implemented for the extension-debugger
+// session. html-monolith currently ships Firefox-only.
+func (s *Session) GetDocumentHTML(ctx context.Context) (io.ReadCloser, error) {
+	return nil, errors.Errorf("html-monolith capture is not supported via the extension debugger yet (use --browser firefox)")
+}
+
 // BrowserInfo returns a minimal identity for the extension-proxied
 // session. We don't know which browser is driving the extension from
 // here, so Name is empty and callers should fall back to their own

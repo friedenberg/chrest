@@ -11,6 +11,7 @@ import (
 	"code.linenisgreat.com/chrest/go/src/charlie/extension"
 	"code.linenisgreat.com/chrest/go/src/charlie/firefox"
 	"code.linenisgreat.com/chrest/go/src/charlie/headless"
+	"code.linenisgreat.com/chrest/go/src/charlie/monolith"
 	"code.linenisgreat.com/chrest/go/src/delta/proxy"
 	"github.com/amarbel-llc/purse-first/libs/dewey/bravo/errors"
 	"github.com/amarbel-llc/purse-first/libs/dewey/golf/command"
@@ -24,6 +25,7 @@ const (
 	formatMHTML          = "mhtml"
 	formatA11y           = "a11y"
 	formatText           = "text"
+	formatHTMLMonolith   = "html-monolith"
 )
 
 var captureFormats = []string{
@@ -33,7 +35,10 @@ var captureFormats = []string{
 	formatMHTML,
 	formatA11y,
 	formatText,
+	formatHTMLMonolith,
 }
+
+const captureFormatsDesc = "pdf, screenshot-png, screenshot-jpeg, mhtml, a11y, text, html-monolith"
 
 // CaptureParams is the shared parameter struct for the `capture` command,
 // used by both the MCP tool handler and the CLI bypass in
@@ -74,7 +79,7 @@ func registerCaptureCommands(app *command.Utility, p *proxy.BrowserProxy) {
 		Params: []command.Param{
 			command.StringFlag{
 				Name:        "format",
-				Description: "Output format: pdf, screenshot-png, screenshot-jpeg, mhtml, a11y, text",
+				Description: "Output format: " + captureFormatsDesc,
 				Required:    true,
 				EnumValues:  captureFormats,
 			},
@@ -189,6 +194,13 @@ func runCapture(ctx context.Context, s cdp.Session, params CaptureParams) (io.Re
 		return s.AccessibilityTree(ctx)
 	case formatText:
 		return s.ExtractText(ctx)
+	case formatHTMLMonolith:
+		dom, err := s.GetDocumentHTML(ctx)
+		if err != nil {
+			return nil, err
+		}
+		defer dom.Close()
+		return monolith.Process(ctx, dom, params.URL)
 	default:
 		return nil, fmt.Errorf("unknown --format value %q; expected one of %v", params.Format, captureFormats)
 	}

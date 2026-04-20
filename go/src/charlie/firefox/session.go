@@ -340,8 +340,18 @@ func (s *Session) AccessibilityTree(ctx context.Context) (io.ReadCloser, error) 
 }
 
 func (s *Session) ExtractText(ctx context.Context) (io.ReadCloser, error) {
+	return s.evaluateString(ctx, "document.body.innerText")
+}
+
+func (s *Session) GetDocumentHTML(ctx context.Context) (io.ReadCloser, error) {
+	return s.evaluateString(ctx, "document.documentElement.outerHTML")
+}
+
+// evaluateString runs a BiDi script.evaluate expecting a string result
+// and returns it as a reader. Shared by ExtractText and GetDocumentHTML.
+func (s *Session) evaluateString(ctx context.Context, expression string) (io.ReadCloser, error) {
 	result, err := s.conn.Send("script.evaluate", map[string]any{
-		"expression":      "document.body.innerText",
+		"expression":      expression,
 		"target":          map[string]string{"context": s.contextID},
 		"awaitPromise":    false,
 		"resultOwnership": "none",

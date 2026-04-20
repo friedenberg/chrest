@@ -39,7 +39,7 @@ func cmdCapture(ctx context.Context, p *proxy.BrowserProxy, args []string) error
 	fs.SetOutput(os.Stderr)
 	fs.Usage = func() {
 		fmt.Fprintln(os.Stderr, "Usage: chrest capture --format <kind> [flags]")
-		fmt.Fprintln(os.Stderr, "  Formats: pdf, screenshot-png, screenshot-jpeg, mhtml, a11y, text")
+		fmt.Fprintln(os.Stderr, "  Formats: pdf, screenshot-png, screenshot-jpeg, mhtml, a11y, text, html-monolith")
 		fs.PrintDefaults()
 		fmt.Fprintln(os.Stderr)
 		fmt.Fprintln(os.Stderr, "See also: chrest capture-batch  (JSON-stdin batch interface per RFC 0001)")
@@ -47,7 +47,7 @@ func cmdCapture(ctx context.Context, p *proxy.BrowserProxy, args []string) error
 
 	var params tools.CaptureParams
 	var timeout time.Duration
-	fs.StringVar(&params.Format, "format", "", "Output format: pdf, screenshot-png, screenshot-jpeg, mhtml, a11y, text")
+	fs.StringVar(&params.Format, "format", "", "Output format: pdf, screenshot-png, screenshot-jpeg, mhtml, a11y, text, html-monolith")
 	fs.StringVar(&params.URL, "url", "", "URL to capture")
 	fs.StringVar(&params.TabID, "tab-id", "", "Tab ID to capture (uses extension debugger instead of headless)")
 	fs.StringVar(&params.Browser, "browser", "", "Browser backend: chrome (default) or firefox")

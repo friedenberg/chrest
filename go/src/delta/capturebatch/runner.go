@@ -11,17 +11,19 @@ import (
 	"code.linenisgreat.com/chrest/go/src/bravo/cdp"
 	"code.linenisgreat.com/chrest/go/src/charlie/firefox"
 	"code.linenisgreat.com/chrest/go/src/charlie/headless"
+	"code.linenisgreat.com/chrest/go/src/charlie/monolith"
 	"code.linenisgreat.com/chrest/go/src/delta/tools"
 )
 
 // PayloadMediaTypes maps each supported capture format to the media
 // type recorded on the payload ArtifactRef. RFC 0001 §Payload Artifact.
 var PayloadMediaTypes = map[string]string{
-	"text":       "text/plain; charset=utf-8",
-	"pdf":        "application/pdf",
-	"screenshot": "image/png",
-	"mhtml":      "multipart/related",
-	"a11y":       "application/json",
+	"text":          "text/plain; charset=utf-8",
+	"pdf":           "application/pdf",
+	"screenshot":    "image/png",
+	"mhtml":         "multipart/related",
+	"a11y":          "application/json",
+	"html-monolith": "text/html; charset=utf-8",
 }
 
 // Options configure the runner; most come from Input.
@@ -99,7 +101,7 @@ func runOne(ctx context.Context, r Resolved, opts Options, host HostFingerprint)
 		return entry
 	}
 
-	payloadRef, stripped, err := writePayload(ctx, session, r, opts.Writer, mediaType)
+	payloadRef, stripped, err := writePayload(ctx, session, r, opts.Writer, mediaType, opts.URL)
 	if err != nil {
 		entry.Error = &CaptureError{Kind: "payload-write-failed", Message: err.Error()}
 		return entry
@@ -170,8 +172,9 @@ func writePayload(
 	r Resolved,
 	writer WriterSpec,
 	mediaType string,
+	url string,
 ) (*ArtifactRef, map[string]any, error) {
-	rc, err := runCaptureFormat(ctx, session, r)
+	rc, err := runCaptureFormat(ctx, session, r, url)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -237,7 +240,10 @@ func writeEnvelope(
 // Mirrors tools.runCapture but operates directly on a cdp.Session —
 // capture-batch holds the session over multiple operations (navigate,
 // capture, BrowserInfo) so it doesn't use tools.StreamCapture wholesale.
-func runCaptureFormat(ctx context.Context, s cdp.Session, r Resolved) (io.ReadCloser, error) {
+//
+// baseURL is forwarded to encoders that need it for relative-asset
+// resolution (currently only html-monolith).
+func runCaptureFormat(ctx context.Context, s cdp.Session, r Resolved, baseURL string) (io.ReadCloser, error) {
 	var opts tools.CaptureParams
 	if len(r.Options) > 0 {
 		_ = json.Unmarshal(r.Options, &opts) // best-effort field copy
@@ -260,6 +266,13 @@ func runCaptureFormat(ctx context.Context, s cdp.Session, r Resolved) (io.ReadCl
 		return s.CaptureSnapshot(ctx)
 	case "a11y":
 		return s.AccessibilityTree(ctx)
+	case "html-monolith":
+		dom, err := s.GetDocumentHTML(ctx)
+		if err != nil {
+			return nil, err
+		}
+		defer dom.Close()
+		return monolith.Process(ctx, dom, baseURL)
 	default:
 		return nil, fmt.Errorf("unknown capture format %q", r.Format)
 	}

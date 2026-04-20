@@ -95,10 +95,11 @@
                   "${pkgs.firefox}/Applications/Firefox.app/Contents/MacOS"
                 else
                   "${pkgs.firefox}/bin";
+              monolithBinPath = "${pkgs.monolith}/bin";
             in
             ''
               wrapProgram $out/bin/chrest \
-                --prefix PATH : ${firefoxBinPath}
+                --prefix PATH : ${firefoxBinPath}:${monolithBinPath}
             '';
         };
       in
@@ -128,6 +129,7 @@
             ]
           ) ++ [
             pkgs.firefox
+            pkgs.monolith
           ] ++ (
             with pkgs-master;
             [
