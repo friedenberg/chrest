@@ -124,6 +124,96 @@ explore-capture-batch input="/home/sasha/eng/aim/fixtures/batch-input.example.js
     cat "$err" >&2
   fi
 
+# Drive chrest capture-batch against a real HTTP fixture and save
+# every writer-stdin artifact to disk so envelope / spec / payload
+# bytes can be visually reviewed. Use to sanity-check artifact shape
+# against RFC 0001 after non-trivial capturebatch changes.
+#
+# Output goes under /tmp/chrest-envelope-review.<timestamp>/. Prints
+# the batch output JSON + a categorized dump of every artifact.
+explore-envelope-review format="text" browser="firefox" split="true":
+  #!/usr/bin/env bash
+  set -euo pipefail
+  just build-go
+  out_dir=$(mktemp -d "/tmp/chrest-envelope-review.XXXXXX")
+  echo "review dir: $out_dir" >&2
+  rec_dir="$out_dir/artifacts"
+  mkdir -p "$rec_dir"
+
+  # Recording writer: tee stdin to a file, emit a JSON ref.
+  cat >"$out_dir/writer.sh" <<EOF
+  #!/usr/bin/env bash
+  out=\$(mktemp "$rec_dir/artifact.XXXXXX")
+  cat > "\$out"
+  size=\$(wc -c < "\$out")
+  echo "{\"id\":\"blake2b256-rec-\$(basename \$out)\",\"size\":\$size}"
+  EOF
+  chmod +x "$out_dir/writer.sh"
+
+  # Minimal HTML fixture in the same dir the server will serve.
+  cat >"$out_dir/test.html" <<'HTML'
+  <!doctype html>
+  <html><head><title>envelope review</title></head>
+  <body><h1>Hello from chrest</h1><p>Fixture for envelope-review recipe.</p></body>
+  </html>
+  HTML
+
+  # Python http.server on an ephemeral port.
+  port=$(python3 -c 'import socket;s=socket.socket();s.bind(("127.0.0.1",0));print(s.getsockname()[1]);s.close()')
+  (cd "$out_dir" && python3 -m http.server "$port" >/dev/null 2>&1) &
+  srv_pid=$!
+  trap 'kill $srv_pid 2>/dev/null || true' EXIT
+  for _ in $(seq 1 50); do
+    curl -sf "http://127.0.0.1:$port/test.html" >/dev/null && break
+    sleep 0.1
+  done
+
+  cat <<JSON > "$out_dir/input.json"
+  {
+    "schema": "web-capture-archive/v1",
+    "writer": {"cmd": ["$out_dir/writer.sh"]},
+    "url": "http://127.0.0.1:$port/test.html",
+    "defaults": {"browser": "{{browser}}", "split": {{split}}},
+    "captures": [{"name": "c", "format": "{{format}}"}]
+  }
+  JSON
+
+  echo "=== batch output ===" >&2
+  go/build/release/chrest capture-batch < "$out_dir/input.json" | tee "$out_dir/output.json" | jq '.'
+
+  echo >&2
+  echo "=== artifact classification ===" >&2
+  for f in "$rec_dir"/artifact.*; do
+    name=$(basename "$f")
+    size=$(wc -c < "$f")
+    magic=$(xxd -l 8 -p "$f" 2>/dev/null || true)
+    # Try to decide artifact type from content.
+    kind="unknown"
+    if jq -e '.schema | startswith("web-capture-archive.envelope")' < "$f" >/dev/null 2>&1; then
+      kind="envelope"
+    elif jq -e '.schema | startswith("web-capture-archive.spec")' < "$f" >/dev/null 2>&1; then
+      kind="spec"
+    else
+      case "$magic" in
+        89504e47*) kind="payload-png" ;;
+        25504446*) kind="payload-pdf" ;;
+        *) kind="payload-other" ;;
+      esac
+    fi
+    printf '%-18s %-8s %10s bytes  %s\n' "$name" "$kind" "$size" "$magic" >&2
+  done
+
+  echo >&2
+  echo "=== pretty JSON artifacts ===" >&2
+  for f in "$rec_dir"/artifact.*; do
+    if jq -e 'type == "object"' < "$f" >/dev/null 2>&1; then
+      echo "--- $(basename "$f") ---" >&2
+      jq '.' < "$f" >&2
+    fi
+  done
+  echo >&2
+  echo "artifact files kept in: $rec_dir" >&2
+
 # Print chrest's help text (both top-level and per-command) so we can
 # verify command discoverability after any registration changes.
 explore-help subcommand="":
