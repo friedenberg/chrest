@@ -7,6 +7,7 @@ import (
 	"encoding/base64"
 	"encoding/binary"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -18,18 +19,32 @@ import (
 	"time"
 )
 
+// frame covers both request/response and event shapes that can appear
+// on the wire. The readLoop discriminates on presence of `id`: response
+// frames always carry the id that matched the originating request,
+// event frames omit it and carry `method` + `params`.
+type frame struct {
+	Type      string          `json:"type,omitempty"`
+	ID        int64           `json:"id,omitempty"`
+	Method    string          `json:"method,omitempty"`
+	Params    json.RawMessage `json:"params,omitempty"`
+	Result    json.RawMessage `json:"result,omitempty"`
+	ErrorType string          `json:"error,omitempty"`
+	Message   string          `json:"message,omitempty"`
+}
+
 type request struct {
 	ID     int64           `json:"id"`
 	Method string          `json:"method"`
 	Params json.RawMessage `json:"params,omitempty"`
 }
 
-type response struct {
-	Type      string          `json:"type"`
-	ID        int64           `json:"id"`
-	Result    json.RawMessage `json:"result,omitempty"`
-	ErrorType string          `json:"error,omitempty"`
-	Message   string          `json:"message,omitempty"`
+// EventFrame is delivered to Subscribe channels for each matching
+// incoming event. Params is raw JSON so callers can decode it into
+// any event-specific struct.
+type EventFrame struct {
+	Method string
+	Params json.RawMessage
 }
 
 const (
@@ -40,20 +55,36 @@ const (
 
 	wsGUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
 
-	// Maximum frames to skip (events, non-matching responses) before
-	// giving up. Prevents infinite loops if the server never responds.
-	maxSkippedFrames = 1000
-
 	dialTimeout = 5 * time.Second
-	readTimeout = 30 * time.Second
+
+	// Bound the per-call wait so Send cannot block forever if the server
+	// never responds. Previously enforced via conn.SetReadDeadline around
+	// the inline read loop; now enforced by per-call timer in Send.
+	sendTimeout = 30 * time.Second
+
+	// Per-subscriber buffer. Events drop with a warning if a slow
+	// subscriber lets its channel fill — we will not block the read
+	// loop or the rest of the subscribers.
+	subBuffer = 64
 )
 
-// Conn wraps a raw TCP connection with WebSocket framing for BiDi JSON-RPC.
+// Conn wraps a raw TCP connection with WebSocket framing for BiDi
+// JSON-RPC, plus a background read loop that demuxes response frames
+// to pending request callers and event frames to subscribers.
 type Conn struct {
 	conn net.Conn
 	br   *bufio.Reader
-	seq  atomic.Int64
-	mu   sync.Mutex
+
+	writeMu sync.Mutex // serialises outbound WS frames
+	seq     atomic.Int64
+
+	mu      sync.Mutex
+	pending map[int64]chan frame
+	subs    map[string]map[int64]chan EventFrame
+	subSeq  atomic.Int64
+
+	done    chan struct{}
+	connErr atomic.Value // error, set once when the read loop exits
 }
 
 // Dial connects to a BiDi WebSocket endpoint.
@@ -121,7 +152,16 @@ func Dial(baseURL string) (*Conn, error) {
 	}
 
 	log.Printf("bidi: connected")
-	return &Conn{conn: conn, br: br}, nil
+
+	c := &Conn{
+		conn:    conn,
+		br:      br,
+		pending: make(map[int64]chan frame),
+		subs:    make(map[string]map[int64]chan EventFrame),
+		done:    make(chan struct{}),
+	}
+	go c.readLoop()
+	return c, nil
 }
 
 // computeAcceptKey computes the expected Sec-WebSocket-Accept value.
@@ -132,6 +172,7 @@ func computeAcceptKey(key string) string {
 }
 
 // writeFrame writes a WebSocket text frame with masking (client must mask).
+// Callers must hold c.writeMu.
 func (c *Conn) writeFrame(payload []byte) error {
 	// Text frame, FIN bit set.
 	header := []byte{0x80 | opcodeText}
@@ -171,6 +212,7 @@ func (c *Conn) writeFrame(payload []byte) error {
 }
 
 // writePong sends a WebSocket pong frame with the given payload.
+// Callers must hold c.writeMu.
 func (c *Conn) writePong(payload []byte) error {
 	header := []byte{0x80 | opcodePong}
 
@@ -199,7 +241,7 @@ func (c *Conn) writePong(payload []byte) error {
 }
 
 // readFrame reads a WebSocket frame, handling control frames (close, ping).
-// Returns the payload for data frames only.
+// Returns the payload for data frames only. Must only be called from readLoop.
 func (c *Conn) readFrame() ([]byte, error) {
 	for {
 		hdr := make([]byte, 2)
@@ -249,7 +291,10 @@ func (c *Conn) readFrame() ([]byte, error) {
 		case opcodeClose:
 			return nil, fmt.Errorf("bidi: server sent close frame")
 		case opcodePing:
-			if err := c.writePong(payload); err != nil {
+			c.writeMu.Lock()
+			err := c.writePong(payload)
+			c.writeMu.Unlock()
+			if err != nil {
 				return nil, fmt.Errorf("bidi: pong failed: %w", err)
 			}
 			continue
@@ -261,8 +306,105 @@ func (c *Conn) readFrame() ([]byte, error) {
 	}
 }
 
-// Send sends a BiDi method call and returns the result.
+// readLoop owns all reads on the connection. It demuxes incoming
+// frames to pending request callers (by id) or subscribers (by method).
+// Exits when readFrame returns an error; records the cause in connErr
+// and closes done so Send/Subscribe callers can unblock.
+func (c *Conn) readLoop() {
+	defer close(c.done)
+	for {
+		payload, err := c.readFrame()
+		if err != nil {
+			c.connErr.Store(err)
+			c.failPending(err)
+			c.closeSubs()
+			return
+		}
+		var f frame
+		if err := json.Unmarshal(payload, &f); err != nil {
+			log.Printf("bidi: discarding unparsable frame: %v", err)
+			continue
+		}
+
+		// Response frames carry the request id we assigned via seq.Add,
+		// so they are always non-zero. Event frames omit id entirely
+		// (unmarshals to zero value).
+		if f.ID != 0 {
+			c.mu.Lock()
+			ch, ok := c.pending[f.ID]
+			if ok {
+				delete(c.pending, f.ID)
+			}
+			c.mu.Unlock()
+			if !ok {
+				log.Printf("bidi: orphaned response for id=%d method=%s", f.ID, f.Method)
+				continue
+			}
+			ch <- f
+			continue
+		}
+
+		if f.Method == "" {
+			log.Printf("bidi: discarding frame with no id and no method: %s", string(payload))
+			continue
+		}
+
+		c.dispatchEvent(f.Method, EventFrame{Method: f.Method, Params: f.Params})
+	}
+}
+
+func (c *Conn) failPending(err error) {
+	c.mu.Lock()
+	pending := c.pending
+	c.pending = make(map[int64]chan frame)
+	c.mu.Unlock()
+	for _, ch := range pending {
+		select {
+		case ch <- frame{Type: "error", ErrorType: "connection-closed", Message: err.Error()}:
+		default:
+		}
+	}
+}
+
+func (c *Conn) closeSubs() {
+	c.mu.Lock()
+	subs := c.subs
+	c.subs = make(map[string]map[int64]chan EventFrame)
+	c.mu.Unlock()
+	for _, chs := range subs {
+		for _, ch := range chs {
+			close(ch)
+		}
+	}
+}
+
+// dispatchEvent fans out a single event to every subscriber for its
+// method. Slow subscribers whose channels are full lose events with a
+// warning; the read loop never blocks on a single consumer.
+func (c *Conn) dispatchEvent(method string, ev EventFrame) {
+	c.mu.Lock()
+	matches := c.subs[method]
+	targets := make([]chan EventFrame, 0, len(matches))
+	for _, ch := range matches {
+		targets = append(targets, ch)
+	}
+	c.mu.Unlock()
+	for _, ch := range targets {
+		select {
+		case ch <- ev:
+		default:
+			log.Printf("bidi: subscriber channel full for %s, dropping event", method)
+		}
+	}
+}
+
+// Send sends a BiDi method call and blocks until the matching response
+// arrives, the per-call deadline expires, or the connection fails.
 func (c *Conn) Send(method string, params any) (json.RawMessage, error) {
+	if err := c.err(); err != nil {
+		return nil, fmt.Errorf("bidi send: %w", err)
+	}
+
 	id := c.seq.Add(1)
 
 	var rawParams json.RawMessage
@@ -279,43 +421,136 @@ func (c *Conn) Send(method string, params any) (json.RawMessage, error) {
 		return nil, fmt.Errorf("bidi marshal request: %w", err)
 	}
 
+	// Register the response channel before writing, so the reader
+	// cannot deliver into a missing slot.
+	resCh := make(chan frame, 1)
 	c.mu.Lock()
-	defer c.mu.Unlock()
+	c.pending[id] = resCh
+	c.mu.Unlock()
 
-	// Set a read deadline so we don't block forever.
-	c.conn.SetReadDeadline(time.Now().Add(readTimeout))
-	defer c.conn.SetReadDeadline(time.Time{})
-
-	if err := c.writeFrame(payload); err != nil {
+	c.writeMu.Lock()
+	err = c.writeFrame(payload)
+	c.writeMu.Unlock()
+	if err != nil {
+		c.mu.Lock()
+		delete(c.pending, id)
+		c.mu.Unlock()
 		return nil, fmt.Errorf("bidi send: %w", err)
 	}
 
-	for skipped := 0; skipped < maxSkippedFrames; skipped++ {
-		frame, err := c.readFrame()
-		if err != nil {
-			return nil, fmt.Errorf("bidi receive: %w", err)
-		}
+	timer := time.NewTimer(sendTimeout)
+	defer timer.Stop()
 
-		var resp response
-		if err := json.Unmarshal(frame, &resp); err != nil {
-			return nil, fmt.Errorf("bidi unmarshal response: %w", err)
-		}
-
-		if resp.ID != id {
-			continue
-		}
-
-		if resp.Type == "error" {
+	select {
+	case resp := <-resCh:
+		if resp.Type == "error" || resp.ErrorType != "" {
 			return nil, fmt.Errorf("bidi error %s: %s", resp.ErrorType, resp.Message)
 		}
-
 		return resp.Result, nil
+	case <-c.done:
+		c.mu.Lock()
+		delete(c.pending, id)
+		c.mu.Unlock()
+		return nil, fmt.Errorf("bidi send: %w", c.err())
+	case <-timer.C:
+		c.mu.Lock()
+		delete(c.pending, id)
+		c.mu.Unlock()
+		return nil, fmt.Errorf("bidi: timed out after %s waiting for response to %s (id=%d)", sendTimeout, method, id)
 	}
-
-	return nil, fmt.Errorf("bidi: exceeded %d skipped frames waiting for response to %s (id=%d)", maxSkippedFrames, method, id)
 }
 
-// Close closes the underlying connection.
+// Subscription holds a channel of events for the methods it was
+// registered against. Close the subscription when done to release
+// server-side subscriptions (via session.unsubscribe is the caller's
+// responsibility) and remove the local channel from the dispatch map.
+type Subscription struct {
+	Events  <-chan EventFrame
+	conn    *Conn
+	methods []string
+	id      int64
+	once    sync.Once
+}
+
+// Close removes the subscription from the dispatch map. Idempotent.
+// Does not call session.unsubscribe — that is left to the caller
+// since only they know the BiDi subscription id(s).
+func (s *Subscription) Close() {
+	s.once.Do(func() {
+		s.conn.mu.Lock()
+		defer s.conn.mu.Unlock()
+		for _, m := range s.methods {
+			if byID := s.conn.subs[m]; byID != nil {
+				if ch, ok := byID[s.id]; ok {
+					delete(byID, s.id)
+					close(ch)
+				}
+				if len(byID) == 0 {
+					delete(s.conn.subs, m)
+				}
+			}
+		}
+	})
+}
+
+// Subscribe registers a local event channel for the given methods and
+// returns a Subscription whose Events channel delivers every matching
+// event until Close is called or the connection dies.
+//
+// The channel is buffered; slow consumers drop events rather than
+// block the read loop. Callers that need every event must drain the
+// channel promptly.
+//
+// Subscribe does NOT call session.subscribe on the remote peer — that
+// is left to the caller because BiDi subscriptions can be scoped by
+// context and have their own id semantics. Typical flow:
+//
+//	sub := conn.Subscribe([]string{"network.responseCompleted"})
+//	defer sub.Close()
+//	_, err := conn.Send("session.subscribe", map[string]any{"events": []string{"network.responseCompleted"}})
+func (c *Conn) Subscribe(methods []string) *Subscription {
+	ch := make(chan EventFrame, subBuffer)
+	id := c.subSeq.Add(1)
+	c.mu.Lock()
+	for _, m := range methods {
+		byID := c.subs[m]
+		if byID == nil {
+			byID = make(map[int64]chan EventFrame)
+			c.subs[m] = byID
+		}
+		byID[id] = ch
+	}
+	c.mu.Unlock()
+	return &Subscription{Events: ch, conn: c, methods: methods, id: id}
+}
+
+// err returns the connection's terminal error, or nil if still live.
+func (c *Conn) err() error {
+	v := c.connErr.Load()
+	if v == nil {
+		return nil
+	}
+	if err, ok := v.(error); ok && err != nil {
+		return err
+	}
+	return nil
+}
+
+// Err returns the read-loop's terminal error, or nil while the
+// connection is still live. Useful for test assertions.
+func (c *Conn) Err() error {
+	return c.err()
+}
+
+// Close closes the underlying connection. The read loop notices the
+// resulting read error and fails any in-flight Send calls.
 func (c *Conn) Close() error {
-	return c.conn.Close()
+	if err := c.conn.Close(); err != nil {
+		// Swallow the common "already closed" case so callers can
+		// freely defer Close without layering.
+		if !errors.Is(err, net.ErrClosed) {
+			return err
+		}
+	}
+	return nil
 }
