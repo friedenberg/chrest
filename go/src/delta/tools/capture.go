@@ -50,6 +50,15 @@ var captureFormats = []string{
 
 const captureFormatsDesc = "pdf, screenshot-png, screenshot-jpeg, mhtml, a11y, text, html-monolith, html-outer, markdown-full, markdown-reader, markdown-selector"
 
+func ValidFormat(s string) bool {
+	for _, f := range captureFormats {
+		if f == s {
+			return true
+		}
+	}
+	return false
+}
+
 // readerEngineReadability runs extraction via the embedded Go
 // Readability port. Default and only currently-supported engine.
 const readerEngineReadability = "readability"
