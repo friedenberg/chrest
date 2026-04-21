@@ -131,7 +131,23 @@ func (s *Session) initSession() error {
 	// emitting the event — this order prevents losing early events on
 	// fast navigations. session.subscribe failures are non-fatal:
 	// captures still work, we just won't populate envelope.http.*.
-	s.networkSub = s.conn.Subscribe([]string{"network.responseCompleted"})
+	//
+	// The filter drops sub-resource events (those without a navigation
+	// field) before they reach the channel. Heavy pages emit hundreds
+	// of network.responseCompleted events for sub-resources; without
+	// the filter the 64-slot buffer overflows on complex pages (#33).
+	s.networkSub = s.conn.SubscribeWithFilter(
+		[]string{"network.responseCompleted"},
+		func(ev bidi.EventFrame) bool {
+			var peek struct {
+				Navigation string `json:"navigation"`
+			}
+			if err := json.Unmarshal(ev.Params, &peek); err != nil {
+				return false
+			}
+			return peek.Navigation != ""
+		},
+	)
 	if _, err := s.conn.Send("session.subscribe", map[string]any{
 		"events":   []string{"network.responseCompleted"},
 		"contexts": []string{s.contextID},

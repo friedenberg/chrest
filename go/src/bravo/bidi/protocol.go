@@ -68,6 +68,17 @@ const (
 	subBuffer = 64
 )
 
+// EventFilter is a predicate applied before buffering an event into a
+// subscriber's channel. Returning false drops the event before it
+// reaches the channel, preventing buffer overflow from irrelevant
+// high-volume events.
+type EventFilter func(EventFrame) bool
+
+type subscriber struct {
+	ch     chan EventFrame
+	filter EventFilter // nil = accept all
+}
+
 // Conn wraps a raw TCP connection with WebSocket framing for BiDi
 // JSON-RPC, plus a background read loop that demuxes response frames
 // to pending request callers and event frames to subscribers.
@@ -80,7 +91,7 @@ type Conn struct {
 
 	mu      sync.Mutex
 	pending map[int64]chan frame
-	subs    map[string]map[int64]chan EventFrame
+	subs    map[string]map[int64]subscriber
 	subSeq  atomic.Int64
 
 	done    chan struct{}
@@ -157,7 +168,7 @@ func Dial(baseURL string) (*Conn, error) {
 		conn:    conn,
 		br:      br,
 		pending: make(map[int64]chan frame),
-		subs:    make(map[string]map[int64]chan EventFrame),
+		subs:    make(map[string]map[int64]subscriber),
 		done:    make(chan struct{}),
 	}
 	go c.readLoop()
@@ -369,29 +380,34 @@ func (c *Conn) failPending(err error) {
 func (c *Conn) closeSubs() {
 	c.mu.Lock()
 	subs := c.subs
-	c.subs = make(map[string]map[int64]chan EventFrame)
+	c.subs = make(map[string]map[int64]subscriber)
 	c.mu.Unlock()
-	for _, chs := range subs {
-		for _, ch := range chs {
-			close(ch)
+	for _, byID := range subs {
+		for _, s := range byID {
+			close(s.ch)
 		}
 	}
 }
 
 // dispatchEvent fans out a single event to every subscriber for its
-// method. Slow subscribers whose channels are full lose events with a
-// warning; the read loop never blocks on a single consumer.
+// method. Subscriber filters are applied before buffering — events
+// rejected by a filter never touch the channel. Slow subscribers whose
+// channels are full lose events with a warning; the read loop never
+// blocks on a single consumer.
 func (c *Conn) dispatchEvent(method string, ev EventFrame) {
 	c.mu.Lock()
 	matches := c.subs[method]
-	targets := make([]chan EventFrame, 0, len(matches))
-	for _, ch := range matches {
-		targets = append(targets, ch)
+	targets := make([]subscriber, 0, len(matches))
+	for _, s := range matches {
+		targets = append(targets, s)
 	}
 	c.mu.Unlock()
-	for _, ch := range targets {
+	for _, s := range targets {
+		if s.filter != nil && !s.filter(ev) {
+			continue
+		}
 		select {
-		case ch <- ev:
+		case s.ch <- ev:
 		default:
 			log.Printf("bidi: subscriber channel full for %s, dropping event", method)
 		}
@@ -481,9 +497,9 @@ func (s *Subscription) Close() {
 		defer s.conn.mu.Unlock()
 		for _, m := range s.methods {
 			if byID := s.conn.subs[m]; byID != nil {
-				if ch, ok := byID[s.id]; ok {
+				if sub, ok := byID[s.id]; ok {
 					delete(byID, s.id)
-					close(ch)
+					close(sub.ch)
 				}
 				if len(byID) == 0 {
 					delete(s.conn.subs, m)
@@ -509,16 +525,25 @@ func (s *Subscription) Close() {
 //	defer sub.Close()
 //	_, err := conn.Send("session.subscribe", map[string]any{"events": []string{"network.responseCompleted"}})
 func (c *Conn) Subscribe(methods []string) *Subscription {
+	return c.SubscribeWithFilter(methods, nil)
+}
+
+// SubscribeWithFilter is like Subscribe but applies filter before
+// buffering events. Events for which filter returns false are silently
+// discarded in the dispatch loop, never consuming channel capacity.
+// Pass nil for an unfiltered subscription (same as Subscribe).
+func (c *Conn) SubscribeWithFilter(methods []string, filter EventFilter) *Subscription {
 	ch := make(chan EventFrame, subBuffer)
 	id := c.subSeq.Add(1)
+	sub := subscriber{ch: ch, filter: filter}
 	c.mu.Lock()
 	for _, m := range methods {
 		byID := c.subs[m]
 		if byID == nil {
-			byID = make(map[int64]chan EventFrame)
+			byID = make(map[int64]subscriber)
 			c.subs[m] = byID
 		}
-		byID[id] = ch
+		byID[id] = sub
 	}
 	c.mu.Unlock()
 	return &Subscription{Events: ch, conn: c, methods: methods, id: id}
