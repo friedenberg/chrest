@@ -32,7 +32,7 @@ test-mcp: build
   echo "$resources" | jq -e '.resources | length > 0'
   echo "$templates" | jq -e '.resourceTemplates | length > 0'
   # Verify readOnlyHint annotations
-  for tool in browser-info list-windows get-window list-tabs get-tab list-extensions items-get state-get read-resource capture; do
+  for tool in browser-info list-windows get-window list-tabs get-tab list-extensions items-get state-get read-resource capture web-fetch; do
     echo "$tools" | jq -e --arg t "$tool" '.tools[] | select(.name == $t) | .annotations.readOnlyHint == true' \
       || { echo "FAIL: $tool missing readOnlyHint"; exit 1; }
   done
@@ -56,7 +56,7 @@ test-mcp-bats:
   out=$(mktemp)
   trap 'rm -f "$out"' EXIT
   timeout --preserve-status 120 \
-    bats --bin-dir go/build/release/ --allow-unix-sockets --allow-local-binding zz-tests_bats/ \
+    bats --bin-dir go/build/release/ --no-sandbox zz-tests_bats/ \
     > >(tee "$out") 2>&1
   bats_rc=$?
   expected=$(grep -m1 -E '^1\.\.[0-9]+$' "$out" | sed 's/^1\.\.//')

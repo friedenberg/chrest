@@ -61,7 +61,7 @@ function web_fetch_rejects_missing_url { # @test
   echo "$result" | grep '"id":2' | jq -e '.result.isError == true'
 }
 
-function web_fetch_returns_three_content_blocks { # @test
+function web_fetch_defaults_to_markdown_with_resource_links { # @test
   firefox="$(command -v firefox || command -v firefox-esr || true)"
   if [ -z "$firefox" ]; then
     skip "no Firefox found on PATH"
@@ -82,11 +82,41 @@ FIXTURE
     "{\"jsonrpc\":\"2.0\",\"id\":2,\"method\":\"tools/call\",\"params\":{\"name\":\"web-fetch\",\"arguments\":{\"url\":\"$url\"}}}" |
     timeout 20 "$CHREST_BIN" mcp)
 
-  echo "$result" | grep '"id":2' | jq -e '.result.content | length == 3'
-  echo "$result" | grep '"id":2' | jq -e '.result.content[0].resource.mimeType == "text/plain; charset=utf-8"'
-  echo "$result" | grep '"id":2' | jq -e '.result.content[1].resource.mimeType == "text/markdown; charset=utf-8"'
-  echo "$result" | grep '"id":2' | jq -e '.result.content[2].resource.mimeType == "text/html; charset=utf-8"'
-  echo "$result" | grep '"id":2' | jq -e '.result.content[0].resource.text | contains("Hello web-fetch")'
+  resp=$(echo "$result" | grep '"id":2')
+  # 3 blocks: 1 embedded resource (markdown) + 2 resource_links (text, html)
+  echo "$resp" | jq -e '.result.content | length == 3'
+  # The embedded resource is markdown (fragment #markdown in URI)
+  echo "$resp" | jq -e '.result.content[] | select(.type == "resource") | .resource.uri | test("#markdown$")'
+  # The other two are resource_links
+  echo "$resp" | jq -e '[.result.content[] | select(.type == "resource_link")] | length == 2'
+}
+
+function web_fetch_format_text_returns_text_inline { # @test
+  firefox="$(command -v firefox || command -v firefox-esr || true)"
+  if [ -z "$firefox" ]; then
+    skip "no Firefox found on PATH"
+  fi
+  if ! timeout 5 "$firefox" --headless --version >/dev/null 2>&1; then
+    skip "headless Firefox not functional"
+  fi
+
+  cat >"$BATS_TEST_TMPDIR/fetch.html" <<'FIXTURE'
+<!doctype html>
+<html><head><title>Fetch Test</title></head>
+<body><h1>Hello web-fetch</h1><p>Body text.</p></body>
+</html>
+FIXTURE
+  url="file://$BATS_TEST_TMPDIR/fetch.html"
+
+  result=$(printf '%s\n' "$INIT_MSG" "$INITIALIZED_MSG" \
+    "{\"jsonrpc\":\"2.0\",\"id\":2,\"method\":\"tools/call\",\"params\":{\"name\":\"web-fetch\",\"arguments\":{\"url\":\"$url\",\"format\":\"text\"}}}" |
+    timeout 20 "$CHREST_BIN" mcp)
+
+  resp=$(echo "$result" | grep '"id":2')
+  # The embedded resource is text (fragment #text in URI)
+  echo "$resp" | jq -e '.result.content[] | select(.type == "resource") | .resource.uri | test("#text$")'
+  # Markdown and html are resource_links
+  echo "$resp" | jq -e '[.result.content[] | select(.type == "resource_link")] | length == 2'
 }
 
 function tools_call_list_windows_handles_stale_socket { # @test

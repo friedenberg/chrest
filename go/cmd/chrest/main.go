@@ -7,22 +7,23 @@ import (
 	"log"
 	"os"
 	"strings"
+	"sync"
 	"syscall"
 
-	"code.linenisgreat.com/chrest/go/src/alfa/prompter"
 	"code.linenisgreat.com/chrest/go/libs/dewey/golf/command"
 	"code.linenisgreat.com/chrest/go/libs/dewey/golf/protocol"
 	"code.linenisgreat.com/chrest/go/libs/dewey/golf/server"
 	"code.linenisgreat.com/chrest/go/libs/dewey/golf/transport"
+	"code.linenisgreat.com/chrest/go/src/alfa/prompter"
 
+	"code.linenisgreat.com/chrest/go/libs/dewey/0/stack_frame"
+	"code.linenisgreat.com/chrest/go/libs/dewey/bravo/errors"
+	"code.linenisgreat.com/chrest/go/libs/dewey/charlie/ui"
 	"code.linenisgreat.com/chrest/go/src/bravo/config"
 	"code.linenisgreat.com/chrest/go/src/charlie/browser_items"
 	"code.linenisgreat.com/chrest/go/src/delta/proxy"
 	"code.linenisgreat.com/chrest/go/src/delta/resources"
 	"code.linenisgreat.com/chrest/go/src/delta/tools"
-	"code.linenisgreat.com/chrest/go/libs/dewey/0/stack_frame"
-	"code.linenisgreat.com/chrest/go/libs/dewey/bravo/errors"
-	"code.linenisgreat.com/chrest/go/libs/dewey/charlie/ui"
 )
 
 func init() {
@@ -151,6 +152,8 @@ func runMCP(ctx context.Context, app *command.Utility, p *proxy.BrowserProxy) er
 	itemsProxy := browser_items.BrowserProxy{Config: p.Config}
 	itemResources := resources.NewItemResources(p, itemsProxy)
 
+	var fetchCache sync.Map // web-fetch:// URI → string content
+
 	// Bridge tool: exposes resources as a tool for subagent access
 	registry.Register(
 		protocol.ToolV1{
@@ -165,6 +168,16 @@ func runMCP(ctx context.Context, app *command.Utility, p *proxy.BrowserProxy) er
 			}
 			if err := json.Unmarshal(args, &p0); err != nil {
 				return protocol.ErrorResultV1(err.Error()), nil
+			}
+			if strings.HasPrefix(p0.URI, "web-fetch://") {
+				if v, ok := fetchCache.Load(p0.URI); ok {
+					return &protocol.ToolCallResultV1{
+						Content: []protocol.ContentBlockV1{
+							protocol.TextContentV1(v.(string)),
+						},
+					}, nil
+				}
+				return protocol.ErrorResultV1("resource not found (page may need to be fetched first): " + p0.URI), nil
 			}
 			result, err := itemResources.ReadResource(ctx, p0.URI)
 			if err != nil {
@@ -181,54 +194,71 @@ func runMCP(ctx context.Context, app *command.Utility, p *proxy.BrowserProxy) er
 		},
 	)
 
+	type webFetchFormat struct {
+		capture  string
+		fragment string
+		mime     string
+		name     string
+	}
+	allFormats := []webFetchFormat{
+		{"text", "text", "text/plain; charset=utf-8", "Plain text"},
+		{"markdown-reader", "markdown", "text/markdown; charset=utf-8", "Reader-mode Markdown"},
+		{"html-outer", "html", "text/html; charset=utf-8", "Raw HTML"},
+	}
+
 	registry.Register(
 		protocol.ToolV1{
 			Name: "web-fetch",
 			Description: "Fetch a web page via headless Firefox and return its content " +
-				"as plain text, reader-mode Markdown, and raw HTML. Returns the full " +
-				"page \u2014 no summarization. Use instead of the built-in WebFetch when " +
-				"you need complete, unsummarized content or when the page requires " +
-				"JavaScript to render.",
-			InputSchema: json.RawMessage(`{"type":"object","properties":{"url":{"type":"string","description":"URL to fetch"}},"required":["url"]}`),
+				"as reader-mode Markdown (default). All three formats (text, markdown, html) " +
+				"are always rendered; non-selected formats are returned as resource URIs " +
+				"that can be read via read-resource. Returns the full page — no summarization. " +
+				"Use instead of the built-in WebFetch when you need complete, unsummarized " +
+				"content or when the page requires JavaScript to render.",
+			InputSchema: json.RawMessage(`{"type":"object","properties":{"url":{"type":"string","description":"URL to fetch"},"format":{"type":"string","description":"Format to return inline: 'markdown' (default), 'text', or 'html'. Other formats are returned as resource_link URIs.","enum":["markdown","text","html"]}},"required":["url"]}`),
 			Annotations: &protocol.ToolAnnotations{ReadOnlyHint: protocol.BoolPtr(true)},
 		},
 		func(ctx context.Context, args json.RawMessage) (*protocol.ToolCallResultV1, error) {
 			var p0 struct {
-				URL string `json:"url"`
+				URL    string `json:"url"`
+				Format string `json:"format"`
 			}
 			if err := json.Unmarshal(args, &p0); err != nil {
 				return protocol.ErrorResultV1(err.Error()), nil
 			}
+			if p0.Format == "" {
+				p0.Format = "markdown"
+			}
+
+			captures := make([]string, len(allFormats))
+			for i, f := range allFormats {
+				captures[i] = f.capture
+			}
 
 			results, err := tools.MultiExtract(ctx, p, tools.MultiExtractParams{
 				URL:     p0.URL,
-				Formats: []string{"text", "markdown-reader", "html-outer"},
+				Formats: captures,
 			})
 			if err != nil {
 				return protocol.ErrorResultV1(err.Error()), nil
 			}
 
-			type fmtMeta struct {
-				fragment string
-				mime     string
-			}
-			meta := []fmtMeta{
-				{"text", "text/plain; charset=utf-8"},
-				{"markdown", "text/markdown; charset=utf-8"},
-				{"html", "text/html; charset=utf-8"},
-			}
-
 			var blocks []protocol.ContentBlockV1
 			var errs []string
 			for i, r := range results {
+				f := allFormats[i]
+				uri := fmt.Sprintf("web-fetch://%s#%s", p0.URL, f.fragment)
 				if r.Err != nil {
 					errs = append(errs, fmt.Sprintf("%s: %s", r.Format, r.Err))
 					continue
 				}
-				uri := fmt.Sprintf("web-fetch://%s#%s", p0.URL, meta[i].fragment)
-				blocks = append(blocks, protocol.EmbeddedTextResourceContent(
-					uri, string(r.Data), meta[i].mime,
-				))
+				content := string(r.Data)
+				fetchCache.Store(uri, content)
+				if f.fragment == p0.Format {
+					blocks = append(blocks, protocol.EmbeddedTextResourceContent(uri, content, f.mime))
+				} else {
+					blocks = append(blocks, protocol.ResourceLinkContent(uri, f.name, "", f.mime))
+				}
 			}
 			if len(errs) > 0 {
 				blocks = append(blocks,
