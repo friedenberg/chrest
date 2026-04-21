@@ -12,7 +12,7 @@ import (
 
 	"code.linenisgreat.com/chrest/go/src/charlie/browser_items"
 	"code.linenisgreat.com/chrest/go/src/delta/proxy"
-	"github.com/amarbel-llc/purse-first/libs/dewey/golf/protocol"
+	"code.linenisgreat.com/chrest/go/libs/dewey/golf/protocol"
 )
 
 const (

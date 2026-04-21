@@ -14,9 +14,9 @@ import (
 
 	"code.linenisgreat.com/chrest/go/src/bravo/client"
 	"code.linenisgreat.com/chrest/go/src/bravo/config"
-	"github.com/amarbel-llc/purse-first/libs/dewey/0/primordial"
-	"github.com/amarbel-llc/purse-first/libs/dewey/bravo/errors"
-	"github.com/amarbel-llc/purse-first/libs/dewey/golf/command"
+	"code.linenisgreat.com/chrest/go/libs/dewey/0/primordial"
+	"code.linenisgreat.com/chrest/go/libs/dewey/bravo/errors"
+	"code.linenisgreat.com/chrest/go/libs/dewey/golf/command"
 )
 
 func registerClientCommand(app *command.Utility, c config.Config) {

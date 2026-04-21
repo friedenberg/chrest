@@ -8,7 +8,6 @@ require (
 	codeberg.org/readeck/go-readability/v2 v2.1.1
 	github.com/JohannesKaufmann/html-to-markdown/v2 v2.5.0
 	github.com/amarbel-llc/bob/packages/tap-dancer/go v0.0.0-20260315134819-f7c6cbb2c6f2
-	github.com/amarbel-llc/purse-first/libs/dewey v0.0.4
 	github.com/amarbel-llc/tommy v0.0.0-20260416172442-0769146d4d1e
 	github.com/andybalholm/cascadia v1.3.3
 	github.com/charmbracelet/huh v0.8.0
@@ -16,10 +15,15 @@ require (
 	golang.org/x/net v0.53.0
 )
 
-require github.com/amarbel-llc/purse-first/libs/go-mcp v0.0.4 // indirect
+require (
+	golang.org/x/term v0.42.0
+	golang.org/x/xerrors v0.0.0-20240903120638-7835f813f4da
+	mvdan.cc/sh/v3 v3.13.1
+)
 
 require (
 	github.com/JohannesKaufmann/dom v0.2.0 // indirect
+	github.com/amarbel-llc/purse-first/libs/go-mcp v0.0.4 // indirect
 	github.com/araddon/dateparse v0.0.0-20210429162001-6b43995a97de // indirect
 	github.com/atotto/clipboard v0.1.4 // indirect
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
@@ -40,7 +44,6 @@ require (
 	github.com/erikgeiser/coninput v0.0.0-20211004153227-1c3628e74d0f // indirect
 	github.com/go-shiori/dom v0.0.0-20230515143342-73569d674e1c // indirect
 	github.com/gogs/chardet v0.0.0-20211120154057-b7413eaefb8f // indirect
-	github.com/google/go-cmp v0.7.0 // indirect
 	github.com/hhrutter/lzw v1.0.0 // indirect
 	github.com/hhrutter/pkcs7 v0.2.0 // indirect
 	github.com/hhrutter/tiff v1.0.2 // indirect
@@ -60,10 +63,7 @@ require (
 	golang.org/x/mod v0.35.0 // indirect
 	golang.org/x/sync v0.20.0 // indirect
 	golang.org/x/sys v0.43.0 // indirect
-	golang.org/x/term v0.42.0 // indirect
 	golang.org/x/text v0.36.0 // indirect
 	golang.org/x/tools v0.44.0 // indirect
-	golang.org/x/xerrors v0.0.0-20240903120638-7835f813f4da // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
-	mvdan.cc/sh/v3 v3.13.1 // indirect
 )

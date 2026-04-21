@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/amarbel-llc/purse-first/libs/dewey/charlie/ui"
+	"code.linenisgreat.com/chrest/go/libs/dewey/charlie/ui"
 )
 
 func TestMain(m *testing.M) {

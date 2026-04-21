@@ -11,7 +11,7 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/amarbel-llc/purse-first/libs/dewey/bravo/errors"
+	"code.linenisgreat.com/chrest/go/libs/dewey/bravo/errors"
 )
 
 // ErrMissing is returned when the monolith binary cannot be found on

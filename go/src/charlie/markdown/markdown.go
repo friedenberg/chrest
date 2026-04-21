@@ -24,7 +24,7 @@ import (
 	"golang.org/x/net/html"
 
 	readability "codeberg.org/readeck/go-readability/v2"
-	"github.com/amarbel-llc/purse-first/libs/dewey/bravo/errors"
+	"code.linenisgreat.com/chrest/go/libs/dewey/bravo/errors"
 )
 
 // ErrNoArticle is returned by ConvertReader when Readability was unable

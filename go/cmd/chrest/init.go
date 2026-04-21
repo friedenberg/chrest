@@ -10,8 +10,8 @@ import (
 	"code.linenisgreat.com/chrest/go/src/bravo/config"
 	"code.linenisgreat.com/chrest/go/src/charlie/install"
 	tap "github.com/amarbel-llc/bob/packages/tap-dancer/go"
-	"github.com/amarbel-llc/purse-first/libs/dewey/bravo/errors"
-	"github.com/amarbel-llc/purse-first/libs/dewey/golf/command"
+	"code.linenisgreat.com/chrest/go/libs/dewey/bravo/errors"
+	"code.linenisgreat.com/chrest/go/libs/dewey/golf/command"
 )
 
 const defaultBrowserName = "default"

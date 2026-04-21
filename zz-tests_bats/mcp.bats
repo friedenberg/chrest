@@ -35,6 +35,60 @@ function tools_call_list_windows_returns_quickly_with_no_sockets { # @test
   echo "$result" | grep '"id":2' | jq -e '.result or .error'
 }
 
+function web_fetch_appears_in_tools_list { # @test
+  result=$(printf '%s\n' "$INIT_MSG" "$INITIALIZED_MSG" \
+    '{"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}' | run_mcp)
+  echo "$result" | grep '"id":2' | jq -e '
+    [.result.tools[] | select(.name == "web-fetch")] | length == 1
+  '
+}
+
+# V1 negotiation exposes annotations (readOnlyHint). The shared INIT_MSG
+# uses protocol 2025-03-26 which falls back to V0 where annotations are
+# dropped, so this test uses the V1 version string explicitly.
+function web_fetch_annotations_visible_under_v1 { # @test
+  v1_init='{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{},"clientInfo":{"name":"test","version":"0.0.1"}}}'
+  result=$(printf '%s\n' "$v1_init" "$INITIALIZED_MSG" \
+    '{"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}' | run_mcp)
+  tool=$(echo "$result" | grep '"id":2' | jq '[.result.tools[] | select(.name == "web-fetch")] | first')
+  echo "DEBUG V1 tool: $tool" >&2
+  echo "$tool" | jq -e '.annotations.readOnlyHint == true'
+}
+
+function web_fetch_rejects_missing_url { # @test
+  result=$(printf '%s\n' "$INIT_MSG" "$INITIALIZED_MSG" \
+    '{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"web-fetch","arguments":{}}}' | run_mcp)
+  echo "$result" | grep '"id":2' | jq -e '.result.isError == true'
+}
+
+function web_fetch_returns_three_content_blocks { # @test
+  firefox="$(command -v firefox || command -v firefox-esr || true)"
+  if [ -z "$firefox" ]; then
+    skip "no Firefox found on PATH"
+  fi
+  if ! timeout 5 "$firefox" --headless --version >/dev/null 2>&1; then
+    skip "headless Firefox not functional"
+  fi
+
+  cat >"$BATS_TEST_TMPDIR/fetch.html" <<'FIXTURE'
+<!doctype html>
+<html><head><title>Fetch Test</title></head>
+<body><h1>Hello web-fetch</h1><p>Body text.</p></body>
+</html>
+FIXTURE
+  url="file://$BATS_TEST_TMPDIR/fetch.html"
+
+  result=$(printf '%s\n' "$INIT_MSG" "$INITIALIZED_MSG" \
+    "{\"jsonrpc\":\"2.0\",\"id\":2,\"method\":\"tools/call\",\"params\":{\"name\":\"web-fetch\",\"arguments\":{\"url\":\"$url\"}}}" |
+    timeout 20 "$CHREST_BIN" mcp)
+
+  echo "$result" | grep '"id":2' | jq -e '.result.content | length == 3'
+  echo "$result" | grep '"id":2' | jq -e '.result.content[0].resource.mimeType == "text/plain; charset=utf-8"'
+  echo "$result" | grep '"id":2' | jq -e '.result.content[1].resource.mimeType == "text/markdown; charset=utf-8"'
+  echo "$result" | grep '"id":2' | jq -e '.result.content[2].resource.mimeType == "text/html; charset=utf-8"'
+  echo "$result" | grep '"id":2' | jq -e '.result.content[0].resource.text | contains("Hello web-fetch")'
+}
+
 function tools_call_list_windows_handles_stale_socket { # @test
   # Override XDG_STATE_HOME to a short /tmp path to avoid AF_UNIX 108-char limit
   short_state="$(mktemp -d /tmp/chrest-bats.XXXXXX)"

@@ -2,7 +2,7 @@ package install
 
 import (
 	"code.linenisgreat.com/chrest/go/src/alfa/browser"
-	"github.com/amarbel-llc/purse-first/libs/dewey/bravo/errors"
+	"code.linenisgreat.com/chrest/go/libs/dewey/bravo/errors"
 )
 
 func GetUserPath(b browser.Browser) string {

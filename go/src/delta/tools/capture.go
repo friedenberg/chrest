@@ -15,9 +15,9 @@ import (
 	"code.linenisgreat.com/chrest/go/src/charlie/markdown"
 	"code.linenisgreat.com/chrest/go/src/charlie/monolith"
 	"code.linenisgreat.com/chrest/go/src/delta/proxy"
-	"github.com/amarbel-llc/purse-first/libs/dewey/bravo/errors"
-	"github.com/amarbel-llc/purse-first/libs/dewey/golf/command"
-	"github.com/amarbel-llc/purse-first/libs/dewey/golf/protocol"
+	"code.linenisgreat.com/chrest/go/libs/dewey/bravo/errors"
+	"code.linenisgreat.com/chrest/go/libs/dewey/golf/command"
+	"code.linenisgreat.com/chrest/go/libs/dewey/golf/protocol"
 )
 
 const (

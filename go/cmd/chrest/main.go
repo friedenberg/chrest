@@ -3,24 +3,26 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log"
 	"os"
+	"strings"
 	"syscall"
 
 	"code.linenisgreat.com/chrest/go/src/alfa/prompter"
-	"github.com/amarbel-llc/purse-first/libs/dewey/golf/command"
-	"github.com/amarbel-llc/purse-first/libs/dewey/golf/protocol"
-	"github.com/amarbel-llc/purse-first/libs/dewey/golf/server"
-	"github.com/amarbel-llc/purse-first/libs/dewey/golf/transport"
+	"code.linenisgreat.com/chrest/go/libs/dewey/golf/command"
+	"code.linenisgreat.com/chrest/go/libs/dewey/golf/protocol"
+	"code.linenisgreat.com/chrest/go/libs/dewey/golf/server"
+	"code.linenisgreat.com/chrest/go/libs/dewey/golf/transport"
 
 	"code.linenisgreat.com/chrest/go/src/bravo/config"
 	"code.linenisgreat.com/chrest/go/src/charlie/browser_items"
 	"code.linenisgreat.com/chrest/go/src/delta/proxy"
 	"code.linenisgreat.com/chrest/go/src/delta/resources"
 	"code.linenisgreat.com/chrest/go/src/delta/tools"
-	"github.com/amarbel-llc/purse-first/libs/dewey/0/stack_frame"
-	"github.com/amarbel-llc/purse-first/libs/dewey/bravo/errors"
-	"github.com/amarbel-llc/purse-first/libs/dewey/charlie/ui"
+	"code.linenisgreat.com/chrest/go/libs/dewey/0/stack_frame"
+	"code.linenisgreat.com/chrest/go/libs/dewey/bravo/errors"
+	"code.linenisgreat.com/chrest/go/libs/dewey/charlie/ui"
 )
 
 func init() {
@@ -176,6 +178,68 @@ func runMCP(ctx context.Context, app *command.Utility, p *proxy.BrowserProxy) er
 					protocol.TextContentV1(result.Contents[0].Text),
 				},
 			}, nil
+		},
+	)
+
+	registry.Register(
+		protocol.ToolV1{
+			Name: "web-fetch",
+			Description: "Fetch a web page via headless Firefox and return its content " +
+				"as plain text, reader-mode Markdown, and raw HTML. Returns the full " +
+				"page \u2014 no summarization. Use instead of the built-in WebFetch when " +
+				"you need complete, unsummarized content or when the page requires " +
+				"JavaScript to render.",
+			InputSchema: json.RawMessage(`{"type":"object","properties":{"url":{"type":"string","description":"URL to fetch"}},"required":["url"]}`),
+			Annotations: &protocol.ToolAnnotations{ReadOnlyHint: protocol.BoolPtr(true)},
+		},
+		func(ctx context.Context, args json.RawMessage) (*protocol.ToolCallResultV1, error) {
+			var p0 struct {
+				URL string `json:"url"`
+			}
+			if err := json.Unmarshal(args, &p0); err != nil {
+				return protocol.ErrorResultV1(err.Error()), nil
+			}
+
+			results, err := tools.MultiExtract(ctx, p, tools.MultiExtractParams{
+				URL:     p0.URL,
+				Formats: []string{"text", "markdown-reader", "html-outer"},
+			})
+			if err != nil {
+				return protocol.ErrorResultV1(err.Error()), nil
+			}
+
+			type fmtMeta struct {
+				fragment string
+				mime     string
+			}
+			meta := []fmtMeta{
+				{"text", "text/plain; charset=utf-8"},
+				{"markdown", "text/markdown; charset=utf-8"},
+				{"html", "text/html; charset=utf-8"},
+			}
+
+			var blocks []protocol.ContentBlockV1
+			var errs []string
+			for i, r := range results {
+				if r.Err != nil {
+					errs = append(errs, fmt.Sprintf("%s: %s", r.Format, r.Err))
+					continue
+				}
+				uri := fmt.Sprintf("web-fetch://%s#%s", p0.URL, meta[i].fragment)
+				blocks = append(blocks, protocol.EmbeddedTextResourceContent(
+					uri, string(r.Data), meta[i].mime,
+				))
+			}
+			if len(errs) > 0 {
+				blocks = append(blocks,
+					protocol.TextContentV1("partial errors: "+strings.Join(errs, "; ")),
+				)
+			}
+			if len(blocks) == 0 {
+				return protocol.ErrorResultV1("all formats failed: " + strings.Join(errs, "; ")), nil
+			}
+
+			return &protocol.ToolCallResultV1{Content: blocks}, nil
 		},
 	)
 

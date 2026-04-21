@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 
 	"code.linenisgreat.com/chrest/go/src/delta/proxy"
-	"github.com/amarbel-llc/purse-first/libs/dewey/golf/command"
-	"github.com/amarbel-llc/purse-first/libs/dewey/golf/protocol"
+	"code.linenisgreat.com/chrest/go/libs/dewey/golf/command"
+	"code.linenisgreat.com/chrest/go/libs/dewey/golf/protocol"
 )
 
 func registerTabCommands(app *command.Utility, p *proxy.BrowserProxy) {

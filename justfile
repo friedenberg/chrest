@@ -142,6 +142,88 @@ explore-markdown-samples:
   echo "=== outputs ===" >&2
   ls -la "$out_dir"/*.md 2>/dev/null >&2 || true
 
+[group: 'explore']
+explore-vendor-dewey:
+  #!/usr/bin/env bash
+  set -euo pipefail
+  src="/Users/sfriedenberg/.cache/go/pkg/mod/github.com/amarbel-llc/purse-first/libs/dewey@v0.0.4"
+  dst="go/libs/dewey"
+  pkgs=(
+    "0/interfaces"
+    "0/stack_frame"
+    "0/primordial"
+    "0/box_chars"
+    "0/http_statuses"
+    "alfa/pool"
+    "alfa/cmp"
+    "bravo/errors"
+    "bravo/collections_slice"
+    "charlie/ui"
+    "charlie/ohio"
+    "charlie/values"
+    "charlie/flags"
+    "charlie/quiter"
+    "0/flag_policy"
+    "delta/cli"
+    "delta/collections_value"
+    "golf/jsonrpc"
+    "golf/transport"
+    "golf/server"
+    "golf/protocol"
+    "golf/command"
+  )
+  for pkg in "${pkgs[@]}"; do
+    mkdir -p "$dst/$pkg"
+    for f in "$src/$pkg"/*.go; do
+      [ -f "$f" ] || continue
+      base=$(basename "$f")
+      # Skip test files
+      [[ "$base" == *_test.go ]] && continue
+      cp "$f" "$dst/$pkg/$base"
+    done
+    echo "  copied $pkg ($(ls "$dst/$pkg"/*.go 2>/dev/null | wc -l) files)"
+  done
+  # Exclude golf/command/huh/ subpackage (charmbracelet dep, not used by chrest)
+  echo "done — $dst populated"
+
+[group: 'explore']
+explore-mcp-v1-debug:
+  #!/usr/bin/env bash
+  set -euo pipefail
+  v1_init='{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{},"clientInfo":{"name":"test","version":"0.0.1"}}}'
+  notif='{"jsonrpc":"2.0","method":"notifications/initialized"}'
+  list='{"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}'
+  result=$(printf '%s\n' "$v1_init" "$notif" "$list" | go/build/release/chrest mcp)
+  echo "=== init response ==="
+  echo "$result" | grep '"id":1' | jq .
+  echo "=== tools/list response (web-fetch) ==="
+  echo "$result" | grep '"id":2' | jq '[.result.tools[] | select(.name == "web-fetch")] | first'
+
+[group: 'explore']
+explore-rewrite-dewey-imports:
+  #!/usr/bin/env bash
+  set -euo pipefail
+  old="github.com/amarbel-llc/purse-first/libs/dewey"
+  new="code.linenisgreat.com/chrest/go/libs/dewey"
+  # Rewrite vendored dewey files
+  count=0
+  while IFS= read -r f; do
+    if grep -q "$old" "$f"; then
+      sed -i'' "s|$old|$new|g" "$f"
+      count=$((count + 1))
+    fi
+  done < <(find go/libs/dewey -name '*.go' -type f)
+  echo "rewrote $count vendored files"
+  # Rewrite chrest source files
+  count2=0
+  while IFS= read -r f; do
+    if grep -q "$old" "$f"; then
+      sed -i'' "s|$old|$new|g" "$f"
+      count2=$((count2 + 1))
+    fi
+  done < <(find go/src go/cmd -name '*.go' -type f)
+  echo "rewrote $count2 chrest source files"
+
 explore-client +httpie_args:
   go/build/release/chrest client {{httpie_args}}
 

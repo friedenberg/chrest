@@ -7,9 +7,9 @@ import (
 
 	"code.linenisgreat.com/chrest/go/src/bravo/config"
 	"code.linenisgreat.com/chrest/go/src/bravo/server"
-	"github.com/amarbel-llc/purse-first/libs/dewey/0/stack_frame"
-	"github.com/amarbel-llc/purse-first/libs/dewey/bravo/errors"
-	"github.com/amarbel-llc/purse-first/libs/dewey/charlie/ui"
+	"code.linenisgreat.com/chrest/go/libs/dewey/0/stack_frame"
+	"code.linenisgreat.com/chrest/go/libs/dewey/bravo/errors"
+	"code.linenisgreat.com/chrest/go/libs/dewey/charlie/ui"
 )
 
 func init() {
