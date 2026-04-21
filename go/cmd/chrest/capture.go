@@ -43,7 +43,7 @@ func cmdCapture(ctx context.Context, p *proxy.BrowserProxy, args []string) (err 
 	fs.Usage = func() {
 		fmt.Fprintln(os.Stderr, "Usage: chrest capture --format <kind> [flags]")
 		fmt.Fprintln(os.Stderr, "  Formats: pdf, screenshot-png, screenshot-jpeg, mhtml, a11y, text, html-monolith,")
-		fmt.Fprintln(os.Stderr, "           markdown-full, markdown-reader, markdown-selector")
+		fmt.Fprintln(os.Stderr, "           html-outer, markdown-full, markdown-reader, markdown-selector")
 		fs.PrintDefaults()
 		fmt.Fprintln(os.Stderr)
 		fmt.Fprintln(os.Stderr, "See also: chrest capture-batch  (JSON-stdin batch interface per RFC 0001)")
@@ -54,7 +54,7 @@ func cmdCapture(ctx context.Context, p *proxy.BrowserProxy, args []string) (err 
 	var output string
 	var paperWidth, paperHeight float64
 	var marginTop, marginBottom, marginLeft, marginRight float64
-	fs.StringVar(&params.Format, "format", "", "Output format: pdf, screenshot-png, screenshot-jpeg, mhtml, a11y, text, html-monolith, markdown-full, markdown-reader, markdown-selector")
+	fs.StringVar(&params.Format, "format", "", "Output format: pdf, screenshot-png, screenshot-jpeg, mhtml, a11y, text, html-monolith, html-outer, markdown-full, markdown-reader, markdown-selector")
 	fs.StringVar(&params.URL, "url", "", "URL to capture")
 	fs.StringVar(&params.TabID, "tab-id", "", "Tab ID to capture (uses extension debugger instead of headless)")
 	fs.StringVar(&params.Browser, "browser", "firefox", "Browser backend: firefox (default) or chrome")

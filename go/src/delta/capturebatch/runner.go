@@ -25,6 +25,7 @@ var PayloadMediaTypes = map[string]string{
 	"mhtml":             "multipart/related",
 	"a11y":              "application/json",
 	"html-monolith":     "text/html; charset=utf-8",
+	"html-outer":        "text/html; charset=utf-8",
 	"markdown-full":     "text/markdown; charset=utf-8",
 	"markdown-reader":   "text/markdown; charset=utf-8",
 	"markdown-selector": "text/markdown; charset=utf-8",
@@ -276,6 +277,8 @@ func runCaptureFormat(ctx context.Context, s cdp.Session, r Resolved, baseURL st
 		return s.CaptureSnapshot(ctx)
 	case "a11y":
 		return s.AccessibilityTree(ctx)
+	case "html-outer":
+		return s.GetDocumentHTML(ctx)
 	case "html-monolith":
 		dom, err := s.GetDocumentHTML(ctx)
 		if err != nil {

@@ -31,6 +31,7 @@ const (
 	formatMarkdownFull     = "markdown-full"
 	formatMarkdownReader   = "markdown-reader"
 	formatMarkdownSelector = "markdown-selector"
+	formatHTMLOuter        = "html-outer"
 )
 
 var captureFormats = []string{
@@ -44,9 +45,10 @@ var captureFormats = []string{
 	formatMarkdownFull,
 	formatMarkdownReader,
 	formatMarkdownSelector,
+	formatHTMLOuter,
 }
 
-const captureFormatsDesc = "pdf, screenshot-png, screenshot-jpeg, mhtml, a11y, text, html-monolith, markdown-full, markdown-reader, markdown-selector"
+const captureFormatsDesc = "pdf, screenshot-png, screenshot-jpeg, mhtml, a11y, text, html-monolith, html-outer, markdown-full, markdown-reader, markdown-selector"
 
 // readerEngineReadability runs extraction via the embedded Go
 // Readability port. Default and only currently-supported engine.
@@ -160,7 +162,7 @@ func registerCaptureCommands(app *command.Utility, p *proxy.BrowserProxy) {
 			Short: "Capture a web page in a given format",
 			Long: "Capture renders a web page and writes its content to stdout (or to a file " +
 				"with --output). The --format flag selects the output format:\n\n" +
-				"Document formats: pdf, mhtml, html-monolith, text, a11y.\n" +
+				"Document formats: pdf, mhtml, html-monolith, html-outer, text, a11y.\n" +
 				"Screenshot formats: screenshot-png, screenshot-jpeg.\n" +
 				"Semantic formats: markdown-full, markdown-reader, markdown-selector.\n\n" +
 				"The default browser backend is Firefox (WebDriver BiDi). Pass --browser " +
@@ -333,6 +335,8 @@ func runCapture(ctx context.Context, s cdp.Session, params CaptureParams) (io.Re
 		return s.AccessibilityTree(ctx)
 	case formatText:
 		return s.ExtractText(ctx)
+	case formatHTMLOuter:
+		return s.GetDocumentHTML(ctx)
 	case formatHTMLMonolith:
 		dom, err := s.GetDocumentHTML(ctx)
 		if err != nil {

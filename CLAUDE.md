@@ -113,7 +113,7 @@ just deploy-firefox     # sign and deploy to Firefox AMO
 - `chrest mcp` - Start MCP server (stdio transport)
 - `chrest capture --format <kind>` - Single-page capture. Formats: `pdf`,
   `screenshot-png`, `screenshot-jpeg`, `mhtml`, `a11y`, `text`, `html-monolith`,
-  `markdown-full`, `markdown-reader`, `markdown-selector`. Default backend is
+  `html-outer`, `markdown-full`, `markdown-reader`, `markdown-selector`. Default backend is
   `firefox`; pass `--browser chrome` (alias `headless`) for the headless-CDP
   path. Has `--timeout` (default 60s, deadline-backed context) and
   `--output <path>` (atomic tmpfile + rename; unlinks on failure). The CLI

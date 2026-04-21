@@ -101,6 +101,13 @@ function firefox_capture_html_monolith_has_no_trailing_newline { # @test
   [ "$tail" = "3c2f68746d6c3e0a" ]
 }
 
+# html-outer: raw outerHTML from the rendered DOM, no asset inlining.
+function firefox_capture_html_outer_returns_html { # @test
+  timeout "$FIREFOX_TEST_TIMEOUT" "$CHREST_BIN" capture --format html-outer --browser firefox --url "$FIXTURE" >"$BATS_TEST_TMPDIR/out.html"
+  grep -q "Hello from chrest" "$BATS_TEST_TMPDIR/out.html"
+  grep -qi "<html" "$BATS_TEST_TMPDIR/out.html"
+}
+
 # Default backend is firefox (no --browser flag). Proves a user can reach
 # the firefox path without explicit opt-in.
 function capture_default_backend_is_firefox { # @test

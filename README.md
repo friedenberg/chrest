@@ -120,7 +120,7 @@ like [`http`](https://httpie.io/) and [`jq`](https://jqlang.github.io/jq/).
 result in the format you ask for. Output streams to stdout by default; use
 `--output <path>` to write atomically to a file.
 
-Ten formats are supported:
+Eleven formats are supported:
 
 | Format | Media type | Notes |
 |---|---|---|
@@ -131,6 +131,7 @@ Ten formats are supported:
 | `a11y` | `application/json` | Chrome-only; accessibility tree |
 | `text` | `text/plain; charset=utf-8` | `document.body.innerText` |
 | `html-monolith` | `text/html; charset=utf-8` | self-contained HTML with assets inlined as `data:` URIs (via the [`monolith`](https://github.com/Y2Z/monolith) CLI) |
+| `html-outer` | `text/html; charset=utf-8` | raw `document.documentElement.outerHTML` — no asset inlining |
 | `markdown-full` | `text/markdown; charset=utf-8` | whole rendered DOM → markdown |
 | `markdown-reader` | `text/markdown; charset=utf-8` | Readability-extracted main content → markdown |
 | `markdown-selector` | `text/markdown; charset=utf-8` | CSS-selector scoped; requires `--selector <css>` |
