@@ -105,7 +105,6 @@ func cmdCapture(ctx context.Context, p *proxy.BrowserProxy, args []string) (err 
 		return fmt.Errorf("--format is required")
 	}
 
-	// Self-contained deadline.
 	if timeout > 0 {
 		var cancel context.CancelFunc
 		ctx, cancel = context.WithTimeout(ctx, timeout)
@@ -163,12 +162,6 @@ func cmdCaptureMulti(
 ) error {
 	if output == "" {
 		return fmt.Errorf("--output is required when capturing multiple formats (it must be a directory path)")
-	}
-
-	for _, f := range formats {
-		if !tools.ValidFormat(f) {
-			return fmt.Errorf("unknown format %q", f)
-		}
 	}
 
 	if err := os.MkdirAll(output, 0o755); err != nil {

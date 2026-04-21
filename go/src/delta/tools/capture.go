@@ -7,7 +7,11 @@ import (
 	"fmt"
 	"io"
 	"strconv"
+	"strings"
 
+	"code.linenisgreat.com/chrest/go/libs/dewey/bravo/errors"
+	"code.linenisgreat.com/chrest/go/libs/dewey/golf/command"
+	"code.linenisgreat.com/chrest/go/libs/dewey/golf/protocol"
 	"code.linenisgreat.com/chrest/go/src/bravo/cdp"
 	"code.linenisgreat.com/chrest/go/src/charlie/extension"
 	"code.linenisgreat.com/chrest/go/src/charlie/firefox"
@@ -15,9 +19,6 @@ import (
 	"code.linenisgreat.com/chrest/go/src/charlie/markdown"
 	"code.linenisgreat.com/chrest/go/src/charlie/monolith"
 	"code.linenisgreat.com/chrest/go/src/delta/proxy"
-	"code.linenisgreat.com/chrest/go/libs/dewey/bravo/errors"
-	"code.linenisgreat.com/chrest/go/libs/dewey/golf/command"
-	"code.linenisgreat.com/chrest/go/libs/dewey/golf/protocol"
 )
 
 const (
@@ -32,6 +33,8 @@ const (
 	formatMarkdownReader   = "markdown-reader"
 	formatMarkdownSelector = "markdown-selector"
 	formatHTMLOuter        = "html-outer"
+
+	defaultViewportHeight = 1024
 )
 
 var captureFormats = []string{
@@ -48,7 +51,7 @@ var captureFormats = []string{
 	formatHTMLOuter,
 }
 
-const captureFormatsDesc = "pdf, screenshot-png, screenshot-jpeg, mhtml, a11y, text, html-monolith, html-outer, markdown-full, markdown-reader, markdown-selector"
+var captureFormatsDesc = strings.Join(captureFormats, ", ")
 
 var formatExtensions = map[string]string{
 	formatPDF:              ".pdf",
@@ -128,24 +131,24 @@ func (f flexFloat) MarshalJSON() ([]byte, error) {
 // used by both the MCP tool handler and the CLI bypass in
 // go/cmd/chrest/capture.go.
 type CaptureParams struct {
-	Format       string    `json:"format"`
-	URL          string    `json:"url"`
-	TabID        string    `json:"tab-id"`
-	Browser      string    `json:"browser"`
-	Landscape    bool      `json:"landscape"`
-	NoHeaders    bool      `json:"no-headers"`
-	Background   bool      `json:"background"`
-	Quality      int       `json:"quality"`
-	FullPage     bool      `json:"full-page"`
-	Selector     string    `json:"selector"`
-	ReaderEngine string    `json:"reader-engine"`
-	PaperWidth   flexFloat `json:"paper-width"`
-	PaperHeight  flexFloat `json:"paper-height"`
-	MarginTop    flexFloat `json:"margin-top"`
-	MarginBottom flexFloat `json:"margin-bottom"`
-	MarginLeft   flexFloat `json:"margin-left"`
-	MarginRight    flexFloat `json:"margin-right"`
-	ViewportWidth  int       `json:"viewport-width"`
+	Format        string    `json:"format"`
+	URL           string    `json:"url"`
+	TabID         string    `json:"tab-id"`
+	Browser       string    `json:"browser"`
+	Landscape     bool      `json:"landscape"`
+	NoHeaders     bool      `json:"no-headers"`
+	Background    bool      `json:"background"`
+	Quality       int       `json:"quality"`
+	FullPage      bool      `json:"full-page"`
+	Selector      string    `json:"selector"`
+	ReaderEngine  string    `json:"reader-engine"`
+	PaperWidth    flexFloat `json:"paper-width"`
+	PaperHeight   flexFloat `json:"paper-height"`
+	MarginTop     flexFloat `json:"margin-top"`
+	MarginBottom  flexFloat `json:"margin-bottom"`
+	MarginLeft    flexFloat `json:"margin-left"`
+	MarginRight   flexFloat `json:"margin-right"`
+	ViewportWidth int       `json:"viewport-width"`
 }
 
 // Validate rejects format-specific flags used with an incompatible --format,
@@ -296,7 +299,7 @@ func StreamCapture(
 	defer session.Close()
 
 	if params.ViewportWidth > 0 {
-		if err := session.SetViewport(ctx, params.ViewportWidth, 1024); err != nil {
+		if err := session.SetViewport(ctx, params.ViewportWidth, defaultViewportHeight); err != nil {
 			return errors.Wrap(err)
 		}
 	}

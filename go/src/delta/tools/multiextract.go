@@ -6,11 +6,11 @@ import (
 	"fmt"
 	"io"
 
+	"code.linenisgreat.com/chrest/go/libs/dewey/bravo/errors"
 	"code.linenisgreat.com/chrest/go/src/bravo/cdp"
 	"code.linenisgreat.com/chrest/go/src/charlie/markdown"
 	"code.linenisgreat.com/chrest/go/src/charlie/monolith"
 	"code.linenisgreat.com/chrest/go/src/delta/proxy"
-	"code.linenisgreat.com/chrest/go/libs/dewey/bravo/errors"
 )
 
 type MultiExtractParams struct {
@@ -54,7 +54,7 @@ func MultiExtract(
 	defer session.Close()
 
 	if params.ViewportWidth > 0 {
-		if err := session.SetViewport(ctx, params.ViewportWidth, 1024); err != nil {
+		if err := session.SetViewport(ctx, params.ViewportWidth, defaultViewportHeight); err != nil {
 			return nil, errors.Wrap(err)
 		}
 	}

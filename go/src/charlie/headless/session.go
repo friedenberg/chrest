@@ -8,9 +8,9 @@ import (
 	"io"
 	"strings"
 
+	"code.linenisgreat.com/chrest/go/libs/dewey/bravo/errors"
 	"code.linenisgreat.com/chrest/go/src/bravo/cdp"
 	"code.linenisgreat.com/chrest/go/src/charlie/launcher"
-	"code.linenisgreat.com/chrest/go/libs/dewey/bravo/errors"
 )
 
 // Session implements cdp.Session using a headless Chrome process.

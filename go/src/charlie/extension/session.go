@@ -8,9 +8,9 @@ import (
 	"io"
 	"strings"
 
+	"code.linenisgreat.com/chrest/go/libs/dewey/bravo/errors"
 	"code.linenisgreat.com/chrest/go/src/bravo/cdp"
 	"code.linenisgreat.com/chrest/go/src/delta/proxy"
-	"code.linenisgreat.com/chrest/go/libs/dewey/bravo/errors"
 )
 
 // Session implements cdp.Session using the browser extension's
@@ -66,7 +66,7 @@ func (s *Session) sendCommand(ctx context.Context, method string, params any) (j
 }
 
 func (s *Session) SetViewport(ctx context.Context, width, height int) error {
-	return errors.Errorf("--viewport-width is not supported via the extension debugger (use --browser firefox or chrome)")
+	return errors.Errorf("viewport control is not supported via the extension debugger backend")
 }
 
 func (s *Session) Navigate(ctx context.Context, url string) error {

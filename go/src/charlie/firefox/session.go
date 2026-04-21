@@ -8,10 +8,10 @@ import (
 	"log"
 	"strings"
 
+	"code.linenisgreat.com/chrest/go/libs/dewey/bravo/errors"
 	"code.linenisgreat.com/chrest/go/src/bravo/bidi"
 	"code.linenisgreat.com/chrest/go/src/bravo/cdp"
 	"code.linenisgreat.com/chrest/go/src/charlie/launcher"
-	"code.linenisgreat.com/chrest/go/libs/dewey/bravo/errors"
 )
 
 // Session implements cdp.Session using a headless Firefox process via BiDi.
