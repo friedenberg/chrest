@@ -15,7 +15,9 @@
           "purse-first",
           "nixpkgs"
         ],
-        "nixpkgs-master": "nixpkgs-master",
+        "nixpkgs-master": [
+          "nixpkgs-master"
+        ],
         "purse-first": "purse-first",
         "rust-overlay": "rust-overlay_2",
         "utils": [
@@ -217,38 +219,6 @@
         "type": "github"
       }
     },
-    "nixpkgs-master_3": {
-      "locked": {
-        "lastModified": 1770522055,
-        "narHash": "sha256-03+UdWZAo150UdTZGG4xwSCTTT0GbxpSyGn9j4FBBH8=",
-        "owner": "NixOS",
-        "repo": "nixpkgs",
-        "rev": "b28c4999ed71543e71552ccfd0d7e68c581ba7e9",
-        "type": "github"
-      },
-      "original": {
-        "owner": "NixOS",
-        "repo": "nixpkgs",
-        "rev": "b28c4999ed71543e71552ccfd0d7e68c581ba7e9",
-        "type": "github"
-      }
-    },
-    "nixpkgs-master_4": {
-      "locked": {
-        "lastModified": 1774366223,
-        "narHash": "sha256-EkNxFNHtu8q9oUcmcaQk/fsNrErrAMUMx4uMN5qjDIM=",
-        "owner": "NixOS",
-        "repo": "nixpkgs",
-        "rev": "e2dde111aea2c0699531dc616112a96cd55ab8b5",
-        "type": "github"
-      },
-      "original": {
-        "owner": "NixOS",
-        "repo": "nixpkgs",
-        "rev": "e2dde111aea2c0699531dc616112a96cd55ab8b5",
-        "type": "github"
-      }
-    },
     "nixpkgs_2": {
       "locked": {
         "lastModified": 1774244481,
@@ -303,7 +273,7 @@
         "fh": "fh",
         "gomod2nix": "gomod2nix",
         "nixpkgs": "nixpkgs_2",
-        "nixpkgs-master": "nixpkgs-master_2",
+        "nixpkgs-master": "nixpkgs-master",
         "rust-overlay": "rust-overlay",
         "utils": "utils"
       },
@@ -326,7 +296,7 @@
         "bob": "bob",
         "gomod2nix": "gomod2nix_2",
         "nixpkgs": "nixpkgs_3",
-        "nixpkgs-master": "nixpkgs-master_3",
+        "nixpkgs-master": "nixpkgs-master_2",
         "tommy": "tommy",
         "utils": "utils_2"
       }
@@ -445,7 +415,9 @@
           "gomod2nix"
         ],
         "nixpkgs": "nixpkgs_4",
-        "nixpkgs-master": "nixpkgs-master_4",
+        "nixpkgs-master": [
+          "nixpkgs-master"
+        ],
         "utils": [
           "utils"
         ]
