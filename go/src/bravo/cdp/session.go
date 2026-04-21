@@ -23,6 +23,10 @@ type Session interface {
 	// may be empty if the backend didn't advertise them; callers treat
 	// empty strings as "not available."
 	BrowserInfo(ctx context.Context) (BrowserInfo, error)
+	// SetViewport resizes the browsing context viewport before
+	// navigation. Width and height are in CSS pixels. Backends that
+	// do not support viewport control return an error.
+	SetViewport(ctx context.Context, width, height int) error
 	// LastNavigationHTTP returns the HTTP response observed for the
 	// top-level document on the most recent Navigate call. Second
 	// return is false when no response was observed (no navigate yet,

@@ -143,6 +143,17 @@ func (s *Session) initSession() error {
 	return nil
 }
 
+func (s *Session) SetViewport(ctx context.Context, width, height int) error {
+	_, err := s.conn.Send("browsingContext.setViewport", map[string]any{
+		"context": s.contextID,
+		"viewport": map[string]any{
+			"width":  width,
+			"height": height,
+		},
+	})
+	return errors.Wrap(err)
+}
+
 func (s *Session) Navigate(ctx context.Context, url string) error {
 	// Drain any stale events buffered from a prior navigation before
 	// issuing this one, so only the current navigation's events inform

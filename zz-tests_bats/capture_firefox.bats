@@ -225,6 +225,17 @@ function firefox_capture_markdown_reader_browser_engine_unimplemented { # @test
   echo "$output" | grep -qi "not yet implemented"
 }
 
+# --viewport-width controls the CSS viewport before navigation.
+function firefox_capture_screenshot_viewport_width { # @test
+  timeout "$FIREFOX_TEST_TIMEOUT" "$CHREST_BIN" capture --format screenshot-png --full-page --viewport-width 576 --browser firefox --url "$FIXTURE" >"$BATS_TEST_TMPDIR/vp.png"
+  # Verify PNG magic bytes.
+  result=$(head -c 4 "$BATS_TEST_TMPDIR/vp.png" | xxd -p)
+  [ "$result" = "89504e47" ]
+  # Decode IHDR width from bytes 17-20 (big-endian u32) and verify 576.
+  width=$(xxd -p -l 4 -s 16 "$BATS_TEST_TMPDIR/vp.png" | awk '{printf "%d\n", strtonum("0x"$0)}')
+  [ "$width" = "576" ]
+}
+
 # Multi-format: comma-separated --format writes each to a directory.
 function firefox_capture_multi_format_writes_directory { # @test
   out="$BATS_TEST_TMPDIR/multi"

@@ -74,6 +74,7 @@ func cmdCapture(ctx context.Context, p *proxy.BrowserProxy, args []string) (err 
 	fs.BoolVar(&params.FullPage, "full-page", false, "screenshot-png / screenshot-jpeg: capture the full scrollable page")
 	fs.StringVar(&params.Selector, "selector", "", "markdown-selector only: CSS selector for the element to extract (first match wins)")
 	fs.StringVar(&params.ReaderEngine, "reader-engine", "", "markdown-reader only: extraction engine (\"readability\" default; \"browser\" reserved/not-yet-implemented)")
+	fs.IntVar(&params.ViewportWidth, "viewport-width", 0, "Viewport width in CSS pixels (e.g. 576 for thermal printer). Affects layout of all formats.")
 	fs.DurationVar(&timeout, "timeout", defaultCaptureTimeout, "Abort and tear down the browser if the capture takes longer than this (0 disables)")
 	fs.StringVar(&output, "output", "", "Write capture to this path. For multi-format, must be a directory (files named <format><ext>).")
 
@@ -175,13 +176,14 @@ func cmdCaptureMulti(
 	}
 
 	mep := tools.MultiExtractParams{
-		URL:          params.URL,
-		Browser:      params.Browser,
-		Formats:      formats,
-		Selector:     params.Selector,
-		ReaderEngine: params.ReaderEngine,
-		Quality:      params.Quality,
-		FullPage:     params.FullPage,
+		URL:           params.URL,
+		Browser:       params.Browser,
+		Formats:       formats,
+		Selector:      params.Selector,
+		ReaderEngine:  params.ReaderEngine,
+		Quality:       params.Quality,
+		FullPage:      params.FullPage,
+		ViewportWidth: params.ViewportWidth,
 	}
 
 	results, err := tools.MultiExtract(ctx, p, mep)

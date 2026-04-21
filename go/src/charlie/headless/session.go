@@ -38,6 +38,16 @@ func NewSession(ctx context.Context) (*Session, error) {
 	return &Session{chrome: chrome, conn: conn}, nil
 }
 
+func (s *Session) SetViewport(ctx context.Context, width, height int) error {
+	_, err := s.conn.Send("Emulation.setDeviceMetricsOverride", map[string]any{
+		"width":             width,
+		"height":            height,
+		"deviceScaleFactor": 1,
+		"mobile":            false,
+	})
+	return errors.Wrap(err)
+}
+
 func (s *Session) Navigate(ctx context.Context, url string) error {
 	if _, err := s.conn.Send("Page.enable", nil); err != nil {
 		return errors.Wrap(err)

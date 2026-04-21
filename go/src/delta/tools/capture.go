@@ -144,7 +144,8 @@ type CaptureParams struct {
 	MarginTop    flexFloat `json:"margin-top"`
 	MarginBottom flexFloat `json:"margin-bottom"`
 	MarginLeft   flexFloat `json:"margin-left"`
-	MarginRight  flexFloat `json:"margin-right"`
+	MarginRight    flexFloat `json:"margin-right"`
+	ViewportWidth  int       `json:"viewport-width"`
 }
 
 // Validate rejects format-specific flags used with an incompatible --format,
@@ -252,6 +253,7 @@ func registerCaptureCommands(app *command.Utility, p *proxy.BrowserProxy) {
 			command.BoolFlag{Name: "full-page", Description: "screenshot-png / screenshot-jpeg: capture the full scrollable page"},
 			command.StringFlag{Name: "selector", Description: "markdown-selector only: CSS selector for the element to extract (first match wins)"},
 			command.StringFlag{Name: "reader-engine", Description: "markdown-reader only: extraction engine (\"readability\" default; \"browser\" reserved/not-yet-implemented)"},
+			command.IntFlag{Name: "viewport-width", Description: "Viewport width in CSS pixels (e.g. 576 for thermal printer). Affects layout of all formats."},
 		},
 		Run: func(ctx context.Context, args json.RawMessage, _ command.Prompter) (*command.Result, error) {
 			var p0 CaptureParams
@@ -292,6 +294,12 @@ func StreamCapture(
 		return errors.Wrap(err)
 	}
 	defer session.Close()
+
+	if params.ViewportWidth > 0 {
+		if err := session.SetViewport(ctx, params.ViewportWidth, 1024); err != nil {
+			return errors.Wrap(err)
+		}
+	}
 
 	if params.URL != "" {
 		if err := session.Navigate(ctx, params.URL); err != nil {

@@ -14,13 +14,14 @@ import (
 )
 
 type MultiExtractParams struct {
-	URL          string
-	Browser      string
-	Formats      []string
-	Selector     string
-	ReaderEngine string
-	Quality      int
-	FullPage     bool
+	URL           string
+	Browser       string
+	Formats       []string
+	Selector      string
+	ReaderEngine  string
+	Quality       int
+	FullPage      bool
+	ViewportWidth int
 }
 
 type FormatResult struct {
@@ -51,6 +52,12 @@ func MultiExtract(
 		return nil, errors.Wrap(err)
 	}
 	defer session.Close()
+
+	if params.ViewportWidth > 0 {
+		if err := session.SetViewport(ctx, params.ViewportWidth, 1024); err != nil {
+			return nil, errors.Wrap(err)
+		}
+	}
 
 	if err := session.Navigate(ctx, params.URL); err != nil {
 		return nil, errors.Wrap(err)

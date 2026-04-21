@@ -65,6 +65,10 @@ func (s *Session) sendCommand(ctx context.Context, method string, params any) (j
 	return arr[0], nil
 }
 
+func (s *Session) SetViewport(ctx context.Context, width, height int) error {
+	return errors.Errorf("--viewport-width is not supported via the extension debugger (use --browser firefox or chrome)")
+}
+
 func (s *Session) Navigate(ctx context.Context, url string) error {
 	_, err := s.sendCommand(ctx, "Page.navigate", map[string]string{"url": url})
 	return err
