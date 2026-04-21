@@ -224,3 +224,21 @@ function firefox_capture_markdown_reader_browser_engine_unimplemented { # @test
   [ "$status" -ne 0 ]
   echo "$output" | grep -qi "not yet implemented"
 }
+
+# Multi-format: comma-separated --format writes each to a directory.
+function firefox_capture_multi_format_writes_directory { # @test
+  out="$BATS_TEST_TMPDIR/multi"
+  timeout "$FIREFOX_TEST_TIMEOUT" "$CHREST_BIN" capture --format text,html-outer --browser firefox --url "$FIXTURE" --output "$out"
+  [ -d "$out" ]
+  [ -f "$out/text.txt" ]
+  [ -f "$out/html-outer.html" ]
+  grep -q "Hello from chrest" "$out/text.txt"
+  grep -qi "<html" "$out/html-outer.html"
+}
+
+# Multi-format without --output must fail.
+function firefox_capture_multi_format_requires_output { # @test
+  run timeout "$FIREFOX_TEST_TIMEOUT" "$CHREST_BIN" capture --format text,html-outer --browser firefox --url "$FIXTURE"
+  [ "$status" -ne 0 ]
+  echo "$output" | grep -qi "output.*required"
+}

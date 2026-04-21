@@ -50,6 +50,27 @@ var captureFormats = []string{
 
 const captureFormatsDesc = "pdf, screenshot-png, screenshot-jpeg, mhtml, a11y, text, html-monolith, html-outer, markdown-full, markdown-reader, markdown-selector"
 
+var formatExtensions = map[string]string{
+	formatPDF:              ".pdf",
+	formatScreenshotPNG:    ".png",
+	formatScreenshotJPEG:   ".jpeg",
+	formatMHTML:            ".mhtml",
+	formatA11y:             ".json",
+	formatText:             ".txt",
+	formatHTMLMonolith:     ".html",
+	formatHTMLOuter:        ".html",
+	formatMarkdownFull:     ".md",
+	formatMarkdownReader:   ".md",
+	formatMarkdownSelector: ".md",
+}
+
+func FormatExtension(format string) string {
+	if ext, ok := formatExtensions[format]; ok {
+		return ext
+	}
+	return ""
+}
+
 func ValidFormat(s string) bool {
 	for _, f := range captureFormats {
 		if f == s {

@@ -19,6 +19,8 @@ type MultiExtractParams struct {
 	Formats      []string
 	Selector     string
 	ReaderEngine string
+	Quality      int
+	FullPage     bool
 }
 
 type FormatResult struct {
@@ -146,10 +148,17 @@ func extractOne(
 		return readAllCloser(s.PrintToPDF(ctx, cdp.PDFOptions{}))
 
 	case formatScreenshotPNG:
-		return readAllCloser(s.CaptureScreenshot(ctx, cdp.ScreenshotOptions{Format: "png"}))
+		return readAllCloser(s.CaptureScreenshot(ctx, cdp.ScreenshotOptions{
+			Format:   "png",
+			FullPage: params.FullPage,
+		}))
 
 	case formatScreenshotJPEG:
-		return readAllCloser(s.CaptureScreenshot(ctx, cdp.ScreenshotOptions{Format: "jpeg"}))
+		return readAllCloser(s.CaptureScreenshot(ctx, cdp.ScreenshotOptions{
+			Format:   "jpeg",
+			Quality:  params.Quality,
+			FullPage: params.FullPage,
+		}))
 
 	case formatMHTML:
 		return readAllCloser(s.CaptureSnapshot(ctx))

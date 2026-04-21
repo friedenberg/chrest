@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strings"
 	"syscall"
 	"time"
 
@@ -41,9 +42,11 @@ func cmdCapture(ctx context.Context, p *proxy.BrowserProxy, args []string) (err 
 	fs := flag.NewFlagSet("capture", flag.ContinueOnError)
 	fs.SetOutput(os.Stderr)
 	fs.Usage = func() {
-		fmt.Fprintln(os.Stderr, "Usage: chrest capture --format <kind> [flags]")
+		fmt.Fprintln(os.Stderr, "Usage: chrest capture --format <kind>[,<kind>...] [flags]")
 		fmt.Fprintln(os.Stderr, "  Formats: pdf, screenshot-png, screenshot-jpeg, mhtml, a11y, text, html-monolith,")
 		fmt.Fprintln(os.Stderr, "           html-outer, markdown-full, markdown-reader, markdown-selector")
+		fmt.Fprintln(os.Stderr, "  Multiple comma-separated formats extract all in a single browser session.")
+		fmt.Fprintln(os.Stderr, "  --output is required for multi-format and must be a directory path.")
 		fs.PrintDefaults()
 		fmt.Fprintln(os.Stderr)
 		fmt.Fprintln(os.Stderr, "See also: chrest capture-batch  (JSON-stdin batch interface per RFC 0001)")
@@ -54,7 +57,7 @@ func cmdCapture(ctx context.Context, p *proxy.BrowserProxy, args []string) (err 
 	var output string
 	var paperWidth, paperHeight float64
 	var marginTop, marginBottom, marginLeft, marginRight float64
-	fs.StringVar(&params.Format, "format", "", "Output format: pdf, screenshot-png, screenshot-jpeg, mhtml, a11y, text, html-monolith, html-outer, markdown-full, markdown-reader, markdown-selector")
+	fs.StringVar(&params.Format, "format", "", "Output format (comma-separated for multi): pdf, screenshot-png, screenshot-jpeg, mhtml, a11y, text, html-monolith, html-outer, markdown-full, markdown-reader, markdown-selector")
 	fs.StringVar(&params.URL, "url", "", "URL to capture")
 	fs.StringVar(&params.TabID, "tab-id", "", "Tab ID to capture (uses extension debugger instead of headless)")
 	fs.StringVar(&params.Browser, "browser", "firefox", "Browser backend: firefox (default) or chrome")
@@ -72,7 +75,7 @@ func cmdCapture(ctx context.Context, p *proxy.BrowserProxy, args []string) (err 
 	fs.StringVar(&params.Selector, "selector", "", "markdown-selector only: CSS selector for the element to extract (first match wins)")
 	fs.StringVar(&params.ReaderEngine, "reader-engine", "", "markdown-reader only: extraction engine (\"readability\" default; \"browser\" reserved/not-yet-implemented)")
 	fs.DurationVar(&timeout, "timeout", defaultCaptureTimeout, "Abort and tear down the browser if the capture takes longer than this (0 disables)")
-	fs.StringVar(&output, "output", "", "Write capture to this path (atomic tmpfile + rename). If unset, stream to stdout.")
+	fs.StringVar(&output, "output", "", "Write capture to this path. For multi-format, must be a directory (files named <format><ext>).")
 
 	if err = fs.Parse(args); err != nil {
 		return err
@@ -101,20 +104,20 @@ func cmdCapture(ctx context.Context, p *proxy.BrowserProxy, args []string) (err 
 		return fmt.Errorf("--format is required")
 	}
 
-	if err = params.Validate(); err != nil {
-		return err
-	}
-
-	// Self-contained deadline. When it fires, ctx cancels — which
-	// propagates into exec.CommandContext (SIGKILL to the browser
-	// parent) and into any ctx-aware I/O inside StreamCapture. This
-	// guards against hangs the external test harness doesn't notice:
-	// Navigate stuck on a loading page, BiDi read stuck waiting for a
-	// browser response, etc.
+	// Self-contained deadline.
 	if timeout > 0 {
 		var cancel context.CancelFunc
 		ctx, cancel = context.WithTimeout(ctx, timeout)
 		defer cancel()
+	}
+
+	formats := strings.Split(params.Format, ",")
+	if len(formats) > 1 {
+		return cmdCaptureMulti(ctx, p, params, formats, output)
+	}
+
+	if err = params.Validate(); err != nil {
+		return err
 	}
 
 	var w io.Writer = os.Stdout
@@ -129,14 +132,11 @@ func cmdCapture(ctx context.Context, p *proxy.BrowserProxy, args []string) (err 
 		tmpPath := f.Name()
 		w = f
 		defer func() {
-			// Close before rename: some filesystems don't like renaming
-			// an open file, and we want Close's error to count as a
-			// capture failure.
 			if closeErr := f.Close(); closeErr != nil && err == nil {
 				err = closeErr
 			}
 			if err != nil {
-				os.Remove(tmpPath) // best-effort; don't mask the real error
+				os.Remove(tmpPath)
 				return
 			}
 			if rerr := os.Rename(tmpPath, output); rerr != nil {
@@ -151,4 +151,87 @@ func cmdCapture(ctx context.Context, p *proxy.BrowserProxy, args []string) (err 
 		err = fmt.Errorf("capture timed out after %s", timeout)
 	}
 	return
+}
+
+func cmdCaptureMulti(
+	ctx context.Context,
+	p *proxy.BrowserProxy,
+	params tools.CaptureParams,
+	formats []string,
+	output string,
+) error {
+	if output == "" {
+		return fmt.Errorf("--output is required when capturing multiple formats (it must be a directory path)")
+	}
+
+	for _, f := range formats {
+		if !tools.ValidFormat(f) {
+			return fmt.Errorf("unknown format %q", f)
+		}
+	}
+
+	if err := os.MkdirAll(output, 0o755); err != nil {
+		return fmt.Errorf("create output directory: %w", err)
+	}
+
+	mep := tools.MultiExtractParams{
+		URL:          params.URL,
+		Browser:      params.Browser,
+		Formats:      formats,
+		Selector:     params.Selector,
+		ReaderEngine: params.ReaderEngine,
+		Quality:      params.Quality,
+		FullPage:     params.FullPage,
+	}
+
+	results, err := tools.MultiExtract(ctx, p, mep)
+	if err != nil {
+		return err
+	}
+
+	var firstErr error
+	for _, r := range results {
+		if r.Err != nil {
+			fmt.Fprintf(os.Stderr, "%s: %s\n", r.Format, r.Err)
+			if firstErr == nil {
+				firstErr = fmt.Errorf("format %s failed: %w", r.Format, r.Err)
+			}
+			continue
+		}
+
+		ext := tools.FormatExtension(r.Format)
+		dest := filepath.Join(output, r.Format+ext)
+		if werr := atomicWrite(dest, r.Data); werr != nil {
+			fmt.Fprintf(os.Stderr, "%s: write error: %s\n", r.Format, werr)
+			if firstErr == nil {
+				firstErr = fmt.Errorf("format %s write failed: %w", r.Format, werr)
+			}
+			continue
+		}
+		fmt.Fprintf(os.Stderr, "wrote %s (%d bytes)\n", dest, len(r.Data))
+	}
+	return firstErr
+}
+
+func atomicWrite(dest string, data []byte) error {
+	f, err := os.CreateTemp(filepath.Dir(dest), ".chrest-capture-*")
+	if err != nil {
+		return err
+	}
+	tmpPath := f.Name()
+
+	if _, err := f.Write(data); err != nil {
+		f.Close()
+		os.Remove(tmpPath)
+		return err
+	}
+	if err := f.Close(); err != nil {
+		os.Remove(tmpPath)
+		return err
+	}
+	if err := os.Rename(tmpPath, dest); err != nil {
+		os.Remove(tmpPath)
+		return err
+	}
+	return nil
 }
