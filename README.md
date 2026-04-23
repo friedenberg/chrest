@@ -127,8 +127,8 @@ Eleven formats are supported:
 | `pdf` | `application/pdf` | flags: `--landscape`, `--no-headers`, `--background` |
 | `screenshot-png` | `image/png` | flag: `--full-page` |
 | `screenshot-jpeg` | `image/jpeg` | flags: `--quality`, `--full-page` |
-| `mhtml` | `multipart/related` | Chrome-only |
-| `a11y` | `application/json` | Chrome-only; accessibility tree |
+| `mhtml` | `multipart/related` | not yet functional |
+| `a11y` | `application/json` | not yet functional; accessibility tree |
 | `text` | `text/plain; charset=utf-8` | `document.body.innerText` |
 | `html-monolith` | `text/html; charset=utf-8` | self-contained HTML with assets inlined as `data:` URIs (via the [`monolith`](https://github.com/Y2Z/monolith) CLI) |
 | `html-outer` | `text/html; charset=utf-8` | raw `document.documentElement.outerHTML` — no asset inlining |
@@ -136,9 +136,7 @@ Eleven formats are supported:
 | `markdown-reader` | `text/markdown; charset=utf-8` | Readability-extracted main content → markdown |
 | `markdown-selector` | `text/markdown; charset=utf-8` | CSS-selector scoped; requires `--selector <css>` |
 
-Default backend is headless Firefox over WebDriver BiDi. Pass
-`--browser chrome` (alias `headless`) for the headless-CDP path when you need
-`mhtml` or `a11y`.
+Backend is headless Firefox via WebDriver BiDi.
 
 Examples:
 

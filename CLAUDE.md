@@ -77,18 +77,13 @@ just deploy-firefox     # sign and deploy to Firefox AMO
   reads; routes response frames to per-request channels and fans events out
   to `Subscribe(methods)` consumers. Prerequisite for capture envelope `http.*`
   fields (chrest#24).
-- `bravo/cdp/` - `cdp.Session` interface used by the capture pipeline, plus
-  shared `HTTPResponse` / `HTTPHeader` types. Headers are `[]HTTPHeader`
-  (name/value pairs) rather than a map so the envelope preserves order and
-  duplicates (e.g. `Set-Cookie`).
 - `charlie/install/` - Native messaging host installation (platform-specific paths)
 - `charlie/browser_items/` - Browser item types and operations
-- `charlie/extension/` - Extension-driven CDP backend (uses `chrome.debugger`).
 - `charlie/firefox/` - Firefox/BiDi capture backend. Subscribes to
   `network.responseCompleted`, drains stale events before each navigate, and
-  populates `LastNavigationHTTP()` — enables envelope v1 emission.
-- `charlie/headless/` - Headless Chrome/CDP capture backend. No network-event
-  wiring yet, so envelopes from this backend are v1-preview.
+  populates `LastNavigationHTTP()` — enables envelope v1 emission. Also holds
+  shared capture types (`HTTPResponse`, `HTTPHeader`, `PDFOptions`,
+  `ScreenshotOptions`, `BrowserInfo`).
 - `charlie/launcher/` - Browser process launching.
 - `charlie/monolith/` - Shells out to the `monolith` CLI to inline every asset
   as `data:` URIs. Used by the `html-monolith` capture format; binary is wrapped
@@ -113,14 +108,14 @@ just deploy-firefox     # sign and deploy to Firefox AMO
 - `chrest mcp` - Start MCP server (stdio transport)
 - `chrest capture --format <kind>` - Single-page capture. Formats: `pdf`,
   `screenshot-png`, `screenshot-jpeg`, `mhtml`, `a11y`, `text`, `html-monolith`,
-  `html-outer`, `markdown-full`, `markdown-reader`, `markdown-selector`. Default backend is
-  `firefox`; pass `--browser chrome` (alias `headless`) for the headless-CDP
-  path. Has `--timeout` (default 60s, deadline-backed context) and
-  `--output <path>` (atomic tmpfile + rename; unlinks on failure). The CLI
-  exits non-zero on any error. The markdown variants route through
-  `charlie/markdown/` — `markdown-reader` runs go-readability on the DOM,
-  `markdown-selector` takes a `--selector` CSS selector (first match);
-  `--reader-engine` is reserved (`readability` default, `browser` NYI).
+  `html-outer`, `markdown-full`, `markdown-reader`, `markdown-selector`. Backend
+  is headless Firefox via WebDriver BiDi (only backend since chrest#47). Has
+  `--timeout` (default 60s, deadline-backed context) and `--output <path>`
+  (atomic tmpfile + rename; unlinks on failure). The CLI exits non-zero on any
+  error. The markdown variants route through `charlie/markdown/` —
+  `markdown-reader` runs go-readability on the DOM, `markdown-selector` takes a
+  `--selector` CSS selector (first match); `--reader-engine` is reserved
+  (`readability` default, `browser` NYI).
 - `chrest capture-batch` - RFC 0001 capturer role (MVP, `split=false`). Reads
   a batch input JSON on stdin, runs captures sequentially, streams each
   artifact to a writer subprocess, and emits a result envelope on stdout.
@@ -142,10 +137,9 @@ under `~/eng/aim/fixtures/` and are referenced by `explore-capture-batch` and
 Schema tokens (see `types.go`, `envelope.go`, `spec.go`):
 - Input/output schema: `web-capture-archive/v1`
 - Envelope schema: `web-capture-archive.envelope/v1` when `http.status` +
-  `http.headers` are populated (Firefox/BiDi backend), or
-  `web-capture-archive.envelope/v1-preview` when they can't be (headless-CDP
-  backend — can't observe network events today, chrest#24 follow-up).
-  Preview-tolerant consumers opt in knowingly; v1-strict consumers reject.
+  `http.headers` are populated (Firefox/BiDi backend). The `v1-preview` schema
+  token is retained in the codebase for future backends that can't observe
+  network events; Firefox/BiDi always emits `v1`.
 - Capturer identifier: `chrest` (`CapturerName` constant).
 
 Files of note:
@@ -205,7 +199,7 @@ Uses nix flakes with direnv. The root `flake.nix` provides a dev shell with Go a
   up in-flight feature work — the `design` + implementation file pair together
   is the contract for a given chunk of work.
 - `zz-tests_bats/` - BATS integration tests that exercise `chrest` end-to-end
-  against real unix sockets (`--allow-unix-sockets`). Suites: `capture.bats`,
+  against real unix sockets (`--allow-unix-sockets`). Suites:
   `capture_batch.bats`, `capture_firefox.bats`, `mcp.bats`. Run via
   `just test-mcp-bats`.
 
