@@ -8,3 +8,7 @@ extension/firefox/secrets/jwt_issuer
 extension/firefox/secrets/jwt_secret
 extension/.secrets-firefox.env
 extension/node_modules/
+
+# Dev-only moxy overlay for the chrest-dev entry; absolute paths are
+# environment-specific, so keep it out of the repo.
+/moxyfile
