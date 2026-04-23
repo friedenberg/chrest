@@ -45,6 +45,7 @@
             gomod2nix.overlays.default
           ];
         };
+        firefox = pkgs.callPackage ./nix/firefox.nix { };
         pkgs-master = import nixpkgs-master {
           inherit system;
           overlays = [
@@ -92,16 +93,11 @@
           '';
           postFixup =
             let
-              firefoxBinPath =
-                if pkgs.stdenv.isDarwin then
-                  "${pkgs.firefox}/Applications/Firefox.app/Contents/MacOS"
-                else
-                  "${pkgs.firefox}/bin";
               monolithBinPath = "${pkgs.monolith}/bin";
             in
             ''
               wrapProgram $out/bin/chrest \
-                --prefix PATH : ${firefoxBinPath}:${monolithBinPath}
+                --prefix PATH : ${firefox}/bin:${monolithBinPath}
             '';
         };
       in
@@ -131,7 +127,7 @@
               zip
             ]
           ) ++ [
-            pkgs.firefox
+            firefox
             pkgs.monolith
           ] ++ (
             with pkgs-master;
