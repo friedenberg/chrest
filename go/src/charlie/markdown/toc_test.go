@@ -74,7 +74,7 @@ func TestExtractTOC_EmptyTextUsesID(t *testing.T) {
 }
 
 func TestFormatTOC_Empty(t *testing.T) {
-	got := FormatTOC(nil, "https://x")
+	got := FormatTOC(nil, "https://x", "")
 	want := "(no headings with ids found on https://x)"
 	if got != want {
 		t.Errorf("FormatTOC(nil): got %q; want %q", got, want)
@@ -88,7 +88,7 @@ func TestFormatTOC_NestingRelative(t *testing.T) {
 		{ID: "c", Text: "C", Level: 4},
 		{ID: "d", Text: "D", Level: 3},
 	}
-	got := FormatTOC(headings, "https://example.com")
+	got := FormatTOC(headings, "https://example.com", "")
 
 	cases := []struct {
 		needle string
@@ -109,8 +109,16 @@ func TestFormatTOC_NestingRelative(t *testing.T) {
 func TestFormatTOC_IncludesURL(t *testing.T) {
 	headings := []Heading{{ID: "a", Text: "A", Level: 1}}
 	url := "https://example.com/some/page"
-	got := FormatTOC(headings, url)
+	got := FormatTOC(headings, url, "")
 	if !strings.Contains(got, url) {
 		t.Errorf("FormatTOC output does not mention URL %q\n---\n%s", url, got)
+	}
+}
+
+func TestFormatTOC_FragmentHint(t *testing.T) {
+	headings := []Heading{{ID: "target", Text: "Target", Level: 2}}
+	got := FormatTOC(headings, "https://example.com/page", "target")
+	if !strings.Contains(got, `selector="#target"`) {
+		t.Errorf("expected fragment hint in output; got:\n%s", got)
 	}
 }

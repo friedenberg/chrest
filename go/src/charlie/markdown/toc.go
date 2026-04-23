@@ -63,7 +63,9 @@ func ExtractTOC(dom io.Reader) ([]Heading, error) {
 // ready-to-paste CSS selectors. Indentation reflects each heading's level
 // relative to the shallowest level present in the list. When headings is
 // empty, returns a single-line "(no headings...)" fallback naming url.
-func FormatTOC(headings []Heading, url string) string {
+// fragment, if non-empty, is an anchor from the original URL — a hint line
+// is appended pointing the caller to that selector.
+func FormatTOC(headings []Heading, url, fragment string) string {
 	if len(headings) == 0 {
 		return fmt.Sprintf("(no headings with ids found on %s)", url)
 	}
@@ -82,6 +84,9 @@ func FormatTOC(headings []Heading, url string) string {
 		fmt.Fprintf(&b, "%s- `#%s` — %s\n", indent, h.ID, h.Text)
 	}
 	b.WriteString("\nPass one of these ids as `selector` to fetch that section only.\n")
+	if fragment != "" {
+		fmt.Fprintf(&b, "\nNote: the URL points to `#%s` — pass `selector=\"#%s\"` to fetch that section.\n", fragment, fragment)
+	}
 	return b.String()
 }
 

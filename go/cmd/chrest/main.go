@@ -8,6 +8,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"net/url"
 	"strings"
 	"sync"
 	"syscall"
@@ -219,7 +220,7 @@ func runMCP(ctx context.Context, app *command.Utility, p *proxy.BrowserProxy) er
 				case "toc":
 					return &protocol.ToolCallResultV1{
 						Content: []protocol.ContentBlockV1{
-							protocol.TextContentV1(markdown.FormatTOC(entry.TOC, url)),
+							protocol.TextContentV1(markdown.FormatTOC(entry.TOC, url, "")),
 						},
 					}, nil
 				case "markdown-selector":
@@ -320,7 +321,11 @@ func runMCP(ctx context.Context, app *command.Utility, p *proxy.BrowserProxy) er
 				fetchCache.Store(p0.URL, entry)
 			}
 
-			tocBlock := protocol.TextContentV1(markdown.FormatTOC(entry.TOC, p0.URL))
+			urlFragment := ""
+			if parsed, parseErr := url.Parse(p0.URL); parseErr == nil {
+				urlFragment = parsed.Fragment
+			}
+			tocBlock := protocol.TextContentV1(markdown.FormatTOC(entry.TOC, p0.URL, urlFragment))
 
 			textURI := fmt.Sprintf("web-fetch://%s#text", p0.URL)
 			markdownURI := fmt.Sprintf("web-fetch://%s#markdown", p0.URL)
