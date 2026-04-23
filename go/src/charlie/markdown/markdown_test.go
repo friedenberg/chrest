@@ -2,6 +2,7 @@ package markdown
 
 import (
 	"context"
+	"errors"
 	"io"
 	"strings"
 	"testing"
@@ -91,12 +92,14 @@ func TestConvertSelector_Scoped(t *testing.T) {
 }
 
 func TestConvertSelector_NoMatch(t *testing.T) {
-	_, err := ConvertSelector(context.Background(), strings.NewReader(boilerplateFixture), ".does-not-exist")
+	_, err := ConvertSelector(context.Background(),
+		strings.NewReader(`<p>no headings here</p>`),
+		"#does-not-exist")
 	if err == nil {
-		t.Fatal("expected error for non-matching selector")
+		t.Fatal("expected error for no-match selector; got nil")
 	}
-	if !strings.Contains(err.Error(), ".does-not-exist") {
-		t.Errorf("error message should name the selector, got: %v", err)
+	if !errors.Is(err, ErrSelectorNoMatch) {
+		t.Fatalf("expected errors.Is(err, ErrSelectorNoMatch) to be true; got: %v", err)
 	}
 }
 

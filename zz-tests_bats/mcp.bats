@@ -83,8 +83,10 @@ FIXTURE
     timeout 20 "$CHREST_BIN" mcp)
 
   resp=$(echo "$result" | grep '"id":2')
-  # 3 blocks: 1 embedded resource (markdown) + 2 resource_links (text, html)
-  echo "$resp" | jq -e '.result.content | length == 3'
+  # 4 blocks: TOC text + 1 embedded resource (markdown) + 2 resource_links (text, html)
+  echo "$resp" | jq -e '.result.content | length == 4'
+  # First block is the TOC (text)
+  echo "$resp" | jq -e '.result.content[0].type == "text"'
   # The embedded resource is markdown (fragment #markdown in URI)
   echo "$resp" | jq -e '.result.content[] | select(.type == "resource") | .resource.uri | test("#markdown$")'
   # The other two are resource_links
@@ -113,9 +115,182 @@ FIXTURE
     timeout 20 "$CHREST_BIN" mcp)
 
   resp=$(echo "$result" | grep '"id":2')
+  # 4 blocks: TOC text + 1 embedded resource (text) + 2 resource_links (markdown, html)
+  echo "$resp" | jq -e '.result.content | length == 4'
+  # First block is the TOC (text)
+  echo "$resp" | jq -e '.result.content[0].type == "text"'
   # The embedded resource is text (fragment #text in URI)
   echo "$resp" | jq -e '.result.content[] | select(.type == "resource") | .resource.uri | test("#text$")'
   # Markdown and html are resource_links
+  echo "$resp" | jq -e '[.result.content[] | select(.type == "resource_link")] | length == 2'
+}
+
+function web_fetch_toc_lists_anchors { # @test
+  firefox="$(command -v firefox || command -v firefox-esr || true)"
+  if [ -z "$firefox" ]; then
+    skip "no Firefox found on PATH"
+  fi
+  if ! timeout 5 "$firefox" --headless --version >/dev/null 2>&1; then
+    skip "headless Firefox not functional"
+  fi
+
+  cat >"$BATS_TEST_TMPDIR/anchors.html" <<'FIXTURE'
+<!doctype html>
+<html><head><title>Anchor Fixture</title></head>
+<body>
+  <h1 id="top">Top Heading</h1>
+  <h2 id="intro">Introduction</h2>
+  <p>Intro body text.</p>
+  <h2 id="details">Details</h2>
+  <p>Details body text.</p>
+</body>
+</html>
+FIXTURE
+  url="file://$BATS_TEST_TMPDIR/anchors.html"
+
+  result=$(printf '%s\n' "$INIT_MSG" "$INITIALIZED_MSG" \
+    "{\"jsonrpc\":\"2.0\",\"id\":2,\"method\":\"tools/call\",\"params\":{\"name\":\"web-fetch\",\"arguments\":{\"url\":\"$url\"}}}" |
+    timeout 20 "$CHREST_BIN" mcp)
+
+  resp=$(echo "$result" | grep '"id":2')
+  echo "$resp" | jq -e '.result.content[0].type == "text"'
+  echo "$resp" | jq -e '.result.content[0].text | contains("#top")'
+  echo "$resp" | jq -e '.result.content[0].text | contains("#intro")'
+  echo "$resp" | jq -e '.result.content[0].text | contains("#details")'
+}
+
+function web_fetch_selector_hit_trims_body { # @test
+  firefox="$(command -v firefox || command -v firefox-esr || true)"
+  if [ -z "$firefox" ]; then
+    skip "no Firefox found on PATH"
+  fi
+  if ! timeout 5 "$firefox" --headless --version >/dev/null 2>&1; then
+    skip "headless Firefox not functional"
+  fi
+
+  cat >"$BATS_TEST_TMPDIR/selector-hit.html" <<'FIXTURE'
+<!doctype html>
+<html><head><title>Anchor Fixture</title></head>
+<body>
+  <h1 id="top">Top Heading</h1>
+  <h2 id="intro">Introduction</h2>
+  <p>Intro body text.</p>
+  <h2 id="details">Details</h2>
+  <p>Details body text.</p>
+</body>
+</html>
+FIXTURE
+  url="file://$BATS_TEST_TMPDIR/selector-hit.html"
+
+  result=$(printf '%s\n' "$INIT_MSG" "$INITIALIZED_MSG" \
+    "{\"jsonrpc\":\"2.0\",\"id\":2,\"method\":\"tools/call\",\"params\":{\"name\":\"web-fetch\",\"arguments\":{\"url\":\"$url\",\"selector\":\"#intro\"}}}" |
+    timeout 20 "$CHREST_BIN" mcp)
+
+  resp=$(echo "$result" | grep '"id":2')
+  # 5 blocks: TOC text + embedded selector resource + 3 resource_links
+  echo "$resp" | jq -e '.result.content | length == 5'
+  echo "$resp" | jq -e '.result.content[0].type == "text"'
+  echo "$resp" | jq -e '.result.content[1].type == "resource"'
+  echo "$resp" | jq -e '.result.content[1].resource.uri | test("#markdown-selector$")'
+  echo "$resp" | jq -e '.result.content[1].resource.text | contains("Introduction")'
+  echo "$resp" | jq -e '.result.content[1].resource.text | contains("Details") | not'
+}
+
+function web_fetch_selector_miss_returns_diagnostic { # @test
+  firefox="$(command -v firefox || command -v firefox-esr || true)"
+  if [ -z "$firefox" ]; then
+    skip "no Firefox found on PATH"
+  fi
+  if ! timeout 5 "$firefox" --headless --version >/dev/null 2>&1; then
+    skip "headless Firefox not functional"
+  fi
+
+  cat >"$BATS_TEST_TMPDIR/selector-miss.html" <<'FIXTURE'
+<!doctype html>
+<html><head><title>Anchor Fixture</title></head>
+<body>
+  <h1 id="top">Top Heading</h1>
+  <h2 id="intro">Introduction</h2>
+  <p>Intro body text.</p>
+  <h2 id="details">Details</h2>
+  <p>Details body text.</p>
+</body>
+</html>
+FIXTURE
+  url="file://$BATS_TEST_TMPDIR/selector-miss.html"
+
+  result=$(printf '%s\n' "$INIT_MSG" "$INITIALIZED_MSG" \
+    "{\"jsonrpc\":\"2.0\",\"id\":2,\"method\":\"tools/call\",\"params\":{\"name\":\"web-fetch\",\"arguments\":{\"url\":\"$url\",\"selector\":\"#does-not-exist\"}}}" |
+    timeout 20 "$CHREST_BIN" mcp)
+
+  resp=$(echo "$result" | grep '"id":2')
+  # 5 blocks: TOC text + diagnostic text + 3 resource_links (no embedded resource)
+  echo "$resp" | jq -e '.result.content | length == 5'
+  echo "$resp" | jq -e '.result.content[0].type == "text"'
+  echo "$resp" | jq -e '.result.content[1].type == "text"'
+  echo "$resp" | jq -e '.result.content[1].text | contains("matched no element")'
+  echo "$resp" | jq -e '.result.content[1].text | contains("#does-not-exist")'
+  # Miss path does not embed a resource block
+  echo "$resp" | jq -e '[.result.content[] | select(.type == "resource")] | length == 0'
+  echo "$resp" | jq -e '[.result.content[] | select(.type == "resource_link")] | length == 3'
+}
+
+function web_fetch_selector_rejected_with_non_markdown_format { # @test
+  firefox="$(command -v firefox || command -v firefox-esr || true)"
+  if [ -z "$firefox" ]; then
+    skip "no Firefox found on PATH"
+  fi
+  if ! timeout 5 "$firefox" --headless --version >/dev/null 2>&1; then
+    skip "headless Firefox not functional"
+  fi
+
+  cat >"$BATS_TEST_TMPDIR/selector-reject.html" <<'FIXTURE'
+<!doctype html>
+<html><head><title>Anchor Fixture</title></head>
+<body>
+  <h1 id="top">Top Heading</h1>
+  <h2 id="intro">Introduction</h2>
+</body>
+</html>
+FIXTURE
+  url="file://$BATS_TEST_TMPDIR/selector-reject.html"
+
+  result=$(printf '%s\n' "$INIT_MSG" "$INITIALIZED_MSG" \
+    "{\"jsonrpc\":\"2.0\",\"id\":2,\"method\":\"tools/call\",\"params\":{\"name\":\"web-fetch\",\"arguments\":{\"url\":\"$url\",\"format\":\"text\",\"selector\":\"#intro\"}}}" |
+    timeout 20 "$CHREST_BIN" mcp)
+
+  resp=$(echo "$result" | grep '"id":2')
+  echo "$resp" | jq -e '.result.isError == true'
+  echo "$resp" | jq -e '.result.content[0].text | contains("selector is only supported with format=markdown")'
+}
+
+function web_fetch_refresh_param_accepted { # @test
+  # full cache-vs-refresh behavior requires a single-session driver; this just
+  # validates the refresh param is accepted and produces a valid envelope.
+  firefox="$(command -v firefox || command -v firefox-esr || true)"
+  if [ -z "$firefox" ]; then
+    skip "no Firefox found on PATH"
+  fi
+  if ! timeout 5 "$firefox" --headless --version >/dev/null 2>&1; then
+    skip "headless Firefox not functional"
+  fi
+
+  cat >"$BATS_TEST_TMPDIR/refresh.html" <<'FIXTURE'
+<!doctype html>
+<html><head><title>Refresh Fixture</title></head>
+<body><h1 id="top">Hello refresh</h1><p>Body text.</p></body>
+</html>
+FIXTURE
+  url="file://$BATS_TEST_TMPDIR/refresh.html"
+
+  result=$(printf '%s\n' "$INIT_MSG" "$INITIALIZED_MSG" \
+    "{\"jsonrpc\":\"2.0\",\"id\":2,\"method\":\"tools/call\",\"params\":{\"name\":\"web-fetch\",\"arguments\":{\"url\":\"$url\",\"refresh\":true}}}" |
+    timeout 20 "$CHREST_BIN" mcp)
+
+  resp=$(echo "$result" | grep '"id":2')
+  echo "$resp" | jq -e '.result.content | length == 4'
+  echo "$resp" | jq -e '.result.content[0].type == "text"'
+  echo "$resp" | jq -e '.result.content[] | select(.type == "resource") | .resource.uri | test("#markdown$")'
   echo "$resp" | jq -e '[.result.content[] | select(.type == "resource_link")] | length == 2'
 }
 

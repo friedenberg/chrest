@@ -23,13 +23,19 @@ import (
 	"github.com/andybalholm/cascadia"
 	"golang.org/x/net/html"
 
-	readability "codeberg.org/readeck/go-readability/v2"
 	"code.linenisgreat.com/chrest/go/libs/dewey/bravo/errors"
+	readability "codeberg.org/readeck/go-readability/v2"
 )
 
 // ErrNoArticle is returned by ConvertReader when Readability was unable
 // to find a main-content article in the document.
 var ErrNoArticle = errors.Errorf("readability found no article content")
+
+// ErrSelectorNoMatch is returned (wrapped) by ConvertSelector when the
+// parsed selector is valid but matches no element in the document.
+// Callers can detect this with errors.Is to distinguish a miss from a
+// malformed selector or a DOM-parse failure.
+var ErrSelectorNoMatch = errors.Errorf("selector matched no element")
 
 // ConvertFull converts the full rendered DOM to markdown.
 func ConvertFull(ctx context.Context, dom io.Reader) (io.ReadCloser, error) {
@@ -94,7 +100,7 @@ func ConvertSelector(ctx context.Context, dom io.Reader, selector string) (io.Re
 
 	matched := cascadia.Query(root, sel)
 	if matched == nil {
-		return nil, fmt.Errorf("selector %q matched no element", selector)
+		return nil, fmt.Errorf("%q: %w", selector, ErrSelectorNoMatch)
 	}
 
 	var htmlBuf bytes.Buffer

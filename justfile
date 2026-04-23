@@ -200,6 +200,23 @@ explore-mcp-v1-debug:
   echo "$result" | grep '"id":2' | jq '[.result.tools[] | select(.name == "web-fetch")] | first'
 
 [group: 'explore']
+explore-mcp-web-fetch-blocks url="https://example.com" selector="":
+  #!/usr/bin/env bash
+  set -euo pipefail
+  init='{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{},"clientInfo":{"name":"test","version":"0.0.1"}}}'
+  notif='{"jsonrpc":"2.0","method":"notifications/initialized"}'
+  call=$(jq -nc --arg url "{{url}}" --arg sel "{{selector}}" '
+    {jsonrpc:"2.0",id:2,method:"tools/call",params:{name:"web-fetch",
+      arguments: ($sel | if . == "" then {url:$url,format:"markdown"}
+                        else {url:$url,format:"markdown",selector:.} end)}}')
+  result=$(printf '%s\n' "$init" "$notif" "$call" | go/build/release/chrest mcp)
+  echo "=== content block shapes (types + keys, content elided) ==="
+  echo "$result" | grep '"id":2' | jq '.result.content | map({type, uri, name, mimeType, text_bytes: (.text // "" | length), resource_bytes: (.resource.text // "" | length), resource_uri: .resource.uri})'
+  echo
+  echo "=== TOC (content[0].text) first 20 lines ==="
+  echo "$result" | grep '"id":2' | jq -r '.result.content[0].text' | head -20
+
+[group: 'explore']
 explore-rewrite-dewey-imports:
   #!/usr/bin/env bash
   set -euo pipefail
