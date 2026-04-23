@@ -306,8 +306,6 @@ func discoverStderr(ctx context.Context, stderr interface{ Read([]byte) (int, er
 		return wsURL, nil
 	case err := <-done:
 		return "", errors.Wrapf(err, "browser exited before emitting WebSocket URL")
-	case <-time.After(10 * time.Second):
-		return "", errors.Errorf("timed out waiting for browser WebSocket URL")
 	case <-ctx.Done():
 		return "", ctx.Err()
 	}
@@ -317,16 +315,12 @@ func discoverHTTP(ctx context.Context, port int) (string, error) {
 	url := fmt.Sprintf("http://127.0.0.1:%d/json/list", port)
 	client := &http.Client{Timeout: 2 * time.Second}
 	delay := 50 * time.Millisecond
-	deadline := time.After(10 * time.Second)
-
 	for {
 		if wsURL, found := pollDevToolsEndpoint(client, url); found {
 			return wsURL, nil
 		}
 
 		select {
-		case <-deadline:
-			return "", errors.Errorf("timed out waiting for Chrome DevTools endpoint at %s", url)
 		case <-ctx.Done():
 			return "", ctx.Err()
 		case <-time.After(delay):
