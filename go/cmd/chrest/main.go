@@ -353,8 +353,12 @@ func runMCP(ctx context.Context, app *command.Utility, p *proxy.BrowserProxy) er
 				return &protocol.ToolCallResultV1{Content: blocks}, nil
 			}
 
-			// Selector path.
-			rc, err := markdown.ConvertSelector(ctx, bytes.NewReader(entry.HTML), p0.Selector)
+			// Selector path. Use the section-expanding variant so an
+			// `#id` selector that matches a heading returns the whole
+			// section (heading + following siblings up to the next
+			// heading of equal-or-higher level) rather than just the
+			// heading element.
+			rc, err := markdown.ConvertSelectorSection(bytes.NewReader(entry.HTML), p0.Selector)
 			if err != nil {
 				if errors.Is(err, markdown.ErrSelectorNoMatch) {
 					diag := fmt.Sprintf(

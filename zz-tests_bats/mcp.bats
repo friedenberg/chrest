@@ -193,7 +193,12 @@ FIXTURE
   echo "$resp" | jq -e '.result.content[1].type == "resource"'
   echo "$resp" | jq -e '.result.content[1].resource.uri | test("#markdown-selector$")'
   echo "$resp" | jq -e '.result.content[1].resource.text | contains("Introduction")'
+  # Section-expansion: the paragraph under #intro is a sibling of the h2 and
+  # precedes the next h2, so it MUST be included in the trimmed body.
+  echo "$resp" | jq -e '.result.content[1].resource.text | contains("Intro body text.")'
+  # But the next h2 (#details) and its body must stop the walk.
   echo "$resp" | jq -e '.result.content[1].resource.text | contains("Details") | not'
+  echo "$resp" | jq -e '.result.content[1].resource.text | contains("Details body text.") | not'
 }
 
 function web_fetch_selector_miss_returns_diagnostic { # @test
