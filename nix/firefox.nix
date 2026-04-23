@@ -1,9 +1,22 @@
 # Fixed-output derivation for Firefox, bypassing nixpkgs (unavailable on Darwin).
-# Bump version + hashes on each Firefox release.
 #
-# Darwin: universal .dmg (Apple Silicon + Intel), fetched from Mozilla CDN.
-# Linux:  platform-specific .tar.xz, wrapped with makeWrapper so shared libs
-#         and profile data dirs resolve correctly for headless BiDi capture.
+# Darwin: universal .dmg (Apple Silicon + Intel), fetched from Mozilla CDN,
+#         extracted with undmg, firefox symlinked into $out/bin.
+# Linux:  platform-specific .tar.xz (x86_64 + aarch64), wrapped with
+#         makeWrapper so shared libs and profile data dirs resolve correctly
+#         for headless BiDi capture.
+#
+# To bump to a new Firefox release:
+#   1. Update `version` below.
+#   2. Fetch the SHA256SUMS for the new release:
+#        https://releases.mozilla.org/pub/firefox/releases/<version>/SHA256SUMS
+#   3. Grep for these three lines:
+#        mac/en-US/Firefox <version>.dmg
+#        linux-x86_64/en-US/firefox-<version>.tar.xz
+#        linux-aarch64/en-US/firefox-<version>.tar.xz
+#   4. Convert each hex digest to SRI:
+#        nix hash convert --hash-algo sha256 --to sri <hex>
+#   5. Update the three `hash` fields below.
 {
   lib,
   stdenv,
