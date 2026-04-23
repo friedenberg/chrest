@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"code.linenisgreat.com/chrest/go/src/bravo/cdp"
+	"code.linenisgreat.com/chrest/go/src/charlie/firefox"
 )
 
 type mockSession struct {
@@ -38,11 +38,11 @@ func (m *mockSession) ExtractText(ctx context.Context) (io.ReadCloser, error) {
 	return io.NopCloser(strings.NewReader(m.textBody)), nil
 }
 
-func (m *mockSession) PrintToPDF(ctx context.Context, opts cdp.PDFOptions) (io.ReadCloser, error) {
+func (m *mockSession) PrintToPDF(ctx context.Context, opts firefox.PDFOptions) (io.ReadCloser, error) {
 	return nil, fmt.Errorf("not supported in mock")
 }
 
-func (m *mockSession) CaptureScreenshot(ctx context.Context, opts cdp.ScreenshotOptions) (io.ReadCloser, error) {
+func (m *mockSession) CaptureScreenshot(ctx context.Context, opts firefox.ScreenshotOptions) (io.ReadCloser, error) {
 	return nil, fmt.Errorf("not supported in mock")
 }
 
@@ -54,12 +54,12 @@ func (m *mockSession) AccessibilityTree(ctx context.Context) (io.ReadCloser, err
 	return nil, fmt.Errorf("not supported in mock")
 }
 
-func (m *mockSession) BrowserInfo(ctx context.Context) (cdp.BrowserInfo, error) {
-	return cdp.BrowserInfo{}, nil
+func (m *mockSession) BrowserInfo(ctx context.Context) (firefox.BrowserInfo, error) {
+	return firefox.BrowserInfo{}, nil
 }
 
-func (m *mockSession) LastNavigationHTTP() (cdp.HTTPResponse, bool) {
-	return cdp.HTTPResponse{}, false
+func (m *mockSession) LastNavigationHTTP() (firefox.HTTPResponse, bool) {
+	return firefox.HTTPResponse{}, false
 }
 
 func (m *mockSession) Close() error { return nil }
@@ -185,7 +185,7 @@ func TestMultiExtract_DOMErrorPropagation(t *testing.T) {
 }
 
 func TestMultiExtract_ValidationEmptyURL(t *testing.T) {
-	_, err := MultiExtract(context.Background(), nil, MultiExtractParams{
+	_, err := MultiExtract(context.Background(), MultiExtractParams{
 		Formats: []string{"text"},
 	})
 	if err == nil {
@@ -194,7 +194,7 @@ func TestMultiExtract_ValidationEmptyURL(t *testing.T) {
 }
 
 func TestMultiExtract_ValidationEmptyFormats(t *testing.T) {
-	_, err := MultiExtract(context.Background(), nil, MultiExtractParams{
+	_, err := MultiExtract(context.Background(), MultiExtractParams{
 		URL: "https://example.com",
 	})
 	if err == nil {
@@ -203,7 +203,7 @@ func TestMultiExtract_ValidationEmptyFormats(t *testing.T) {
 }
 
 func TestMultiExtract_ValidationUnknownFormat(t *testing.T) {
-	_, err := MultiExtract(context.Background(), nil, MultiExtractParams{
+	_, err := MultiExtract(context.Background(), MultiExtractParams{
 		URL:     "https://example.com",
 		Formats: []string{"text", "bogus"},
 	})

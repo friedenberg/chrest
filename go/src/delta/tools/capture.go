@@ -12,10 +12,7 @@ import (
 	"code.linenisgreat.com/chrest/go/libs/dewey/bravo/errors"
 	"code.linenisgreat.com/chrest/go/libs/dewey/golf/command"
 	"code.linenisgreat.com/chrest/go/libs/dewey/golf/protocol"
-	"code.linenisgreat.com/chrest/go/src/bravo/cdp"
-	"code.linenisgreat.com/chrest/go/src/charlie/extension"
 	"code.linenisgreat.com/chrest/go/src/charlie/firefox"
-	"code.linenisgreat.com/chrest/go/src/charlie/headless"
 	"code.linenisgreat.com/chrest/go/src/charlie/markdown"
 	"code.linenisgreat.com/chrest/go/src/charlie/monolith"
 	"code.linenisgreat.com/chrest/go/src/delta/proxy"
@@ -133,7 +130,6 @@ func (f flexFloat) MarshalJSON() ([]byte, error) {
 type CaptureParams struct {
 	Format        string    `json:"format"`
 	URL           string    `json:"url"`
-	TabID         string    `json:"tab-id"`
 	Browser       string    `json:"browser"`
 	Landscape     bool      `json:"landscape"`
 	NoHeaders     bool      `json:"no-headers"`
@@ -189,7 +185,7 @@ func (p CaptureParams) Validate() error {
 	return nil
 }
 
-func registerCaptureCommands(app *command.Utility, p *proxy.BrowserProxy) {
+func registerCaptureCommands(app *command.Utility, _ *proxy.BrowserProxy) {
 	app.AddCommand(&command.Command{
 		Name: "capture",
 		Description: command.Description{
@@ -199,10 +195,7 @@ func registerCaptureCommands(app *command.Utility, p *proxy.BrowserProxy) {
 				"Document formats: pdf, mhtml, html-monolith, html-outer, text, a11y.\n" +
 				"Screenshot formats: screenshot-png, screenshot-jpeg.\n" +
 				"Semantic formats: markdown-full, markdown-reader, markdown-selector.\n\n" +
-				"The default browser backend is Firefox (WebDriver BiDi). Pass --browser " +
-				"chrome for headless Chrome (CDP). Some formats are backend-specific: mhtml " +
-				"and a11y require Chrome; html-monolith and the markdown family require " +
-				"Firefox.\n\n" +
+				"The browser backend is headless Firefox via WebDriver BiDi.\n\n" +
 				"When --output is set, the capture is written atomically via a same-directory " +
 				"tmpfile and rename. The tmpfile is cleaned up on failure.\n\n" +
 				"PDF captures accept paper dimension and margin overrides (in inches). A " +
@@ -228,10 +221,6 @@ func registerCaptureCommands(app *command.Utility, p *proxy.BrowserProxy) {
 				Description: "Extract readable article content as Markdown",
 				Command:     "chrest capture --format markdown-reader --url https://example.com/article",
 			},
-			{
-				Description: "Capture with headless Chrome",
-				Command:     "chrest capture --format pdf --browser chrome --url https://example.com",
-			},
 		},
 		Params: []command.Param{
 			command.StringFlag{
@@ -241,8 +230,6 @@ func registerCaptureCommands(app *command.Utility, p *proxy.BrowserProxy) {
 				EnumValues:  captureFormats,
 			},
 			command.StringFlag{Name: "url", Description: "URL to capture"},
-			command.StringFlag{Name: "tab-id", Description: "Tab ID to capture (uses extension debugger instead of headless)"},
-			command.StringFlag{Name: "browser", Description: "Browser backend: firefox (default) or chrome"},
 			command.BoolFlag{Name: "landscape", Description: "PDF only: use landscape orientation"},
 			command.BoolFlag{Name: "no-headers", Description: "PDF only: disable header and footer"},
 			command.BoolFlag{Name: "background", Description: "PDF only: print background graphics"},
@@ -271,7 +258,7 @@ func registerCaptureCommands(app *command.Utility, p *proxy.BrowserProxy) {
 			// text block. CLI goes through cmd/chrest's bypass, which streams
 			// directly to os.Stdout.
 			var buf bytes.Buffer
-			if err := StreamCapture(ctx, p, p0, &buf); err != nil {
+			if err := StreamCapture(ctx, p0, &buf); err != nil {
 				return nil, err
 			}
 			return command.TextResult(buf.String()), nil
@@ -288,11 +275,10 @@ func registerCaptureCommands(app *command.Utility, p *proxy.BrowserProxy) {
 // pass os.Stdout.
 func StreamCapture(
 	ctx context.Context,
-	p *proxy.BrowserProxy,
 	params CaptureParams,
 	w io.Writer,
 ) error {
-	session, err := openCaptureSession(ctx, p, params.URL, params.TabID, params.Browser)
+	session, err := openCaptureSession(ctx, params.URL)
 	if err != nil {
 		return errors.Wrap(err)
 	}
@@ -324,31 +310,18 @@ func StreamCapture(
 
 func openCaptureSession(
 	ctx context.Context,
-	p *proxy.BrowserProxy,
 	url string,
-	tabID string,
-	browserBackend string,
-) (cdp.Session, error) {
-	if tabID != "" {
-		return extension.NewSession(ctx, p, tabID)
-	}
+) (*firefox.Session, error) {
 	if url == "" {
-		return nil, fmt.Errorf("--url is required when --tab-id is not specified")
+		return nil, fmt.Errorf("--url is required")
 	}
-	switch browserBackend {
-	case "", "firefox":
-		return firefox.NewSession(ctx)
-	case "chrome", "headless":
-		return headless.NewSession(ctx)
-	default:
-		return nil, fmt.Errorf("unknown --browser value %q; expected firefox, chrome, or headless", browserBackend)
-	}
+	return firefox.NewSession(ctx)
 }
 
-func runCapture(ctx context.Context, s cdp.Session, params CaptureParams) (io.ReadCloser, error) {
+func runCapture(ctx context.Context, s *firefox.Session, params CaptureParams) (io.ReadCloser, error) {
 	switch params.Format {
 	case formatPDF:
-		return s.PrintToPDF(ctx, cdp.PDFOptions{
+		return s.PrintToPDF(ctx, firefox.PDFOptions{
 			Landscape:           params.Landscape,
 			DisplayHeaderFooter: !params.NoHeaders,
 			PrintBackground:     params.Background,
@@ -360,12 +333,12 @@ func runCapture(ctx context.Context, s cdp.Session, params CaptureParams) (io.Re
 			MarginRight:         params.MarginRight.Value,
 		})
 	case formatScreenshotPNG:
-		return s.CaptureScreenshot(ctx, cdp.ScreenshotOptions{
+		return s.CaptureScreenshot(ctx, firefox.ScreenshotOptions{
 			Format:   "png",
 			FullPage: params.FullPage,
 		})
 	case formatScreenshotJPEG:
-		return s.CaptureScreenshot(ctx, cdp.ScreenshotOptions{
+		return s.CaptureScreenshot(ctx, firefox.ScreenshotOptions{
 			Format:   "jpeg",
 			Quality:  params.Quality,
 			FullPage: params.FullPage,

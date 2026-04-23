@@ -68,37 +68,9 @@ JSON
   echo "$result" | jq -e '.captures[0].payload.size > 100'
 }
 
-function capture_batch_split_true_mhtml_emits_all_three_artifacts { # @test
-  # Stage 4 of chrest#22: MHTML normalizer. Chrome-only because Firefox
-  # BiDi does not support MHTML capture. Unconditionally skipped pending
-  # chrest#14 (headless Chrome CDP-over-websocket broken on this host).
-  # Prior per-test probe using --dump-dom passed even when the real CDP
-  # handshake failed with "bad status", so the probe itself was unreliable.
-  skip "headless Chrome CDP not functional (chrest#14)"
-  input=$(
-    cat <<JSON
-{
-  "schema": "web-capture-archive/v1",
-  "writer": {"cmd": ["$STUB_WRITER"]},
-  "url": "$FIXTURE",
-  "defaults": {"browser": "chrome", "split": true},
-  "captures": [{"name": "m", "format": "mhtml"}]
-}
-JSON
-  )
-  result=$(echo "$input" | timeout 60 "$CHREST_BIN" capture-batch)
-  echo "$result" | jq -e '.captures[0].error == null'
-  echo "$result" | jq -e '.captures[0].payload.normalized == true'
-  echo "$result" | jq -e '.captures[0].payload.media_type  == "multipart/related"'
-  echo "$result" | jq -e '.captures[0].envelope.media_type == "application/vnd.web-capture-archive.envelope+json"'
-  echo "$result" | jq -e '.captures[0].spec.media_type     == "application/vnd.web-capture-archive.spec+json"'
-  echo "$result" | jq -e '.captures[0].payload.size > 100'
-}
-
 function capture_batch_split_true_a11y_returns_not_implemented { # @test
-  # a11y is the last format unimplemented for split=true (blocked on
-  # chrest#14 Chrome SIGTRAP; without a working Chrome we can't even
-  # produce raw a11y captures to test a normalizer against).
+  # a11y is not implemented for split=true (Firefox/BiDi does not support
+  # accessibility-tree capture; chrest#22 follow-up).
   input=$(
     cat <<JSON
 {

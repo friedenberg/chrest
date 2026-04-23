@@ -80,11 +80,11 @@ demo:
   vhs demo/demo.tape
 
 [group: 'explore']
-explore-setup browser="chrome":
+explore-setup browser="firefox":
   just build
   go/build/release/chrest init --browser {{browser}} --name primary
 
-explore-run browser="chrome":
+explore-run browser="firefox":
   #!/usr/bin/env bash
   set -euo pipefail
   if [ "{{browser}}" = "firefox" ]; then

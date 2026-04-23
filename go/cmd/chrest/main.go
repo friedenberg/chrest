@@ -121,7 +121,7 @@ func run(ctx errors.Context) (err error) {
 	// which corrupts binary output and bloats memory. See chrest#21 and the
 	// upstream dewey gap in amarbel-llc/purse-first#55.
 	if len(os.Args) > 1 && os.Args[1] == "capture" {
-		if err = cmdCapture(ctx, p, os.Args[2:]); err != nil {
+		if err = cmdCapture(ctx, os.Args[2:]); err != nil {
 			err = errors.Wrap(err)
 			return
 		}
@@ -283,7 +283,7 @@ func runMCP(ctx context.Context, app *command.Utility, p *proxy.BrowserProxy) er
 				}
 			}
 			if entry == nil {
-				results, err := tools.MultiExtract(ctx, p, tools.MultiExtractParams{
+				results, err := tools.MultiExtract(ctx, tools.MultiExtractParams{
 					URL:     p0.URL,
 					Formats: []string{"text", "markdown-reader", "html-outer"},
 				})

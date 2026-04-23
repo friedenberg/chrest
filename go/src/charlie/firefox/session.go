@@ -10,11 +10,10 @@ import (
 
 	"code.linenisgreat.com/chrest/go/libs/dewey/bravo/errors"
 	"code.linenisgreat.com/chrest/go/src/bravo/bidi"
-	"code.linenisgreat.com/chrest/go/src/bravo/cdp"
 	"code.linenisgreat.com/chrest/go/src/charlie/launcher"
 )
 
-// Session implements cdp.Session using a headless Firefox process via BiDi.
+// Session drives a headless Firefox process via WebDriver BiDi.
 type Session struct {
 	firefox      *launcher.Process
 	conn         *bidi.Conn
@@ -26,7 +25,7 @@ type Session struct {
 	// Navigate call to capture top-level document HTTP metadata for
 	// the envelope artifact (RFC 0001). Closed in Close().
 	networkSub *bidi.Subscription
-	lastHTTP   *cdp.HTTPResponse
+	lastHTTP   *HTTPResponse
 }
 
 // responseCompletedEvent is the subset of the WebDriver BiDi
@@ -62,9 +61,6 @@ type bidiCapabilities struct {
 	PlatformName   string `json:"platformName"`
 	UserAgent      string `json:"userAgent"`
 }
-
-// Verify interface compliance at compile time.
-var _ cdp.Session = (*Session)(nil)
 
 // NewSession launches headless Firefox and connects via BiDi.
 func NewSession(ctx context.Context) (*Session, error) {
@@ -218,7 +214,7 @@ func (s *Session) drainNetworkEvents() {
 // returns the HTTPResponse for the final navigation-tagged event
 // belonging to this session's browsing context. Returns nil if no
 // matching event was seen.
-func (s *Session) pickLastNavigationHTTP(navStart int64) *cdp.HTTPResponse {
+func (s *Session) pickLastNavigationHTTP(navStart int64) *HTTPResponse {
 	var picked *responseCompletedEvent
 	for {
 		select {
@@ -239,15 +235,15 @@ func (s *Session) pickLastNavigationHTTP(navStart int64) *cdp.HTTPResponse {
 			if picked == nil {
 				return nil
 			}
-			headers := make([]cdp.HTTPHeader, 0, len(picked.Response.Headers))
+			headers := make([]HTTPHeader, 0, len(picked.Response.Headers))
 			for _, h := range picked.Response.Headers {
-				headers = append(headers, cdp.HTTPHeader{Name: h.Name, Value: h.Value.Value})
+				headers = append(headers, HTTPHeader{Name: h.Name, Value: h.Value.Value})
 			}
 			var timing int64
 			if picked.Request.Timings.ResponseEnd > 0 && picked.Request.Timings.FetchStart > 0 {
 				timing = int64(picked.Request.Timings.ResponseEnd - picked.Request.Timings.FetchStart)
 			}
-			return &cdp.HTTPResponse{
+			return &HTTPResponse{
 				URL:      picked.Response.URL,
 				Status:   picked.Response.Status,
 				Headers:  headers,
@@ -268,14 +264,14 @@ func navTimestampMs() int64 {
 
 // LastNavigationHTTP returns the response captured during the most
 // recent Navigate, or (zero, false) if none was captured.
-func (s *Session) LastNavigationHTTP() (cdp.HTTPResponse, bool) {
+func (s *Session) LastNavigationHTTP() (HTTPResponse, bool) {
 	if s.lastHTTP == nil {
-		return cdp.HTTPResponse{}, false
+		return HTTPResponse{}, false
 	}
 	return *s.lastHTTP, true
 }
 
-func (s *Session) PrintToPDF(ctx context.Context, opts cdp.PDFOptions) (io.ReadCloser, error) {
+func (s *Session) PrintToPDF(ctx context.Context, opts PDFOptions) (io.ReadCloser, error) {
 	// BiDi browsingContext.print does not support DisplayHeaderFooter.
 	if opts.DisplayHeaderFooter {
 		log.Printf("bidi: DisplayHeaderFooter is not supported by Firefox/BiDi, ignoring")
@@ -334,7 +330,7 @@ func (s *Session) PrintToPDF(ctx context.Context, opts cdp.PDFOptions) (io.ReadC
 	return base64Field(result, "data")
 }
 
-func (s *Session) CaptureScreenshot(ctx context.Context, opts cdp.ScreenshotOptions) (io.ReadCloser, error) {
+func (s *Session) CaptureScreenshot(ctx context.Context, opts ScreenshotOptions) (io.ReadCloser, error) {
 	params := map[string]any{
 		"context": s.contextID,
 	}
@@ -400,8 +396,8 @@ func (s *Session) evaluateString(ctx context.Context, expression string) (io.Rea
 	return io.NopCloser(strings.NewReader(parsed.Result.Value)), nil
 }
 
-func (s *Session) BrowserInfo(ctx context.Context) (cdp.BrowserInfo, error) {
-	info := cdp.BrowserInfo{
+func (s *Session) BrowserInfo(ctx context.Context) (BrowserInfo, error) {
+	info := BrowserInfo{
 		Name:      "firefox",
 		Version:   s.capabilities.BrowserVersion,
 		UserAgent: s.capabilities.UserAgent,

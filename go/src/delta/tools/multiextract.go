@@ -7,15 +7,13 @@ import (
 	"io"
 
 	"code.linenisgreat.com/chrest/go/libs/dewey/bravo/errors"
-	"code.linenisgreat.com/chrest/go/src/bravo/cdp"
+	"code.linenisgreat.com/chrest/go/src/charlie/firefox"
 	"code.linenisgreat.com/chrest/go/src/charlie/markdown"
 	"code.linenisgreat.com/chrest/go/src/charlie/monolith"
-	"code.linenisgreat.com/chrest/go/src/delta/proxy"
 )
 
 type MultiExtractParams struct {
 	URL           string
-	Browser       string
 	Formats       []string
 	Selector      string
 	ReaderEngine  string
@@ -32,7 +30,6 @@ type FormatResult struct {
 
 func MultiExtract(
 	ctx context.Context,
-	p *proxy.BrowserProxy,
 	params MultiExtractParams,
 ) ([]FormatResult, error) {
 	if params.URL == "" {
@@ -47,7 +44,7 @@ func MultiExtract(
 		}
 	}
 
-	session, err := openCaptureSession(ctx, p, params.URL, "", params.Browser)
+	session, err := openCaptureSession(ctx, params.URL)
 	if err != nil {
 		return nil, errors.Wrap(err)
 	}
@@ -66,9 +63,26 @@ func MultiExtract(
 	return multiExtractFromSession(ctx, session, params), nil
 }
 
+// captureSession is the subset of *firefox.Session used by the internal
+// extract helpers. Defined here so tests can inject a mock without depending
+// on the real Firefox binary.
+type captureSession interface {
+	Navigate(ctx context.Context, url string) error
+	SetViewport(ctx context.Context, width, height int) error
+	GetDocumentHTML(ctx context.Context) (io.ReadCloser, error)
+	ExtractText(ctx context.Context) (io.ReadCloser, error)
+	PrintToPDF(ctx context.Context, opts firefox.PDFOptions) (io.ReadCloser, error)
+	CaptureScreenshot(ctx context.Context, opts firefox.ScreenshotOptions) (io.ReadCloser, error)
+	CaptureSnapshot(ctx context.Context) (io.ReadCloser, error)
+	AccessibilityTree(ctx context.Context) (io.ReadCloser, error)
+	BrowserInfo(ctx context.Context) (firefox.BrowserInfo, error)
+	LastNavigationHTTP() (firefox.HTTPResponse, bool)
+	Close() error
+}
+
 func multiExtractFromSession(
 	ctx context.Context,
-	s cdp.Session,
+	s captureSession,
 	params MultiExtractParams,
 ) []FormatResult {
 	results := make([]FormatResult, len(params.Formats))
@@ -111,7 +125,7 @@ func anyFormatNeedsDOM(formats []string) bool {
 
 func extractOne(
 	ctx context.Context,
-	s cdp.Session,
+	s captureSession,
 	format string,
 	params MultiExtractParams,
 	domBytes []byte,
@@ -152,16 +166,16 @@ func extractOne(
 		return readAllCloser(markdown.ConvertSelector(ctx, bytes.NewReader(domBytes), params.Selector))
 
 	case formatPDF:
-		return readAllCloser(s.PrintToPDF(ctx, cdp.PDFOptions{}))
+		return readAllCloser(s.PrintToPDF(ctx, firefox.PDFOptions{}))
 
 	case formatScreenshotPNG:
-		return readAllCloser(s.CaptureScreenshot(ctx, cdp.ScreenshotOptions{
+		return readAllCloser(s.CaptureScreenshot(ctx, firefox.ScreenshotOptions{
 			Format:   "png",
 			FullPage: params.FullPage,
 		}))
 
 	case formatScreenshotJPEG:
-		return readAllCloser(s.CaptureScreenshot(ctx, cdp.ScreenshotOptions{
+		return readAllCloser(s.CaptureScreenshot(ctx, firefox.ScreenshotOptions{
 			Format:   "jpeg",
 			Quality:  params.Quality,
 			FullPage: params.FullPage,

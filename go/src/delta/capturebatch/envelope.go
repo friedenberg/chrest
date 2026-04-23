@@ -3,7 +3,7 @@ package capturebatch
 import (
 	"time"
 
-	"code.linenisgreat.com/chrest/go/src/bravo/cdp"
+	"code.linenisgreat.com/chrest/go/src/charlie/firefox"
 )
 
 // EnvelopeSchemaPreview is emitted when the backend cannot populate
@@ -34,7 +34,7 @@ const EnvelopeMediaType = "application/vnd.web-capture-archive.envelope+json"
 //     only present when the backend supports network-event capture.
 //   - `stripped.<format>` is optional; the format normalizer returns
 //     what it removed, or nil if nothing.
-func BuildEnvelope(url string, capturedAt time.Time, stripped map[string]any, http *cdp.HTTPResponse) ([]byte, error) {
+func BuildEnvelope(url string, capturedAt time.Time, stripped map[string]any, http *firefox.HTTPResponse) ([]byte, error) {
 	schema := EnvelopeSchemaPreview
 	if http != nil {
 		schema = EnvelopeSchemaV1

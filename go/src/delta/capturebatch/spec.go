@@ -3,7 +3,7 @@ package capturebatch
 import (
 	"encoding/json"
 
-	"code.linenisgreat.com/chrest/go/src/bravo/cdp"
+	"code.linenisgreat.com/chrest/go/src/charlie/firefox"
 )
 
 // SpecSchema is the `schema` constant in the spec artifact.
@@ -24,7 +24,7 @@ const SpecMediaType = "application/vnd.web-capture-archive.spec+json"
 //   - MUST NOT contain time-varying data.
 func BuildSpec(
 	r Resolved,
-	browser cdp.BrowserInfo,
+	browser firefox.BrowserInfo,
 	host HostFingerprint,
 	capturerVersion string,
 ) ([]byte, error) {

@@ -13,7 +13,6 @@ import (
 	"syscall"
 	"time"
 
-	"code.linenisgreat.com/chrest/go/src/delta/proxy"
 	"code.linenisgreat.com/chrest/go/src/delta/tools"
 )
 
@@ -30,7 +29,7 @@ const defaultCaptureTimeout = 60 * time.Second
 // amarbel-llc/purse-first#55. Once that lands, this bypass can be removed
 // and the capture command can rely on a single Run handler for both CLI
 // and MCP transports.
-func cmdCapture(ctx context.Context, p *proxy.BrowserProxy, args []string) (err error) {
+func cmdCapture(ctx context.Context, args []string) (err error) {
 	// Ignore SIGPIPE so that a downstream reader closing the pipe early
 	// (e.g. `chrest capture | head -c 4`) turns into an EPIPE on the next
 	// write instead of killing the program. Without this, Go's default
@@ -59,8 +58,6 @@ func cmdCapture(ctx context.Context, p *proxy.BrowserProxy, args []string) (err 
 	var marginTop, marginBottom, marginLeft, marginRight float64
 	fs.StringVar(&params.Format, "format", "", "Output format (comma-separated for multi): pdf, screenshot-png, screenshot-jpeg, mhtml, a11y, text, html-monolith, html-outer, markdown-full, markdown-reader, markdown-selector")
 	fs.StringVar(&params.URL, "url", "", "URL to capture")
-	fs.StringVar(&params.TabID, "tab-id", "", "Tab ID to capture (uses extension debugger instead of headless)")
-	fs.StringVar(&params.Browser, "browser", "firefox", "Browser backend: firefox (default) or chrome")
 	fs.BoolVar(&params.Landscape, "landscape", false, "PDF only: use landscape orientation")
 	fs.BoolVar(&params.NoHeaders, "no-headers", false, "PDF only: disable header and footer")
 	fs.BoolVar(&params.Background, "background", false, "PDF only: print background graphics")
@@ -113,7 +110,7 @@ func cmdCapture(ctx context.Context, p *proxy.BrowserProxy, args []string) (err 
 
 	formats := strings.Split(params.Format, ",")
 	if len(formats) > 1 {
-		return cmdCaptureMulti(ctx, p, params, formats, output)
+		return cmdCaptureMulti(ctx, params, formats, output)
 	}
 
 	if err = params.Validate(); err != nil {
@@ -146,7 +143,7 @@ func cmdCapture(ctx context.Context, p *proxy.BrowserProxy, args []string) (err 
 		}()
 	}
 
-	err = tools.StreamCapture(ctx, p, params, w)
+	err = tools.StreamCapture(ctx, params, w)
 	if errors.Is(err, context.DeadlineExceeded) {
 		err = fmt.Errorf("capture timed out after %s", timeout)
 	}
@@ -155,7 +152,6 @@ func cmdCapture(ctx context.Context, p *proxy.BrowserProxy, args []string) (err 
 
 func cmdCaptureMulti(
 	ctx context.Context,
-	p *proxy.BrowserProxy,
 	params tools.CaptureParams,
 	formats []string,
 	output string,
@@ -170,7 +166,6 @@ func cmdCaptureMulti(
 
 	mep := tools.MultiExtractParams{
 		URL:           params.URL,
-		Browser:       params.Browser,
 		Formats:       formats,
 		Selector:      params.Selector,
 		ReaderEngine:  params.ReaderEngine,
@@ -179,7 +174,7 @@ func cmdCaptureMulti(
 		ViewportWidth: params.ViewportWidth,
 	}
 
-	results, err := tools.MultiExtract(ctx, p, mep)
+	results, err := tools.MultiExtract(ctx, mep)
 	if err != nil {
 		return err
 	}

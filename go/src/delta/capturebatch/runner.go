@@ -8,9 +8,7 @@ import (
 	"io"
 	"time"
 
-	"code.linenisgreat.com/chrest/go/src/bravo/cdp"
 	"code.linenisgreat.com/chrest/go/src/charlie/firefox"
-	"code.linenisgreat.com/chrest/go/src/charlie/headless"
 	"code.linenisgreat.com/chrest/go/src/charlie/markdown"
 	"code.linenisgreat.com/chrest/go/src/charlie/monolith"
 	"code.linenisgreat.com/chrest/go/src/delta/tools"
@@ -114,7 +112,7 @@ func runOne(ctx context.Context, r Resolved, opts Options, host HostFingerprint)
 	entry.Payload = payloadRef
 
 	if r.Split {
-		var httpResp *cdp.HTTPResponse
+		var httpResp *firefox.HTTPResponse
 		if resp, ok := session.LastNavigationHTTP(); ok {
 			httpResp = &resp
 		}
@@ -147,14 +145,12 @@ func splitSupported(format string) bool {
 	}
 }
 
-func openSession(ctx context.Context, browser string) (cdp.Session, error) {
+func openSession(ctx context.Context, browser string) (*firefox.Session, error) {
 	switch browser {
-	case "firefox":
+	case "firefox", "":
 		return firefox.NewSession(ctx)
-	case "chrome", "":
-		return headless.NewSession(ctx)
 	default:
-		return nil, fmt.Errorf("unknown browser backend %q", browser)
+		return nil, fmt.Errorf("unknown browser backend %q; only firefox is supported", browser)
 	}
 }
 
@@ -173,7 +169,7 @@ func openSession(ctx context.Context, browser string) (cdp.Session, error) {
 // architecturally impossible. The split=false path remains streaming.
 func writePayload(
 	ctx context.Context,
-	session cdp.Session,
+	session *firefox.Session,
 	r Resolved,
 	writer WriterSpec,
 	mediaType string,
@@ -223,7 +219,7 @@ func writeEnvelope(
 	opts Options,
 	capturedAt time.Time,
 	stripped map[string]any,
-	httpResp *cdp.HTTPResponse,
+	httpResp *firefox.HTTPResponse,
 ) (*ArtifactRef, error) {
 	envBytes, err := BuildEnvelope(opts.URL, capturedAt, stripped, httpResp)
 	if err != nil {
@@ -248,7 +244,7 @@ func writeEnvelope(
 //
 // baseURL is forwarded to encoders that need it for relative-asset
 // resolution (currently only html-monolith).
-func runCaptureFormat(ctx context.Context, s cdp.Session, r Resolved, baseURL string) (io.ReadCloser, error) {
+func runCaptureFormat(ctx context.Context, s *firefox.Session, r Resolved, baseURL string) (io.ReadCloser, error) {
 	var opts tools.CaptureParams
 	if len(r.Options) > 0 {
 		_ = json.Unmarshal(r.Options, &opts) // best-effort field copy
@@ -257,7 +253,7 @@ func runCaptureFormat(ctx context.Context, s cdp.Session, r Resolved, baseURL st
 	case "text":
 		return s.ExtractText(ctx)
 	case "pdf":
-		return s.PrintToPDF(ctx, cdp.PDFOptions{
+		return s.PrintToPDF(ctx, firefox.PDFOptions{
 			Landscape:           opts.Landscape,
 			DisplayHeaderFooter: !opts.NoHeaders,
 			PrintBackground:     opts.Background,
@@ -269,7 +265,7 @@ func runCaptureFormat(ctx context.Context, s cdp.Session, r Resolved, baseURL st
 			MarginRight:         opts.MarginRight.Value,
 		})
 	case "screenshot":
-		return s.CaptureScreenshot(ctx, cdp.ScreenshotOptions{
+		return s.CaptureScreenshot(ctx, firefox.ScreenshotOptions{
 			Format:   "png",
 			FullPage: opts.FullPage,
 		})
@@ -317,7 +313,7 @@ func runCaptureFormat(ctx context.Context, s cdp.Session, r Resolved, baseURL st
 
 func writeSpec(
 	ctx context.Context,
-	session cdp.Session,
+	session *firefox.Session,
 	r Resolved,
 	host HostFingerprint,
 	opts Options,
