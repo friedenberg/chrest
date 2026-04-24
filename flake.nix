@@ -27,6 +27,16 @@
       bob,
       tommy,
     }:
+    let
+      # Burnt into the binary via the fork's auto-injected -ldflags
+      # (-X main.version / -X main.commit). Single source of truth for
+      # the release version; `just bump-version` sed-rewrites this line.
+      chrestVersion = "0.0.1";
+      # shortRev for clean builds, dirtyShortRev for dirty working trees
+      # (so devshell builds show `dirty-abcdef` rather than masquerading
+      # as a clean release), "unknown" as a last-resort fallback.
+      chrestCommit = self.shortRev or self.dirtyShortRev or "unknown";
+    in
     (utils.lib.eachDefaultSystem (
       system:
       let
@@ -68,7 +78,8 @@
         };
         chrest = pkgs.buildGoApplication {
           pname = "chrest";
-          version = "0.0.1";
+          version = chrestVersion;
+          commit = chrestCommit;
           src = ./go;
           subPackages = [
             "cmd/chrest"

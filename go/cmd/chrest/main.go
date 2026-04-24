@@ -31,6 +31,14 @@ import (
 	"code.linenisgreat.com/chrest/go/src/delta/tools"
 )
 
+// Populated at link time via `-X main.version` / `-X main.commit`
+// (auto-injected by the amarbel-llc/nixpkgs fork's buildGoApplication
+// when `version` and `commit` are passed to the derivation).
+var (
+	version = "dev"
+	commit  = "unknown"
+)
+
 func init() {
 	log.SetPrefix("chrest ")
 }
@@ -77,7 +85,7 @@ func run(ctx errors.Context) (err error) {
 	p := &proxy.BrowserProxy{Config: c}
 
 	app := command.NewUtility("chrest", "Manage browsers via REST")
-	app.Version = "0.1.0"
+	app.Version = version
 	app.MCPArgs = []string{"mcp"}
 
 	tools.RegisterAll(app, p)
@@ -87,6 +95,7 @@ func run(ctx errors.Context) (err error) {
 	registerInstallMCPCommand(app)
 	registerGeneratePluginCommand(app)
 	registerCaptureBatchCommand(app)
+	registerVersionCommand(app)
 
 	if len(os.Args) > 1 && os.Args[1] == "mcp" {
 		if err = runMCP(ctx, app, p); err != nil {
