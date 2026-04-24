@@ -1,7 +1,8 @@
 # Fixed-output derivation for Firefox, bypassing nixpkgs (unavailable on Darwin).
 #
 # Darwin: universal .dmg (Apple Silicon + Intel), fetched from Mozilla CDN,
-#         extracted with undmg, firefox symlinked into $out/bin.
+#         extracted with undmg, makeWrapper wraps the MacOS binary into $out/bin
+#         so argv[0] resolves to the real binary path (symlinks break XPCOM loading).
 # Linux:  platform-specific .tar.xz (x86_64 + aarch64), wrapped with
 #         makeWrapper so shared libs and profile data dirs resolve correctly
 #         for headless BiDi capture.
@@ -40,14 +41,14 @@ if stdenv.isDarwin then
       hash = "sha256-IDZn/2sJIPiZc9R3sTlNmbS3iAemE5FMl7sbMgDm2hs=";
     };
 
-    nativeBuildInputs = [ undmg ];
+    nativeBuildInputs = [ undmg makeWrapper ];
 
     sourceRoot = ".";
 
     installPhase = ''
       mkdir -p $out/bin $out/Applications
       cp -r Firefox.app $out/Applications/
-      ln -s $out/Applications/Firefox.app/Contents/MacOS/firefox $out/bin/firefox
+      makeWrapper $out/Applications/Firefox.app/Contents/MacOS/firefox $out/bin/firefox
     '';
 
     meta = {
