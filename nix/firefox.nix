@@ -69,7 +69,7 @@ else
       };
       aarch64-linux = fetchurl {
         url = "${base}/linux-aarch64/en-US/firefox-${version}.tar.xz";
-        hash = "sha256-nm4pdN36hAVEyvJu/adlxJiJMb8q2a+sQdQDNkWzuc=";
+        hash = "sha256-nm4pdN36hAVEyvJu/adlxJiJMb8q2oXGsQdQDNkWzuc=";
       };
     };
   in

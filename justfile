@@ -1,10 +1,16 @@
 
-default: build build-nix test
+default: build build-nix check-nix test
 
 build: build-go build-extension
 
 build-nix:
   nix build
+
+# Evaluate flake outputs for every supported system. Catches malformed
+# fixed-output hashes on non-host platforms before they surface in
+# flakehub-push's inspect wrapper (see chrest#50).
+check-nix:
+  nix flake check --no-build
 
 reload: build
   go/build/release/chrest install jbcogiaaaaikinoljmplilmcnicpfoek

@@ -111,6 +111,34 @@
           program = "${chrest}/bin/chrest";
         };
 
+        # Force evaluation of devShells and packages across every supported
+        # system, from the host system's checks. Catches malformed fixed-
+        # output hashes on non-host platforms before they surface in
+        # flakehub-push's inspect wrapper (see chrest#50). Eval-only: does
+        # not attempt to build or fetch sources for other systems.
+        checks.all-systems-eval =
+          let
+            systems = [
+              "x86_64-linux"
+              "aarch64-linux"
+              "x86_64-darwin"
+              "aarch64-darwin"
+            ];
+            drvPathsFor = sys: [
+              self.devShells.${sys}.default.drvPath
+              self.packages.${sys}.default.drvPath
+            ];
+            allDrvPaths = pkgs.lib.concatMap drvPathsFor systems;
+          in
+          pkgs.runCommand "all-systems-eval"
+            {
+              paths = builtins.concatStringsSep "\n" allDrvPaths;
+              passAsFile = [ "paths" ];
+            }
+            ''
+              cp "$pathsPath" "$out"
+            '';
+
         devShells.default = pkgs-master.mkShell {
           packages = [
             bob.packages.${system}.batman
