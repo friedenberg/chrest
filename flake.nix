@@ -1,6 +1,6 @@
 {
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/fea3b367d61c1a6592bc47c72f40a9f3e6a53e96";
+    nixpkgs.url = "github:amarbel-llc/nixpkgs";
     nixpkgs-master.url = "github:NixOS/nixpkgs/e2dde111aea2c0699531dc616112a96cd55ab8b5";
     utils.url = "https://flakehub.com/f/numtide/flake-utils/0.1.102";
 
@@ -114,8 +114,11 @@
         # Force evaluation of devShells and packages across every supported
         # system, from the host system's checks. Catches malformed fixed-
         # output hashes on non-host platforms before they surface in
-        # flakehub-push's inspect wrapper (see chrest#50). Eval-only: does
-        # not attempt to build or fetch sources for other systems.
+        # flakehub-push's inspect wrapper (see chrest#50). Eval-only: uses
+        # builtins.seq on each system's drvPath string to trigger the
+        # fixed-output-hash validation without referencing the foreign
+        # drv as a build input — otherwise `nix flake check --no-build`
+        # refuses to realize cross-system drvs.
         checks.all-systems-eval =
           let
             systems = [
@@ -124,20 +127,18 @@
               "x86_64-darwin"
               "aarch64-darwin"
             ];
-            drvPathsFor = sys: [
-              self.devShells.${sys}.default.drvPath
-              self.packages.${sys}.default.drvPath
-            ];
-            allDrvPaths = pkgs.lib.concatMap drvPathsFor systems;
+            forced = builtins.deepSeq
+              (map
+                (sys: {
+                  dev = self.devShells.${sys}.default.drvPath;
+                  pkg = self.packages.${sys}.default.drvPath;
+                })
+                systems)
+              "ok";
           in
-          pkgs.runCommand "all-systems-eval"
-            {
-              paths = builtins.concatStringsSep "\n" allDrvPaths;
-              passAsFile = [ "paths" ];
-            }
-            ''
-              cp "$pathsPath" "$out"
-            '';
+          pkgs.runCommand "all-systems-eval-${forced}" { } ''
+            touch $out
+          '';
 
         devShells.default = pkgs-master.mkShell {
           packages = [
