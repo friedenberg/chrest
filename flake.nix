@@ -4,22 +4,14 @@
     nixpkgs-master.url = "github:NixOS/nixpkgs/e2dde111aea2c0699531dc616112a96cd55ab8b5";
     utils.url = "https://flakehub.com/f/numtide/flake-utils/0.1.102";
 
-    gomod2nix = {
-      url = "github:amarbel-llc/gomod2nix";
-      inputs.nixpkgs.follows = "nixpkgs";
-      inputs.flake-utils.follows = "utils";
-    };
-
     bob = {
       url = "github:amarbel-llc/bob";
-      inputs.gomod2nix.follows = "gomod2nix";
       inputs.nixpkgs-master.follows = "nixpkgs-master";
       inputs.utils.follows = "utils";
     };
 
     tommy = {
       url = "github:amarbel-llc/tommy";
-      inputs.gomod2nix.follows = "gomod2nix";
       inputs.nixpkgs-master.follows = "nixpkgs-master";
       inputs.utils.follows = "utils";
       inputs.bob.follows = "bob";
@@ -32,7 +24,6 @@
       nixpkgs,
       nixpkgs-master,
       utils,
-      gomod2nix,
       bob,
       tommy,
     }:
@@ -42,14 +33,13 @@
         pkgs = import nixpkgs {
           inherit system;
           overlays = [
-            gomod2nix.overlays.default
+            nixpkgs.overlays.default
           ];
         };
         firefox = pkgs.callPackage ./nix/firefox.nix { };
         pkgs-master = import nixpkgs-master {
           inherit system;
           overlays = [
-            gomod2nix.overlays.default
             (final: prev: {
               web-ext = prev.buildNpmPackage rec {
                 pname = "web-ext";
@@ -76,7 +66,7 @@
             })
           ];
         };
-        chrest = pkgs-master.buildGoApplication {
+        chrest = pkgs.buildGoApplication {
           pname = "chrest";
           version = "0.0.1";
           src = ./go;
@@ -85,7 +75,7 @@
             "cmd/chrest-server"
           ];
           modules = ./go/gomod2nix.toml;
-          go = pkgs-master.go_1_26;
+          go = pkgs.go_1_26;
           GOTOOLCHAIN = "local";
           nativeBuildInputs = [ pkgs.makeWrapper ];
           postInstall = ''
@@ -179,7 +169,7 @@
               web-ext
             ]
           ) ++ [
-            gomod2nix.packages.${system}.default
+            pkgs.gomod2nix
           ];
 
           # Passthru: use the outer-shell git (user's nix profile, NixOS
