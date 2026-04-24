@@ -79,19 +79,18 @@ func (p *Process) Close() error {
 // killProcessTree SIGKILLs the root process and every descendant.
 //
 // Two strategies, belt-and-suspenders:
-//  1. Walk /proc/<pid>/task/<tid>/children recursively to catch descendants
-//     even when they live in their own process groups (Firefox content
-//     processes detach into their own groups, so a bare -pgid kill misses
-//     them).
-//  2. Also SIGKILL the root's process group, picking up anything the /proc
-//     walk missed due to reparenting races.
+//  1. collectDescendants enumerates the descendant tree (platform-specific
+//     — /proc on Linux, sysctl kern.proc.all on Darwin) and SIGKILLs each,
+//     catching Firefox content processes that detach into their own
+//     process groups and would escape a bare -pgid kill.
+//  2. SIGKILL the root's process group, picking up anything the walk
+//     missed due to reparenting races.
 //
 // The root is stopped first so it cannot spawn new children during the walk.
 // On a normal system, orphaned helpers would be reaped by init; inside
 // bwrap --unshare-pid sandboxes there is no init, so unkilled descendants
 // linger forever and block the sandbox from exiting.
 func killProcessTree(rootPid int) {
-	// Freeze the root so its listed children are stable during the walk.
 	_ = syscall.Kill(rootPid, syscall.SIGSTOP)
 
 	for _, pid := range collectDescendants(rootPid) {
@@ -104,9 +103,6 @@ func killProcessTree(rootPid int) {
 
 	_ = syscall.Kill(rootPid, syscall.SIGKILL)
 }
-
-// collectDescendants returns every descendant PID of root. The
-// implementation is platform-specific (procs_linux.go, procs_darwin.go).
 
 func findBinary(names []string) (string, error) {
 	for _, name := range names {
