@@ -98,6 +98,7 @@
             ''
               wrapProgram $out/bin/chrest \
                 --prefix PATH : ${firefox}/bin:${monolithBinPath}
+              ln -s ${firefox}/bin/firefox $out/bin/firefox
             '';
         };
       in

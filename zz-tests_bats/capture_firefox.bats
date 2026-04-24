@@ -52,8 +52,8 @@ function firefox_capture_mhtml_returns_unsupported_error { # @test
 }
 
 function firefox_capture_a11y_returns_unsupported_error { # @test
-  run timeout "$FIREFOX_TEST_TIMEOUT" "$CHREST_BIN" capture --format a11y --url "$FIXTURE"
-  echo "$output" | grep -qi "not supported"
+  run bash -c "timeout \"$FIREFOX_TEST_TIMEOUT\" \"$CHREST_BIN\" capture --format a11y --url \"$FIXTURE\" 2>&1"
+  assert_output --partial "not supported"
 }
 
 # Regression: PNG must end exactly at its IEND chunk. A trailing newline
