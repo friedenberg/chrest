@@ -88,6 +88,79 @@ dev-install-mcp: build
 demo:
   vhs demo/demo.tape
 
+# Tag a Go module release. The "go/v" prefix is added for you, so pass
+# the semver without it. Usage: just tag 0.0.2 "feat: release tooling"
+[group('release')]
+tag version message:
+  #!/usr/bin/env bash
+  set -euo pipefail
+  tag="go/v{{version}}"
+  prev=$(git tag --sort=-v:refname -l "go/v*" | head -1)
+  if [[ -n "$prev" ]]; then
+    echo "==> Previous: $prev"
+    git log --oneline "$prev"..HEAD -- go/
+  fi
+  git tag -s -m "{{message}}" "$tag"
+  echo "==> Created tag: $tag"
+  git push origin "$tag"
+  echo "==> Pushed $tag"
+  git tag -v "$tag"
+
+# Sed-rewrite chrestVersion in flake.nix to the given semver. The
+# version string is burnt into the binary at build time via the fork's
+# auto-injected -ldflags (see go/cmd/chrest/main.go version/commit
+# vars), so flake.nix is the single source of truth. No-op if already
+# at the target version. Usage: just bump-version 0.0.2
+[group('release')]
+bump-version new_version:
+  #!/usr/bin/env bash
+  set -euo pipefail
+  current=$(grep 'chrestVersion = ' flake.nix | sed 's/.*"\(.*\)".*/\1/')
+  if [[ "$current" == "{{new_version}}" ]]; then
+    echo "==> already at {{new_version}}"
+    exit 0
+  fi
+  sed -i.bak 's/chrestVersion = "'"$current"'"/chrestVersion = "{{new_version}}"/' flake.nix && rm flake.nix.bak
+  echo "==> bumped chrestVersion: $current -> {{new_version}}"
+
+# Cut a release: must be run on master. Bumps chrestVersion in
+# flake.nix, commits the bump with a changelog-style message built
+# from commits since the last go/v* tag, pushes master, then signs
+# and pushes the go/v{{version}} tag. The "go/v" prefix is added for
+# you, so pass the semver without it. Usage: just release 0.0.2
+#
+# Use `just tag <version> <message>` directly if you want to
+# control the commit message yourself without bumping.
+[group('release')]
+release version:
+  #!/usr/bin/env bash
+  set -euo pipefail
+  current_branch=$(git rev-parse --abbrev-ref HEAD)
+  if [[ "$current_branch" != "master" ]]; then
+    echo "ERROR: just release must be run on master (currently on $current_branch)" >&2
+    exit 1
+  fi
+  prev=$(git tag --sort=-v:refname -l "go/v*" | head -1)
+  header="release v{{version}}"
+  if [[ -n "$prev" ]]; then
+    summary=$(git log --format='- %s' "$prev"..HEAD -- go/)
+    if [[ -n "$summary" ]]; then
+      msg="$header"$'\n\n'"$summary"
+    else
+      msg="$header"
+    fi
+  else
+    msg="$header"
+  fi
+  just bump-version "{{version}}"
+  if ! git diff --quiet flake.nix; then
+    git add flake.nix
+    git commit -m "chore: release go/v{{version}}"
+    git push origin master
+    echo "==> pushed flake.nix bump to master"
+  fi
+  just tag "{{version}}" "$msg"
+
 [group: 'explore']
 explore-setup browser="firefox":
   just build
