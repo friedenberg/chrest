@@ -1,7 +1,10 @@
 
-default: build test
+default: build build-nix test
 
 build: build-go build-extension
+
+build-nix:
+  nix build
 
 reload: build
   go/build/release/chrest install jbcogiaaaaikinoljmplilmcnicpfoek
@@ -18,10 +21,10 @@ test: test-go test-mcp test-mcp-bats
 test-go:
   just go/tests-go
 
-mcp-bin := "go/build/release/chrest mcp"
+mcp-bin := "result/bin/chrest mcp"
 mcp-inspect := "npx @modelcontextprotocol/inspector --cli"
 
-test-mcp: build
+test-mcp: build-nix
   #!/usr/bin/env bash
   set -euo pipefail
   tools=$({{mcp-inspect}} --method tools/list {{mcp-bin}})
@@ -43,7 +46,7 @@ test-mcp: build
   done
   echo "All MCP validations passed"
 
-test-mcp-bats:
+test-mcp-bats: build-nix
   #!/usr/bin/env bash
   # Wrap bats in a hard wall-clock timeout because bats has been observed
   # to hang on post-test shutdown in bwrap --unshare-pid sandboxes after
@@ -56,7 +59,7 @@ test-mcp-bats:
   out=$(mktemp)
   trap 'rm -f "$out"' EXIT
   timeout --preserve-status 120 \
-    bats --bin-dir go/build/release/ --no-sandbox zz-tests_bats/ \
+    bats --bin-dir result/bin/ --no-sandbox zz-tests_bats/ \
     > >(tee "$out") 2>&1
   bats_rc=$?
   expected=$(grep -m1 -E '^1\.\.[0-9]+$' "$out" | sed 's/^1\.\.//')
