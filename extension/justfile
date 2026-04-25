@@ -1,33 +1,21 @@
 
-build: npm-install build-chrome build-firefox
-
-npm-install:
-  npm ci
-
-build-prepare_one browser:
-  #! /usr/bin/env -S bash -e
-
-  rm -rf dist-{{browser}}
-  mkdir -p dist-{{browser}}
+build: build-chrome build-firefox
 
 build-one browser:
   #! /usr/bin/env -S bash -e
 
-  set -o pipefail
+  root="$(git rev-parse --show-toplevel)"
 
-  cat manifest-common.json manifest-{{browser}}.json |
-    jq -s 'reduce .[] as $item ({}; . + $item)' \
-    > dist-{{browser}}/manifest.json
+  nix build --out-link "result-{{browser}}" "$root#extension-{{browser}}"
 
-  cp src/* assets/* dist-{{browser}}
-  BROWSER_TYPE={{browser}} node_modules/.bin/rolldown --config rolldown.config.mjs
+  rm -rf "dist-{{browser}}" "dist-{{browser}}.zip"
+  cp -rL "result-{{browser}}/dist-{{browser}}" "./dist-{{browser}}"
+  cp -L "result-{{browser}}/dist-{{browser}}.zip" "./dist-{{browser}}.zip"
+  chmod -R u+w "dist-{{browser}}" "dist-{{browser}}.zip"
 
-  zip -r dist-{{browser}}.zip dist-{{browser}}
+build-chrome: (build-one "chrome")
 
-build-chrome: (build-prepare_one "chrome") (build-one "chrome")
-
-build-firefox: (build-prepare_one "firefox") && (build-one "firefox")
-  cp zz-firefox-amo-metadata.json dist-firefox
+build-firefox: (build-one "firefox")
 
 deploy-firefox: build-firefox
   #! /usr/bin/env -S bash -e

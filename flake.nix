@@ -4,6 +4,11 @@
     nixpkgs-master.url = "github:NixOS/nixpkgs/e2dde111aea2c0699531dc616112a96cd55ab8b5";
     utils.url = "https://flakehub.com/f/numtide/flake-utils/0.1.102";
 
+    bun2nix = {
+      url = "github:nix-community/bun2nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     bob = {
       url = "github:amarbel-llc/bob";
       inputs.nixpkgs-master.follows = "nixpkgs-master";
@@ -24,6 +29,7 @@
       nixpkgs,
       nixpkgs-master,
       utils,
+      bun2nix,
       bob,
       tommy,
     }:
@@ -102,10 +108,15 @@
               ln -s ${firefox}/bin/firefox $out/bin/firefox
             '';
         };
+        extension = browserType: pkgs.callPackage ./extension/default.nix {
+          inherit browserType;
+        };
       in
       {
         packages.chrest = chrest;
         packages.default = chrest;
+        packages.extension-chrome = extension "chrome";
+        packages.extension-firefox = extension "firefox";
 
         apps.default = {
           type = "app";
@@ -145,9 +156,11 @@
           packages = [
             bob.packages.${system}.batman
             tommy.packages.${system}.default
+            bun2nix.packages.${system}.default
           ] ++ (
             with pkgs;
             [
+              bun
               fish
               gnumake
               jq

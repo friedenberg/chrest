@@ -59,6 +59,20 @@ just build-firefox      # builds firefox extension to dist-firefox/
 just deploy-firefox     # sign and deploy to Firefox AMO
 ```
 
+The extension build is a Nix derivation — `extension/default.nix` driven by
+`pkgs.mkBunDerivation` (chrest#49). Each `just build-<browser>` invokes
+`nix build .#extension-<browser>` and copies `dist-<browser>/` and
+`dist-<browser>.zip` out of the `result-*` symlink for use by
+`deploy-firefox` and manual browser loads. Two consecutive builds produce
+byte-identical zips (mtime-normalized via `touch -t 198001010000`; Info-ZIP
+does not honor `SOURCE_DATE_EPOCH`).
+
+Dependencies are pinned in `extension/bun.lock` (bun) and mirrored to
+`extension/bun.nix` (consumed by `fetchBunDeps`). To bump a dependency:
+edit `package.json`, run `bun install`, then `bun2nix -l bun.lock -o
+bun.nix`. Both files must be staged for `nix build` to see them
+(dirty-tree builds only include git-tracked files).
+
 ## Architecture
 
 ### Communication Flow
