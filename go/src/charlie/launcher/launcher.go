@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net"
 	"net/http"
@@ -46,6 +47,11 @@ type Process struct {
 	// Recorded so capture-batch can emit it in the spec artifact's
 	// browser.command_line field.
 	args []string
+	// exited receives the result of cmd.Wait() exactly once and is then
+	// closed. A dedicated waiter goroutine in Launch owns the actual
+	// cmd.Wait call, so callers must read this channel rather than calling
+	// Wait themselves.
+	exited chan error
 }
 
 // Args returns the argv (excluding argv[0]) the browser was launched with.
@@ -57,12 +63,20 @@ func (p *Process) WSURL() string {
 	return p.wsURL
 }
 
+// Exited returns a channel that delivers the cmd.Wait() error when the
+// browser process exits, then closes. Consumers can select on it to detect
+// an unexpected mid-session crash.
+func (p *Process) Exited() <-chan error {
+	return p.exited
+}
+
 func (p *Process) Close() error {
 	var firstErr error
 
 	if p.cmd.Process != nil {
 		killProcessTree(p.cmd.Process.Pid)
-		if err := p.cmd.Wait(); err != nil {
+		err := <-p.exited
+		if err != nil {
 			if _, ok := err.(*exec.ExitError); !ok {
 				firstErr = err
 			}
@@ -207,23 +221,27 @@ func Launch(ctx context.Context, cfg BrowserConfig) (*Process, error) {
 		}
 		return nil, errors.Wrap(err)
 	}
-	log.Printf("browser started (pid %d)", cmd.Process.Pid)
+	pid := cmd.Process.Pid
+	log.Printf("browser started (pid %d)", pid)
+
+	exited := make(chan error, 1)
+	go func() {
+		err := cmd.Wait()
+		logBrowserExit(pid, err)
+		exited <- err
+		close(exited)
+	}()
 
 	killAndCleanup := func() {
-		killProcessTree(cmd.Process.Pid)
-		_ = cmd.Wait()
+		killProcessTree(pid)
+		<-exited
 		if cleanup != nil {
 			cleanup()
 		}
 	}
 
 	if cfg.Discovery.Kind == HTTPEndpoint {
-		go func() {
-			scanner := bufio.NewScanner(stderr)
-			for scanner.Scan() {
-				log.Printf("browser stderr: %s", scanner.Text())
-			}
-		}()
+		go drainStderr(stderr)
 	}
 
 	var wsURL string
@@ -241,26 +259,68 @@ func Launch(ctx context.Context, cfg BrowserConfig) (*Process, error) {
 	}
 
 	log.Printf("browser WebSocket URL: %s", wsURL)
-	return &Process{cmd: cmd, wsURL: wsURL, cleanup: cleanup, args: args}, nil
+	return &Process{cmd: cmd, wsURL: wsURL, cleanup: cleanup, args: args, exited: exited}, nil
 }
 
-func discoverStderr(ctx context.Context, stderr interface{ Read([]byte) (int, error) }, pattern *regexp.Regexp) (string, error) {
+func drainStderr(stderr io.Reader) {
+	scanner := bufio.NewScanner(stderr)
+	for scanner.Scan() {
+		log.Printf("browser stderr: %s", scanner.Text())
+	}
+	if err := scanner.Err(); err != nil {
+		log.Printf("browser stderr scanner error: %v", err)
+	}
+}
+
+func logBrowserExit(pid int, err error) {
+	if err == nil {
+		log.Printf("browser exited cleanly (pid %d)", pid)
+		return
+	}
+	exitErr, ok := err.(*exec.ExitError)
+	if !ok {
+		log.Printf("browser wait error (pid %d): %v", pid, err)
+		return
+	}
+	if ws, ok := exitErr.Sys().(syscall.WaitStatus); ok {
+		switch {
+		case ws.Signaled():
+			log.Printf("browser killed by signal %v (pid %d)", ws.Signal(), pid)
+		case ws.Exited():
+			log.Printf("browser exited with code %d (pid %d)", ws.ExitStatus(), pid)
+		default:
+			log.Printf("browser exited (pid %d, status %v)", pid, ws)
+		}
+		return
+	}
+	log.Printf("browser exited with error (pid %d): %v", pid, err)
+}
+
+func discoverStderr(ctx context.Context, stderr io.Reader, pattern *regexp.Regexp) (string, error) {
 	found := make(chan string, 1)
 	done := make(chan error, 1)
 
 	go func() {
 		scanner := bufio.NewScanner(stderr)
+		var sentURL bool
 		for scanner.Scan() {
 			line := scanner.Text()
 			log.Printf("browser stderr: %s", line)
-			if m := pattern.FindStringSubmatch(line); len(m) > 1 {
-				found <- m[1]
-				return
+			if !sentURL {
+				if m := pattern.FindStringSubmatch(line); len(m) > 1 {
+					found <- m[1]
+					sentURL = true
+				}
 			}
 		}
 		if err := scanner.Err(); err != nil {
-			done <- err
-		} else {
+			log.Printf("browser stderr scanner error: %v", err)
+			if !sentURL {
+				done <- err
+				return
+			}
+		}
+		if !sentURL {
 			done <- errors.Errorf("browser stderr closed without emitting WebSocket URL")
 		}
 	}()
