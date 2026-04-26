@@ -37,6 +37,10 @@ type BrowserConfig struct {
 	URL         string
 	Discovery   DiscoveryStrategy
 	TempProfile string
+	// ProfilePath, when set, takes precedence over TempProfile: the
+	// browser is launched against this exact directory and the launcher
+	// does not clean it up.
+	ProfilePath string
 }
 
 type Process struct {
@@ -152,7 +156,11 @@ func Launch(ctx context.Context, cfg BrowserConfig) (*Process, error) {
 	args := append([]string{}, cfg.Args...)
 	var cleanup func()
 
-	if cfg.TempProfile != "" {
+	switch {
+	case cfg.ProfilePath != "":
+		args = append(args, "--profile", cfg.ProfilePath)
+		// No cleanup — caller owns the directory.
+	case cfg.TempProfile != "":
 		dir, err := os.MkdirTemp("", cfg.TempProfile+"*")
 		if err != nil {
 			return nil, errors.Wrap(err)

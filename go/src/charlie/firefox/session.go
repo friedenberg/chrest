@@ -64,7 +64,19 @@ type bidiCapabilities struct {
 
 // NewSession launches headless Firefox and connects via BiDi.
 func NewSession(ctx context.Context) (*Session, error) {
-	ff, err := Launch(ctx)
+	return newSessionFromLaunch(ctx, Launch)
+}
+
+// NewSessionWithProfile launches headless Firefox against an explicit
+// profile directory and connects via BiDi.
+func NewSessionWithProfile(ctx context.Context, profilePath string) (*Session, error) {
+	return newSessionFromLaunch(ctx, func(ctx context.Context) (*launcher.Process, error) {
+		return LaunchWithProfile(ctx, profilePath)
+	})
+}
+
+func newSessionFromLaunch(ctx context.Context, launchFn func(context.Context) (*launcher.Process, error)) (*Session, error) {
+	ff, err := launchFn(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -161,6 +173,21 @@ func (s *Session) SetViewport(ctx context.Context, width, height int) error {
 		"viewport": map[string]any{
 			"width":  width,
 			"height": height,
+		},
+	})
+	return errors.Wrap(err)
+}
+
+// SetCookie writes a cookie into Firefox via BiDi storage.setCookie.
+// The cookie lives in the in-memory cookie jar only; Firefox does not
+// flush BiDi-set cookies to cookies.sqlite, even on graceful shutdown.
+func (s *Session) SetCookie(ctx context.Context, name, value, domain, path string) error {
+	_, err := s.conn.Send("storage.setCookie", map[string]any{
+		"cookie": map[string]any{
+			"name":   name,
+			"value":  map[string]any{"type": "string", "value": value},
+			"domain": domain,
+			"path":   path,
 		},
 	})
 	return errors.Wrap(err)
@@ -424,6 +451,19 @@ func (s *Session) Close() error {
 		s.firefox.Close()
 	}
 	return nil
+}
+
+// BrowserClose asks Firefox to exit on its own via BiDi browser.close,
+// allowing it to flush on-disk state (cookies.sqlite, localStorage)
+// before termination — Session.Close() SIGKILLs, which skips the flush.
+// Callers MUST still invoke Close() afterward to release subscription,
+// connection, and process resources.
+func (s *Session) BrowserClose(ctx context.Context) error {
+	if s.conn == nil {
+		return nil
+	}
+	_, err := s.conn.Send("browser.close", map[string]any{})
+	return errors.Wrap(err)
 }
 
 // base64Field extracts a base64-encoded field from a JSON result and
