@@ -177,6 +177,7 @@
               jq
               just
               nodejs_latest
+              poppler-utils
               unixtools.xxd
               vhs
               zip

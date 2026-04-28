@@ -73,6 +73,32 @@ function firefox_capture_pdf_has_no_trailing_newline { # @test
   [ "$tail" = "2525454f460a" ]
 }
 
+# Pin-down: --landscape produces a landscape page (W > H). Pre-emptive
+# regression guard for the planned single-format-through-MultiExtract
+# unification — MultiExtract today hardcodes firefox.PDFOptions{} and
+# would silently drop --landscape if wired naively. Uses pdfinfo from
+# poppler_utils (devshell). Page size is reported as "W x H pts".
+function firefox_capture_pdf_landscape { # @test
+  out="$BATS_TEST_TMPDIR/landscape.pdf"
+  timeout "$FIREFOX_TEST_TIMEOUT" "$CHREST_BIN" capture --format pdf --landscape \
+    --url "$FIXTURE" --output "$out"
+  # Parse "Page size: <W> x <H> pts (...)" — fields 3 and 5.
+  read -r w h <<<"$(pdfinfo "$out" | awk '/^Page size:/ {print $3, $5}')"
+  awk -v w="$w" -v h="$h" 'BEGIN { exit !(w > h) }'
+}
+
+# Pin-down: --paper-width sets the PDF MediaBox width. 2.2409in matches
+# the Peripage A6+ thermal-printer recipe (see amarbel-llc/pa6e). 1in =
+# 72pt, so 2.2409in ≈ 161.345pt. Tolerance is ±1pt for rounding.
+function firefox_capture_pdf_paper_width_thermal { # @test
+  out="$BATS_TEST_TMPDIR/thermal.pdf"
+  timeout "$FIREFOX_TEST_TIMEOUT" "$CHREST_BIN" capture --format pdf \
+    --paper-width 2.2409 --margin-left 0 --margin-right 0 \
+    --url "$FIXTURE" --output "$out"
+  read -r w _ <<<"$(pdfinfo "$out" | awk '/^Page size:/ {print $3, $5}')"
+  awk -v w="$w" 'BEGIN { exit !(w >= 160.3 && w <= 162.4) }'
+}
+
 # html-monolith: pipe the rendered DOM through monolith, which inlines every
 # asset as data: URIs and returns a self-contained .html document. Skip the
 # case gracefully if the monolith binary isn't on PATH (chrest#26).
