@@ -97,6 +97,17 @@
           nativeBuildInputs = [ pkgs.makeWrapper ];
           postInstall = ''
             $out/bin/chrest generate-plugin $out
+            cat > $out/share/purse-first/chrest/clown.json <<'JSON'
+            {
+              "version": 1,
+              "stdioServers": {
+                "chrest": {
+                  "command": "chrest",
+                  "args": ["mcp"]
+                }
+              }
+            }
+            JSON
           '';
           postFixup =
             let
