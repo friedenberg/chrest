@@ -164,15 +164,13 @@ func cmdCaptureMulti(
 		return fmt.Errorf("create output directory: %w", err)
 	}
 
-	mep := tools.MultiExtractParams{
-		URL:           params.URL,
-		Formats:       formats,
-		Selector:      params.Selector,
-		ReaderEngine:  params.ReaderEngine,
-		Quality:       params.Quality,
-		FullPage:      params.FullPage,
-		ViewportWidth: params.ViewportWidth,
-	}
+	// Build MultiExtractParams from the user's full CaptureParams so PDF
+	// flag passthrough (--landscape, --paper-width, --margin-*) reaches
+	// every PDF result in the format set. The single-format helper
+	// hard-codes Formats=[p.Format]; multi overrides it with the parsed
+	// list.
+	mep := params.ToMultiExtractParams()
+	mep.Formats = formats
 
 	results, err := tools.MultiExtract(ctx, mep)
 	if err != nil {

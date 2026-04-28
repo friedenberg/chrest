@@ -279,3 +279,44 @@ function firefox_capture_multi_format_requires_output { # @test
   [ "$status" -ne 0 ]
   echo "$output" | grep -qi "output.*required"
 }
+
+# Multi-format with PDF must honor PDF flags. Pre-unification this
+# silently dropped --landscape because cmdCaptureMulti built
+# MultiExtractParams without the PDF fields. Post-unification both the
+# single-format and multi-format paths run through MultiExtract, and
+# the params plumb landscape/paper/margin through to firefox.PDFOptions.
+function firefox_capture_multi_format_pdf_with_landscape { # @test
+  out="$BATS_TEST_TMPDIR/multi-pdf"
+  timeout "$FIREFOX_TEST_TIMEOUT" "$CHREST_BIN" capture --format pdf,text --landscape \
+    --url "$FIXTURE" --output "$out"
+  [ -f "$out/pdf.pdf" ]
+  [ -f "$out/text.txt" ]
+  read -r w h <<<"$(pdfinfo "$out/pdf.pdf" | awk '/^Page size:/ {print $3, $5}')"
+  awk -v w="$w" -v h="$h" 'BEGIN { exit !(w > h) }'
+}
+
+# Heading-aware section expansion: an `#id` selector that matches a
+# heading returns the whole section (heading + following siblings up
+# to the next equal-or-higher heading), not just the heading element.
+# Pre-unification the markdown-selector format used ConvertSelector
+# (just the matched element); post-unification it uses
+# ConvertSelectorSection, matching web-fetch.
+function firefox_capture_markdown_selector_heading_section { # @test
+  cat >"$BATS_TEST_TMPDIR/sections.html" <<'EOF'
+<!doctype html>
+<html><body>
+<h1 id="alpha">Alpha</h1>
+<p>Alpha body paragraph that should be in the section.</p>
+<h1 id="beta">Beta</h1>
+<p>Beta body paragraph that must be excluded.</p>
+</body></html>
+EOF
+  result=$(timeout "$FIREFOX_TEST_TIMEOUT" "$CHREST_BIN" capture --format markdown-selector \
+    --selector '#alpha' --url "file://$BATS_TEST_TMPDIR/sections.html")
+  echo "$result" | grep -q "Alpha body paragraph"
+  if echo "$result" | grep -q "Beta body paragraph"; then
+    echo "selector leaked beta section:" >&2
+    echo "$result" >&2
+    return 1
+  fi
+}

@@ -20,6 +20,20 @@ type MultiExtractParams struct {
 	Quality       int
 	FullPage      bool
 	ViewportWidth int
+
+	// PDF-only flags. Forwarded verbatim to firefox.PDFOptions when
+	// formatPDF is in Formats. nil pointers and false bools mean "use
+	// the browser default" (typically US Letter, 0.4" margins, headers
+	// on, no background, portrait). Web-fetch leaves these zero.
+	Landscape    bool
+	NoHeaders    bool
+	Background   bool
+	PaperWidth   *float64
+	PaperHeight  *float64
+	MarginTop    *float64
+	MarginBottom *float64
+	MarginLeft   *float64
+	MarginRight  *float64
 }
 
 type FormatResult struct {
@@ -61,6 +75,20 @@ func MultiExtract(
 	}
 
 	return multiExtractFromSession(ctx, session, params), nil
+}
+
+// openCaptureSession opens a fresh headless-Firefox session for a
+// capture. The url is required so we fail fast (and consistently with
+// how the CLI surfaced this error before unification) rather than
+// launching Firefox just to discover there's nothing to navigate to.
+func openCaptureSession(
+	ctx context.Context,
+	url string,
+) (*firefox.Session, error) {
+	if url == "" {
+		return nil, fmt.Errorf("--url is required")
+	}
+	return firefox.NewSession(ctx)
 }
 
 // captureSession is the subset of *firefox.Session used by the internal
@@ -163,10 +191,24 @@ func extractOne(
 		if domErr != nil {
 			return nil, domErr
 		}
-		return readAllCloser(markdown.ConvertSelector(ctx, bytes.NewReader(domBytes), params.Selector))
+		// Heading-aware: an `#id` selector matching a heading returns
+		// the whole section (heading + following siblings up to the
+		// next equal-or-higher heading) rather than just the heading
+		// element. Matches web-fetch's selector behavior.
+		return readAllCloser(markdown.ConvertSelectorSection(bytes.NewReader(domBytes), params.Selector))
 
 	case formatPDF:
-		return readAllCloser(s.PrintToPDF(ctx, firefox.PDFOptions{}))
+		return readAllCloser(s.PrintToPDF(ctx, firefox.PDFOptions{
+			Landscape:           params.Landscape,
+			DisplayHeaderFooter: !params.NoHeaders,
+			PrintBackground:     params.Background,
+			PaperWidth:          params.PaperWidth,
+			PaperHeight:         params.PaperHeight,
+			MarginTop:           params.MarginTop,
+			MarginBottom:        params.MarginBottom,
+			MarginLeft:          params.MarginLeft,
+			MarginRight:         params.MarginRight,
+		}))
 
 	case formatScreenshotPNG:
 		return readAllCloser(s.CaptureScreenshot(ctx, firefox.ScreenshotOptions{

@@ -10,9 +10,6 @@ import (
 
 	"code.linenisgreat.com/chrest/go/libs/dewey/bravo/errors"
 	"code.linenisgreat.com/chrest/go/libs/dewey/golf/command"
-	"code.linenisgreat.com/chrest/go/src/charlie/firefox"
-	"code.linenisgreat.com/chrest/go/src/charlie/markdown"
-	"code.linenisgreat.com/chrest/go/src/charlie/monolith"
 	"code.linenisgreat.com/chrest/go/src/delta/proxy"
 )
 
@@ -254,120 +251,54 @@ func registerCaptureCommands(app *command.Utility, _ *proxy.BrowserProxy) {
 	})
 }
 
-// StreamCapture runs a capture with the given parameters and copies the raw
-// output bytes to w. The session is established, the URL (if any) navigated
-// to, the capture performed, and the session closed before returning.
-//
-// Callers that need the bytes as a Go value (e.g. the MCP handler) can pass
-// a *bytes.Buffer. Callers that want zero-copy output (e.g. the CLI) can
-// pass os.Stdout.
+// StreamCapture runs a single-format capture and copies the bytes to w.
+// Routes through MultiExtract so the CLI single-format path shares one
+// engine with the multi-format path and with web-fetch — see
+// MultiExtractParams. The browser session is opened, the URL navigated
+// to, the format extracted, and the session closed before returning.
 func StreamCapture(
 	ctx context.Context,
 	params CaptureParams,
 	w io.Writer,
 ) error {
-	session, err := openCaptureSession(ctx, params.URL)
+	results, err := MultiExtract(ctx, params.ToMultiExtractParams())
 	if err != nil {
 		return errors.Wrap(err)
 	}
-	defer session.Close()
-
-	if params.ViewportWidth > 0 {
-		if err := session.SetViewport(ctx, params.ViewportWidth, defaultViewportHeight); err != nil {
-			return errors.Wrap(err)
-		}
+	if len(results) != 1 {
+		return fmt.Errorf("MultiExtract returned %d results for one format", len(results))
 	}
-
-	if params.URL != "" {
-		if err := session.Navigate(ctx, params.URL); err != nil {
-			return errors.Wrap(err)
-		}
+	r := results[0]
+	if r.Err != nil {
+		return errors.Wrap(r.Err)
 	}
-
-	rc, err := runCapture(ctx, session, params)
-	if err != nil {
-		return errors.Wrap(err)
-	}
-	defer rc.Close()
-
-	if _, err := io.Copy(w, rc); err != nil {
+	if _, err := w.Write(r.Data); err != nil {
 		return errors.Wrap(err)
 	}
 	return nil
 }
 
-func openCaptureSession(
-	ctx context.Context,
-	url string,
-) (*firefox.Session, error) {
-	if url == "" {
-		return nil, fmt.Errorf("--url is required")
-	}
-	return firefox.NewSession(ctx)
-}
+// ToMultiExtractParams flattens CaptureParams into MultiExtractParams.
+// The PDF flexFloat fields collapse to *float64; everything else maps
+// 1:1.
+func (p CaptureParams) ToMultiExtractParams() MultiExtractParams {
+	return MultiExtractParams{
+		URL:           p.URL,
+		Formats:       []string{p.Format},
+		Selector:      p.Selector,
+		ReaderEngine:  p.ReaderEngine,
+		Quality:       p.Quality,
+		FullPage:      p.FullPage,
+		ViewportWidth: p.ViewportWidth,
 
-func runCapture(ctx context.Context, s *firefox.Session, params CaptureParams) (io.ReadCloser, error) {
-	switch params.Format {
-	case formatPDF:
-		return s.PrintToPDF(ctx, firefox.PDFOptions{
-			Landscape:           params.Landscape,
-			DisplayHeaderFooter: !params.NoHeaders,
-			PrintBackground:     params.Background,
-			PaperWidth:          params.PaperWidth.Value,
-			PaperHeight:         params.PaperHeight.Value,
-			MarginTop:           params.MarginTop.Value,
-			MarginBottom:        params.MarginBottom.Value,
-			MarginLeft:          params.MarginLeft.Value,
-			MarginRight:         params.MarginRight.Value,
-		})
-	case formatScreenshotPNG:
-		return s.CaptureScreenshot(ctx, firefox.ScreenshotOptions{
-			Format:   "png",
-			FullPage: params.FullPage,
-		})
-	case formatScreenshotJPEG:
-		return s.CaptureScreenshot(ctx, firefox.ScreenshotOptions{
-			Format:   "jpeg",
-			Quality:  params.Quality,
-			FullPage: params.FullPage,
-		})
-	case formatMHTML:
-		return s.CaptureSnapshot(ctx)
-	case formatA11y:
-		return s.AccessibilityTree(ctx)
-	case formatText:
-		return s.ExtractText(ctx)
-	case formatHTMLOuter:
-		return s.GetDocumentHTML(ctx)
-	case formatHTMLMonolith:
-		dom, err := s.GetDocumentHTML(ctx)
-		if err != nil {
-			return nil, err
-		}
-		defer dom.Close()
-		return monolith.Process(ctx, dom, params.URL)
-	case formatMarkdownFull:
-		dom, err := s.GetDocumentHTML(ctx)
-		if err != nil {
-			return nil, err
-		}
-		defer dom.Close()
-		return markdown.ConvertFull(ctx, dom)
-	case formatMarkdownReader:
-		dom, err := s.GetDocumentHTML(ctx)
-		if err != nil {
-			return nil, err
-		}
-		defer dom.Close()
-		return markdown.ConvertReader(ctx, dom, params.URL)
-	case formatMarkdownSelector:
-		dom, err := s.GetDocumentHTML(ctx)
-		if err != nil {
-			return nil, err
-		}
-		defer dom.Close()
-		return markdown.ConvertSelector(ctx, dom, params.Selector)
-	default:
-		return nil, fmt.Errorf("unknown --format value %q; expected one of %v", params.Format, captureFormats)
+		Landscape:    p.Landscape,
+		NoHeaders:    p.NoHeaders,
+		Background:   p.Background,
+		PaperWidth:   p.PaperWidth.Value,
+		PaperHeight:  p.PaperHeight.Value,
+		MarginTop:    p.MarginTop.Value,
+		MarginBottom: p.MarginBottom.Value,
+		MarginLeft:   p.MarginLeft.Value,
+		MarginRight:  p.MarginRight.Value,
 	}
 }
