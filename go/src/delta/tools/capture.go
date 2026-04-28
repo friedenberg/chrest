@@ -1,7 +1,6 @@
 package tools
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -11,7 +10,6 @@ import (
 
 	"code.linenisgreat.com/chrest/go/libs/dewey/bravo/errors"
 	"code.linenisgreat.com/chrest/go/libs/dewey/golf/command"
-	"code.linenisgreat.com/chrest/go/libs/dewey/golf/protocol"
 	"code.linenisgreat.com/chrest/go/src/charlie/firefox"
 	"code.linenisgreat.com/chrest/go/src/charlie/markdown"
 	"code.linenisgreat.com/chrest/go/src/charlie/monolith"
@@ -202,8 +200,7 @@ func registerCaptureCommands(app *command.Utility, _ *proxy.BrowserProxy) {
 				"margin of 0 is valid for borderless output. When unset, the browser default " +
 				"is used (typically US Letter 8.5\"x11\" with ~0.4\" margins).",
 		},
-		Annotations: &protocol.ToolAnnotations{ReadOnlyHint: protocol.BoolPtr(true)},
-		SeeAlso:     []string{"capture-batch"},
+		SeeAlso: []string{"capture-batch"},
 		Examples: []command.Example{
 			{
 				Description: "Save a page as PDF",
@@ -245,23 +242,14 @@ func registerCaptureCommands(app *command.Utility, _ *proxy.BrowserProxy) {
 			command.StringFlag{Name: "reader-engine", Description: "markdown-reader only: extraction engine (\"readability\" default; \"browser\" reserved/not-yet-implemented)"},
 			command.IntFlag{Name: "viewport-width", Description: "Viewport width in CSS pixels (e.g. 576 for thermal printer). Affects layout of all formats."},
 		},
-		Run: func(ctx context.Context, args json.RawMessage, _ command.Prompter) (*command.Result, error) {
-			var p0 CaptureParams
-			if err := json.Unmarshal(args, &p0); err != nil {
-				return command.TextErrorResult(err.Error()), nil
-			}
-			if err := p0.Validate(); err != nil {
-				return command.TextErrorResult(err.Error()), nil
-			}
-
-			// MCP path: buffer into memory since Result carries bytes as a
-			// text block. CLI goes through cmd/chrest's bypass, which streams
-			// directly to os.Stdout.
-			var buf bytes.Buffer
-			if err := StreamCapture(ctx, p0, &buf); err != nil {
-				return nil, err
-			}
-			return command.TextResult(buf.String()), nil
+		// CLI-only: the real CLI dispatch happens via the bypass in
+		// go/cmd/chrest/main.go (cmdCapture), which streams capture bytes
+		// directly to stdout/--output without dewey's TextResult buffering.
+		// This shim exists so dewey emits manpages, completions, and CLI
+		// help for `chrest capture`. With Run unset, the command is
+		// excluded from the MCP tool surface (see dewey/.../mcp.go).
+		RunCLI: func(_ context.Context, _ json.RawMessage) error {
+			return nil
 		},
 	})
 }

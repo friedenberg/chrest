@@ -41,7 +41,7 @@ test-mcp: build-nix
   echo "$resources" | jq -e '.resources | length > 0'
   echo "$templates" | jq -e '.resourceTemplates | length > 0'
   # Verify readOnlyHint annotations
-  for tool in browser-info list-windows get-window list-tabs get-tab list-extensions items-get state-get read-resource capture web-fetch; do
+  for tool in browser-info list-windows get-window list-tabs get-tab list-extensions items-get state-get read-resource web-fetch; do
     echo "$tools" | jq -e --arg t "$tool" '.tools[] | select(.name == $t) | .annotations.readOnlyHint == true' \
       || { echo "FAIL: $tool missing readOnlyHint"; exit 1; }
   done
