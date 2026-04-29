@@ -19,6 +19,7 @@ func TestClassify(t *testing.T) {
 		{"image/svg+xml → HTML", "image/svg+xml", "", "", 200, ClassHTML},
 		{"text/plain → Text", "text/plain; charset=utf-8", "", "", 200, ClassText},
 		{"text/markdown → Text", "text/markdown", "", "", 200, ClassText},
+		{"text/x-rst → Text (prefix branch)", "text/x-rst", "", "", 200, ClassText},
 		{"application/json → Text", "application/json", "", "", 200, ClassText},
 		{"application/xml → Text", "application/xml", "", "", 200, ClassText},
 		{".md ext overrides missing ct → Text", "", "", ".md", 200, ClassText},

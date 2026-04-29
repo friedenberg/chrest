@@ -30,13 +30,13 @@ func Classify(headers http.Header, urlStr string, status int) Class {
 	if status < 200 || status >= 300 {
 		return ClassHTTPError
 	}
-	if strings.HasPrefix(strings.ToLower(headers.Get("Content-Disposition")), "attachment") {
+	disp, _, _ := mime.ParseMediaType(headers.Get("Content-Disposition"))
+	if strings.EqualFold(disp, "attachment") {
 		return ClassBinary
 	}
 
 	ct := headers.Get("Content-Type")
 	mt, _, _ := mime.ParseMediaType(ct)
-	mt = strings.ToLower(mt)
 
 	switch mt {
 	case "text/html", "application/xhtml+xml", "image/svg+xml":
@@ -57,6 +57,11 @@ func Classify(headers http.Header, urlStr string, status int) Class {
 	return ClassBinary
 }
 
+// isTextMediaType returns true for media types whose body should be
+// returned as raw text in the web-fetch tool. The list is deliberately
+// narrow: text/css, text/javascript, text/csv etc. are not included
+// because the tool is intended for prose/documentation/source code,
+// not for treating every text/* response as readable content.
 func isTextMediaType(mt string) bool {
 	switch mt {
 	case "text/plain",
@@ -65,7 +70,7 @@ func isTextMediaType(mt string) bool {
 		"application/json",
 		"application/xml",
 		"application/x-yaml",
-		"application/yaml":
+		"application/yaml": // RFC 9512; application/x-yaml is the legacy form
 		return true
 	}
 	if strings.HasPrefix(mt, "text/x-") {
