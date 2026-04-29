@@ -719,6 +719,7 @@ func scrubURL(urlStr string) string {
 	}
 	parsed.RawQuery = ""
 	parsed.Fragment = ""
+	parsed.RawFragment = ""
 	return parsed.String()
 }
 
