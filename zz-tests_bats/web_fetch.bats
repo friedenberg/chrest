@@ -55,7 +55,7 @@ function web_fetch_html_url_regression { # @test
 function web_fetch_raw_md_url_returns_body_and_toc { # @test
   require_firefox
 
-  url="https://raw.githubusercontent.com/anthropics/anthropic-sdk-python/main/README.md"
+  url="https://raw.githubusercontent.com/anthropics/anthropic-sdk-python/78c73600b714fcb036893768df8ee122f33d4cb3/README.md"
   call=$(jq -nc --arg url "$url" '{jsonrpc:"2.0",id:2,method:"tools/call",params:{name:"web-fetch",arguments:{url:$url,format:"markdown"}}}')
   result=$(printf '%s\n' "$INIT_MSG" "$INITIALIZED_MSG" "$call" |
     timeout 60 "$CHREST_BIN" mcp)
@@ -73,7 +73,7 @@ function web_fetch_raw_md_url_returns_body_and_toc { # @test
 function web_fetch_raw_toml_url_returns_text_body { # @test
   require_firefox
 
-  url="https://raw.githubusercontent.com/anthropics/anthropic-sdk-python/main/pyproject.toml"
+  url="https://raw.githubusercontent.com/anthropics/anthropic-sdk-python/78c73600b714fcb036893768df8ee122f33d4cb3/pyproject.toml"
   call=$(jq -nc --arg url "$url" '{jsonrpc:"2.0",id:2,method:"tools/call",params:{name:"web-fetch",arguments:{url:$url,format:"text"}}}')
   result=$(printf '%s\n' "$INIT_MSG" "$INITIALIZED_MSG" "$call" |
     timeout 60 "$CHREST_BIN" mcp)
@@ -90,7 +90,7 @@ function web_fetch_raw_toml_url_returns_text_body { # @test
 function web_fetch_404_url_returns_structured_http_error { # @test
   require_firefox
 
-  url="https://raw.githubusercontent.com/anthropics/anthropic-sdk-python/main/THIS-DOES-NOT-EXIST"
+  url="https://raw.githubusercontent.com/anthropics/anthropic-sdk-python/78c73600b714fcb036893768df8ee122f33d4cb3/THIS-DOES-NOT-EXIST"
   call=$(jq -nc --arg url "$url" '{jsonrpc:"2.0",id:2,method:"tools/call",params:{name:"web-fetch",arguments:{url:$url}}}')
   result=$(printf '%s\n' "$INIT_MSG" "$INITIALIZED_MSG" "$call" |
     timeout 60 "$CHREST_BIN" mcp)
