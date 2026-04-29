@@ -37,18 +37,21 @@ require_firefox() {
 function web_fetch_html_url_regression { # @test
   require_firefox
 
+  # example.com is too minimal for readability to extract a non-empty
+  # article, so we ask for format=text (document.body.innerText). The
+  # response still travels the HTML-class branch of fetchViaDispatch
+  # since the response is text/html.
   url="https://example.com"
-  call=$(jq -nc --arg url "$url" '{jsonrpc:"2.0",id:2,method:"tools/call",params:{name:"web-fetch",arguments:{url:$url,format:"markdown"}}}')
+  call=$(jq -nc --arg url "$url" '{jsonrpc:"2.0",id:2,method:"tools/call",params:{name:"web-fetch",arguments:{url:$url,format:"text"}}}')
   result=$(printf '%s\n' "$INIT_MSG" "$INITIALIZED_MSG" "$call" |
     timeout 60 "$CHREST_BIN" mcp)
 
   resp=$(echo "$result" | grep '"id":2')
   echo "$resp" | jq -e '.result.isError != true'
-  # Default markdown layout: TOC + embedded markdown resource + 2 resource_links.
+  # Default text layout: TOC + embedded text resource + 2 resource_links.
   echo "$resp" | jq -e '.result.content | length == 4'
   echo "$resp" | jq -e '.result.content[0].type == "text"'
-  echo "$resp" | jq -e '.result.content[] | select(.type == "resource") | .resource.uri | test("#markdown$")'
-  # The example.com body is delivered through the HTML/MultiExtract path.
+  echo "$resp" | jq -e '.result.content[] | select(.type == "resource") | .resource.uri | test("#text$")'
   echo "$resp" | jq -e '.result.content[] | select(.type == "resource") | .resource.text | contains("Example Domain")'
 }
 
