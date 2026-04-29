@@ -482,9 +482,23 @@ func fetchViaFirefox(ctx context.Context, url string) (*fetchCacheEntry, error) 
 // a BiDi response intercept, navigate, classify, and either continue
 // (for HTML/Text) or fail (for Binary/HTTPError) the request.
 func fetchViaDispatch(ctx context.Context, urlStr string) (*fetchCacheEntry, error) {
+	// Bound the entire dispatch — including the file://, data: short-circuit
+	// — so a Navigate that errors before any intercept event fires (e.g. DNS
+	// failure) cannot deadlock the goroutine + main goroutine waiting on each
+	// other. 60s matches the `chrest capture --timeout` default.
+	ctx, cancel := context.WithTimeout(ctx, 60*time.Second)
+	defer cancel()
+
 	parsed, err := url.Parse(urlStr)
 	if err != nil {
 		return nil, fmt.Errorf("parse url: %w", err)
+	}
+
+	// file:// and data: URLs have no hostname, so the BiDi urlPattern
+	// hostname field is meaningless. These are local content (no binary
+	// surprises) so route them through the legacy path.
+	if parsed.Scheme == "file" || parsed.Scheme == "data" {
+		return fetchViaFirefox(ctx, urlStr)
 	}
 
 	session, err := firefox.NewSession(ctx)
@@ -507,54 +521,70 @@ func fetchViaDispatch(ctx context.Context, urlStr string) (*fetchCacheEntry, err
 	outcome := make(chan dispatchOutcome, 1)
 
 	go func() {
-		select {
-		case ev := <-events:
-			ct := headerValue(ev.Headers, "Content-Type")
-			class := rawfetch.Classify(httpHeaderFrom(ev.Headers), urlStr, ev.Status)
+		for {
+			select {
+			case ev := <-events:
+				// 3xx redirect: let it follow and wait for the next event.
+				// Without this, the dispatcher would misclassify the redirect
+				// as an HTTPError and surface "HTTP 301" to the user even
+				// though following the redirect would have succeeded.
+				if ev.Status >= 300 && ev.Status < 400 {
+					if err := session.ContinueResponse(ctx, ev.RequestID); err != nil {
+						outcome <- dispatchOutcome{err: err}
+						return
+					}
+					continue
+				}
 
-			log.Printf("web-fetch: dispatch=bidi-intercept class=%v ct=%s status=%d url=%s",
-				class, ct, ev.Status, urlStr)
+				ct := headerValue(ev.Headers, "Content-Type")
+				class := rawfetch.Classify(httpHeaderFrom(ev.Headers), urlStr, ev.Status)
 
-			switch class {
-			case rawfetch.ClassHTML:
-				if err := session.ContinueResponse(ctx, ev.RequestID); err != nil {
-					outcome <- dispatchOutcome{err: err}
+				log.Printf("web-fetch: dispatch=bidi-intercept class=%v ct=%s status=%d url=%s",
+					class, ct, ev.Status, scrubURL(urlStr))
+
+				switch class {
+				case rawfetch.ClassHTML:
+					if err := session.ContinueResponse(ctx, ev.RequestID); err != nil {
+						outcome <- dispatchOutcome{err: err}
+						return
+					}
+				case rawfetch.ClassText:
+					if err := session.ContinueResponse(ctx, ev.RequestID); err != nil {
+						outcome <- dispatchOutcome{err: err}
+						return
+					}
+				case rawfetch.ClassBinary:
+					_ = session.FailRequest(ctx, ev.RequestID)
+					outcome <- dispatchOutcome{
+						err: fmt.Errorf("web-fetch refused binary content-type %q from %s; use `chrest capture` to save binary downloads",
+							ct, ev.URL),
+						failedDeliberately: true,
+					}
+					return
+				case rawfetch.ClassHTTPError:
+					_ = session.FailRequest(ctx, ev.RequestID)
+					outcome <- dispatchOutcome{
+						err:                fmt.Errorf("web-fetch: HTTP %d from %s", ev.Status, ev.URL),
+						failedDeliberately: true,
+					}
 					return
 				}
-			case rawfetch.ClassText:
-				if err := session.ContinueResponse(ctx, ev.RequestID); err != nil {
-					outcome <- dispatchOutcome{err: err}
-					return
-				}
-			case rawfetch.ClassBinary:
-				_ = session.FailRequest(ctx, ev.RequestID)
+
+				// HTML or Text: we let navigate complete in the main goroutine,
+				// and signal success here so the main goroutine knows which
+				// path to populate the entry from.
 				outcome <- dispatchOutcome{
-					err: fmt.Errorf("web-fetch refused binary content-type %q from %s; use `chrest capture` to save binary downloads",
-						ct, ev.URL),
-					failedDeliberately: true,
+					entry: &fetchCacheEntry{
+						FetchedAt: time.Now(),
+						Path:      classPathLabel(class),
+					},
 				}
 				return
-			case rawfetch.ClassHTTPError:
-				_ = session.FailRequest(ctx, ev.RequestID)
-				outcome <- dispatchOutcome{
-					err:                fmt.Errorf("web-fetch: HTTP %d from %s", ev.Status, ev.URL),
-					failedDeliberately: true,
-				}
+
+			case <-ctx.Done():
+				outcome <- dispatchOutcome{err: ctx.Err()}
 				return
 			}
-
-			// HTML or Text: we let navigate complete in the main goroutine,
-			// and signal success here so the main goroutine knows which
-			// path to populate the entry from.
-			outcome <- dispatchOutcome{
-				entry: &fetchCacheEntry{
-					FetchedAt: time.Now(),
-					Path:      classPathLabel(class),
-				},
-			}
-
-		case <-ctx.Done():
-			outcome <- dispatchOutcome{err: ctx.Err()}
 		}
 	}()
 
@@ -677,6 +707,19 @@ func stripPreWrapper(domBytes []byte) []byte {
 		return domBytes
 	}
 	return []byte(s[bodyStart:closeIdx])
+}
+
+// scrubURL returns the URL with the query string and fragment redacted
+// for logging. The path is preserved (it's part of the route and
+// usually not sensitive).
+func scrubURL(urlStr string) string {
+	parsed, err := url.Parse(urlStr)
+	if err != nil {
+		return "<unparseable>"
+	}
+	parsed.RawQuery = ""
+	parsed.Fragment = ""
+	return parsed.String()
 }
 
 // guessContentTypeFromURL infers a content-type from a URL extension
