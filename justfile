@@ -298,6 +298,20 @@ explore-mcp-web-fetch-blocks url="https://example.com" selector="":
   echo "=== TOC (content[0].text) first 20 lines ==="
   echo "$result" | grep '"id":2' | jq -r '.result.content[0].text' | head -20
 
+# Verify Firefox/BiDi response interception support: addIntercept at the
+# responseStarted phase + continueResponse + failRequest. Pre-requisite
+# spike for the web-fetch content-type-dispatch design
+# (docs/plans/2026-04-29-web-fetch-content-type-dispatch-design.md).
+# Launches a real headless Firefox via the standard NewSession.
+[group: 'explore']
+explore-bidi-intercept:
+  #!/usr/bin/env bash
+  set -euo pipefail
+  cd go
+  CHREST_SPIKE_BIDI_INTERCEPT=1 go test -tags spike -count=1 -v \
+    -run TestSpikeBiDiResponseIntercept \
+    ./src/charlie/firefox/...
+
 [group: 'explore']
 explore-rewrite-dewey-imports:
   #!/usr/bin/env bash

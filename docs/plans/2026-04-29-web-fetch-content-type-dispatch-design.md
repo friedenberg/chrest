@@ -154,17 +154,39 @@ overrides observed in stderr logs → delete the env flag and the
 Lets us observe path distribution and confirm classification matches
 expectations.
 
-## Open Questions
+## Spike Results
 
-- **BiDi interception support in Firefox.** The chrest codebase already
-  subscribes to `network.responseCompleted` (passive) but does not currently
-  intercept. A 30-minute spike against the actual Firefox version chrest
-  targets is required before committing to this design — specifically to
-  verify `network.addIntercept` with `responseStarted` phase plus
-  `network.failRequest` work as expected. **Fallback if interception is too
-  immature:** revert to a parallel Go `net/http` pre-fetch path. The
-  `rawfetch.Classify` and `BuildFromText` helpers are reusable across both
-  dispatch mechanisms.
+The BiDi interception spike (`go/src/charlie/firefox/intercept_spike_test.go`,
+runnable via `just explore-bidi-intercept`) confirmed every BiDi mechanism
+this design depends on against Firefox 150.0:
+
+- `network.addIntercept` with phase `responseStarted` accepted, returns an
+  intercept id.
+- `network.responseStarted` event fires for top-level navigations with
+  `isBlocked=true`, the matching `intercepts: [id]` list, the request id we
+  need for continue/fail, and full headers (including `Content-Type`).
+- `network.continueResponse` releases the response; `Navigate` then
+  completes normally.
+- `network.failRequest` aborts the request cleanly; `Navigate` returns a
+  BiDi error wrapping `NS_ERROR_ABORT`.
+
+Spike total wall-clock: 1.5 s.
+
+### Implementation Gotchas Surfaced by the Spike
+
+1. **Navigate blocks on `wait: complete`.** Classification and dispatch must
+   happen on a separate goroutine that consumes the `responseStarted` event
+   while the navigate call is in flight. The spike uses this pattern and it
+   works; the production handler should follow suit.
+
+2. **`failRequest` makes Navigate return an error.** The web-fetch handler
+   must recognise a `NS_ERROR_ABORT`-class BiDi error following an explicit
+   `failRequest` as an *expected* outcome of the binary / HTTPError branch,
+   not as a failure to surface. Suggested approach: track "we issued
+   `failRequest`" alongside the intercept dispatch, and swallow the
+   corresponding Navigate error in that case only.
+
+## Open Questions
 
 - **Markdown → HTML rendering for the `html` slot.** v1 wraps raw text in a
   minimal `<pre>` for the html slot. Future work could add a real markdown→
