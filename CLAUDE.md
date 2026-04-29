@@ -106,6 +106,11 @@ bun.nix`. Both files must be staged for `nix build` to see them
   capture formats. Wraps `JohannesKaufmann/html-to-markdown/v2` plus
   `codeberg.org/readeck/go-readability/v2` (for the reader variant) and
   `andybalholm/cascadia` (for the selector variant).
+- `charlie/rawfetch/` - Content-type classification + raw-text content
+  building for the web-fetch dispatcher. `Classify` decides HTML / Text /
+  Binary / HTTPError from response headers + URL ext + status;
+  `BuildFromText` builds the text/markdown/html slots from a raw text body;
+  `ExtractMarkdownTOCFromText` regex-scans markdown for ATX headings.
 - `delta/proxy/` - Multi-browser proxy (fan-out requests to all sockets)
 - `delta/tools/` - MCP tool definitions with annotations
 - `delta/resources/` - MCP paginated resources (`chrest://items`, `chrest://items/{page}`)

@@ -568,6 +568,16 @@ func fetchViaDispatch(ctx context.Context, urlStr string) (*fetchCacheEntry, err
 						failedDeliberately: true,
 					}
 					return
+				default:
+					// rawfetch.Classify currently never returns ClassUnknown,
+					// but guard against future drift so a zero-value Class
+					// can't silently produce an empty result.
+					_ = session.FailRequest(ctx, ev.RequestID)
+					outcome <- dispatchOutcome{
+						err:                fmt.Errorf("web-fetch: unhandled class %v for %s", class, ev.URL),
+						failedDeliberately: true,
+					}
+					return
 				}
 
 				// HTML or Text: we let navigate complete in the main goroutine,
