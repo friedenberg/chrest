@@ -68,13 +68,22 @@ func (s *Session) AddResponseIntercept(ctx context.Context, protocol, hostname s
 		return "", nil, errors.Wrap(err)
 	}
 
-	result, err := s.conn.Send("network.addIntercept", map[string]any{
+	// When protocol+hostname are both supplied, scope the intercept to
+	// that origin. When either is empty (e.g. the dispatcher needs to
+	// follow cross-host redirects, or the URL has no hostname), omit
+	// urlPatterns so the intercept matches every response in this
+	// browsing context — context scoping alone is sufficient because
+	// the session is fresh per fetch.
+	addParams := map[string]any{
 		"phases":   []string{"responseStarted"},
 		"contexts": []string{s.contextID},
-		"urlPatterns": []map[string]any{
+	}
+	if protocol != "" && hostname != "" {
+		addParams["urlPatterns"] = []map[string]any{
 			{"type": "pattern", "protocol": protocol, "hostname": hostname},
-		},
-	})
+		}
+	}
+	result, err := s.conn.Send("network.addIntercept", addParams)
 	if err != nil {
 		sub.Close()
 		return "", nil, errors.Wrap(err)

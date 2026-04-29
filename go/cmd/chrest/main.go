@@ -507,7 +507,12 @@ func fetchViaDispatch(ctx context.Context, urlStr string) (*fetchCacheEntry, err
 	}
 	defer session.Close()
 
-	interceptID, events, err := session.AddResponseIntercept(ctx, parsed.Scheme, parsed.Hostname())
+	// Pass empty (protocol, hostname) so the intercept is scoped only
+	// to the (fresh, per-call) browsing context — this catches
+	// cross-host redirects (e.g. github.com → codeload.github.com on
+	// release tarball downloads). Browser-context scoping is enough
+	// because the session navigates exactly one URL chain per call.
+	interceptID, events, err := session.AddResponseIntercept(ctx, "", "")
 	if err != nil {
 		return nil, err
 	}
