@@ -1,7 +1,6 @@
 package rawfetch
 
 import (
-	"fmt"
 	"html"
 	"mime"
 	"path"
@@ -49,7 +48,13 @@ func BuildFromText(body []byte, contentType, urlStr string) *Result {
 		r.Markdown = []byte(b.String())
 	}
 
-	r.HTML = []byte(fmt.Sprintf("<pre>%s</pre>", html.EscapeString(string(body))))
+	escaped := html.EscapeString(string(body))
+	var hb strings.Builder
+	hb.Grow(len("<pre></pre>") + len(escaped))
+	hb.WriteString("<pre>")
+	hb.WriteString(escaped)
+	hb.WriteString("</pre>")
+	r.HTML = []byte(hb.String())
 
 	return r
 }

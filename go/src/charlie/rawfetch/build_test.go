@@ -34,8 +34,9 @@ func TestBuildFromText_NonMarkdownText(t *testing.T) {
 	if !strings.Contains(string(r.Markdown), "json") {
 		t.Errorf("language hint should appear in fence; got %q", r.Markdown)
 	}
-	if !strings.Contains(string(r.HTML), "&quot;") && !strings.Contains(string(r.HTML), `{&#34;a&#34;:1}`) {
-		t.Errorf("HTML should HTML-escape body; got %q", r.HTML)
+	wantHTML := `<pre>{&#34;a&#34;:1}</pre>`
+	if string(r.HTML) != wantHTML {
+		t.Errorf("HTML mismatch: got %q want %q", r.HTML, wantHTML)
 	}
 	if len(r.TOC) != 0 {
 		t.Errorf("non-md text should have empty TOC; got %+v", r.TOC)
