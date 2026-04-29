@@ -7,6 +7,7 @@ import (
 	"io"
 	"log"
 	"strings"
+	"sync"
 
 	"code.linenisgreat.com/chrest/go/libs/dewey/bravo/errors"
 	"code.linenisgreat.com/chrest/go/src/bravo/bidi"
@@ -26,6 +27,8 @@ type Session struct {
 	// the envelope artifact (RFC 0001). Closed in Close().
 	networkSub *bidi.Subscription
 	lastHTTP   *HTTPResponse
+
+	intercepts sync.Map // intercept-id → *bidi.Subscription
 }
 
 // responseCompletedEvent is the subset of the WebDriver BiDi

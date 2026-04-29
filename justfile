@@ -312,6 +312,18 @@ explore-bidi-intercept:
     -run TestSpikeBiDiResponseIntercept \
     ./src/charlie/firefox/...
 
+# Same as explore-bidi-intercept but exercises the typed BiDi intercept
+# wrappers (Session.AddResponseIntercept / ContinueResponse /
+# RemoveIntercept) instead of the raw conn.Send calls.
+[group: 'explore']
+explore-bidi-intercept-typed:
+  #!/usr/bin/env bash
+  set -euo pipefail
+  cd go
+  CHREST_SPIKE_BIDI_INTERCEPT=1 go test -tags spike -count=1 -v \
+    -run TestSession_AddResponseIntercept \
+    ./src/charlie/firefox/...
+
 [group: 'explore']
 explore-rewrite-dewey-imports:
   #!/usr/bin/env bash
