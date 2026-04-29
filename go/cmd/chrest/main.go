@@ -7,8 +7,10 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"net/http"
 	"net/url"
 	"os"
+	"path"
 	"strings"
 	"sync"
 	"syscall"
@@ -25,7 +27,9 @@ import (
 	"code.linenisgreat.com/chrest/go/libs/dewey/charlie/ui"
 	"code.linenisgreat.com/chrest/go/src/bravo/config"
 	"code.linenisgreat.com/chrest/go/src/charlie/browser_items"
+	"code.linenisgreat.com/chrest/go/src/charlie/firefox"
 	"code.linenisgreat.com/chrest/go/src/charlie/markdown"
+	"code.linenisgreat.com/chrest/go/src/charlie/rawfetch"
 	"code.linenisgreat.com/chrest/go/src/delta/proxy"
 	"code.linenisgreat.com/chrest/go/src/delta/resources"
 	"code.linenisgreat.com/chrest/go/src/delta/tools"
@@ -172,14 +176,6 @@ func runMCP(ctx context.Context, app *command.Utility, p *proxy.BrowserProxy) er
 		mimeHTML     = "text/html; charset=utf-8"
 	)
 
-	type fetchCacheEntry struct {
-		HTML           []byte
-		Text           []byte
-		MarkdownReader []byte
-		TOC            []markdown.Heading
-		FetchedAt      time.Time
-	}
-
 	var fetchCache sync.Map // URL (no fragment) → *fetchCacheEntry
 
 	// Bridge tool: exposes resources as a tool for subagent access
@@ -292,40 +288,28 @@ func runMCP(ctx context.Context, app *command.Utility, p *proxy.BrowserProxy) er
 				}
 			}
 			if entry == nil {
-				results, err := tools.MultiExtract(ctx, tools.MultiExtractParams{
-					URL:     p0.URL,
-					Formats: []string{"text", "markdown-reader", "html-outer"},
-				})
+				dispatchMode := os.Getenv("CHREST_WEB_FETCH_DISPATCH")
+				if dispatchMode == "" {
+					dispatchMode = "bidi-intercept"
+				}
+
+				var err error
+				switch dispatchMode {
+				case "firefox-only":
+					entry, err = fetchViaFirefox(ctx, p0.URL)
+				case "bidi-intercept":
+					entry, err = fetchViaDispatch(ctx, p0.URL)
+				default:
+					return protocol.ErrorResultV1(
+						"unknown CHREST_WEB_FETCH_DISPATCH=" + dispatchMode +
+							" (expected bidi-intercept or firefox-only)"), nil
+				}
+
 				if err != nil {
 					return protocol.ErrorResultV1(err.Error()), nil
 				}
-
-				entry = &fetchCacheEntry{FetchedAt: time.Now()}
-				var errs []string
-				for _, r := range results {
-					if r.Err != nil {
-						errs = append(errs, fmt.Sprintf("%s: %s", r.Format, r.Err))
-						continue
-					}
-					switch r.Format {
-					case "text":
-						entry.Text = r.Data
-					case "markdown-reader":
-						entry.MarkdownReader = r.Data
-					case "html-outer":
-						entry.HTML = r.Data
-					}
-				}
-				if entry.Text == nil && entry.MarkdownReader == nil && entry.HTML == nil {
-					return protocol.ErrorResultV1("all formats failed: " + strings.Join(errs, "; ")), nil
-				}
-				if entry.HTML != nil {
-					toc, tocErr := markdown.ExtractTOC(bytes.NewReader(entry.HTML))
-					if tocErr != nil {
-						log.Printf("web-fetch: ExtractTOC failed for %s: %v", p0.URL, tocErr)
-					} else {
-						entry.TOC = toc
-					}
+				if entry == nil {
+					return protocol.ErrorResultV1("web-fetch: empty result"), nil
 				}
 				fetchCache.Store(p0.URL, entry)
 			}
@@ -439,4 +423,282 @@ func splitWebFetchURI(uri string) (url, fragment string) {
 		return "", ""
 	}
 	return rest[:idx], rest[idx+1:]
+}
+
+// fetchCacheEntry is the cached payload for a single web-fetch URL.
+// Path identifies which dispatch branch produced the entry
+// ("firefox-only", "html", "text", or "unknown") and is set for
+// observability when investigating slot population issues.
+type fetchCacheEntry struct {
+	HTML           []byte
+	Text           []byte
+	MarkdownReader []byte
+	TOC            []markdown.Heading
+	FetchedAt      time.Time
+	Path           string
+}
+
+// fetchViaFirefox preserves the legacy all-Firefox path. Used when
+// CHREST_WEB_FETCH_DISPATCH=firefox-only.
+func fetchViaFirefox(ctx context.Context, url string) (*fetchCacheEntry, error) {
+	results, err := tools.MultiExtract(ctx, tools.MultiExtractParams{
+		URL:     url,
+		Formats: []string{"text", "markdown-reader", "html-outer"},
+	})
+	if err != nil {
+		return nil, err
+	}
+	entry := &fetchCacheEntry{FetchedAt: time.Now(), Path: "firefox-only"}
+	var errs []string
+	for _, r := range results {
+		if r.Err != nil {
+			errs = append(errs, fmt.Sprintf("%s: %s", r.Format, r.Err))
+			continue
+		}
+		switch r.Format {
+		case "text":
+			entry.Text = r.Data
+		case "markdown-reader":
+			entry.MarkdownReader = r.Data
+		case "html-outer":
+			entry.HTML = r.Data
+		}
+	}
+	if entry.Text == nil && entry.MarkdownReader == nil && entry.HTML == nil {
+		return nil, fmt.Errorf("all formats failed: %s", strings.Join(errs, "; "))
+	}
+	if entry.HTML != nil {
+		toc, tocErr := markdown.ExtractTOC(bytes.NewReader(entry.HTML))
+		if tocErr != nil {
+			log.Printf("web-fetch: ExtractTOC failed for %s: %v", url, tocErr)
+		} else {
+			entry.TOC = toc
+		}
+	}
+	return entry, nil
+}
+
+// fetchViaDispatch implements the content-type-aware path: register
+// a BiDi response intercept, navigate, classify, and either continue
+// (for HTML/Text) or fail (for Binary/HTTPError) the request.
+func fetchViaDispatch(ctx context.Context, urlStr string) (*fetchCacheEntry, error) {
+	parsed, err := url.Parse(urlStr)
+	if err != nil {
+		return nil, fmt.Errorf("parse url: %w", err)
+	}
+
+	session, err := firefox.NewSession(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer session.Close()
+
+	interceptID, events, err := session.AddResponseIntercept(ctx, parsed.Scheme, parsed.Hostname())
+	if err != nil {
+		return nil, err
+	}
+	defer session.RemoveIntercept(ctx, interceptID)
+
+	type dispatchOutcome struct {
+		entry              *fetchCacheEntry
+		err                error
+		failedDeliberately bool // true if we explicitly failRequest'd
+	}
+	outcome := make(chan dispatchOutcome, 1)
+
+	go func() {
+		select {
+		case ev := <-events:
+			ct := headerValue(ev.Headers, "Content-Type")
+			class := rawfetch.Classify(httpHeaderFrom(ev.Headers), urlStr, ev.Status)
+
+			log.Printf("web-fetch: dispatch=bidi-intercept class=%v ct=%s status=%d url=%s",
+				class, ct, ev.Status, urlStr)
+
+			switch class {
+			case rawfetch.ClassHTML:
+				if err := session.ContinueResponse(ctx, ev.RequestID); err != nil {
+					outcome <- dispatchOutcome{err: err}
+					return
+				}
+			case rawfetch.ClassText:
+				if err := session.ContinueResponse(ctx, ev.RequestID); err != nil {
+					outcome <- dispatchOutcome{err: err}
+					return
+				}
+			case rawfetch.ClassBinary:
+				_ = session.FailRequest(ctx, ev.RequestID)
+				outcome <- dispatchOutcome{
+					err: fmt.Errorf("web-fetch refused binary content-type %q from %s; use `chrest capture` to save binary downloads",
+						ct, ev.URL),
+					failedDeliberately: true,
+				}
+				return
+			case rawfetch.ClassHTTPError:
+				_ = session.FailRequest(ctx, ev.RequestID)
+				outcome <- dispatchOutcome{
+					err:                fmt.Errorf("web-fetch: HTTP %d from %s", ev.Status, ev.URL),
+					failedDeliberately: true,
+				}
+				return
+			}
+
+			// HTML or Text: we let navigate complete in the main goroutine,
+			// and signal success here so the main goroutine knows which
+			// path to populate the entry from.
+			outcome <- dispatchOutcome{
+				entry: &fetchCacheEntry{
+					FetchedAt: time.Now(),
+					Path:      classPathLabel(class),
+				},
+			}
+
+		case <-ctx.Done():
+			outcome <- dispatchOutcome{err: ctx.Err()}
+		}
+	}()
+
+	navErr := session.Navigate(ctx, urlStr)
+	out := <-outcome
+
+	if out.failedDeliberately {
+		// Navigate's NS_ERROR_ABORT is expected.
+		if navErr != nil && !firefox.IsAbortedNavigation(navErr) {
+			return nil, navErr
+		}
+		return nil, out.err
+	}
+	if navErr != nil {
+		return nil, navErr
+	}
+	if out.err != nil {
+		return nil, out.err
+	}
+	if out.entry == nil {
+		return nil, fmt.Errorf("web-fetch: dispatcher produced no entry")
+	}
+
+	// Now actually fill the entry. For HTML, run MultiExtract; for
+	// Text, read the body and use rawfetch.BuildFromText.
+	switch out.entry.Path {
+	case "html":
+		results, err := tools.MultiExtract(ctx, tools.MultiExtractParams{
+			URL:     urlStr,
+			Formats: []string{"text", "markdown-reader", "html-outer"},
+		})
+		if err != nil {
+			return nil, err
+		}
+		for _, r := range results {
+			if r.Err != nil {
+				continue
+			}
+			switch r.Format {
+			case "text":
+				out.entry.Text = r.Data
+			case "markdown-reader":
+				out.entry.MarkdownReader = r.Data
+			case "html-outer":
+				out.entry.HTML = r.Data
+			}
+		}
+		if out.entry.HTML != nil {
+			if toc, err := markdown.ExtractTOC(bytes.NewReader(out.entry.HTML)); err == nil {
+				out.entry.TOC = toc
+			}
+		}
+
+	case "text":
+		// Pull the text body via Firefox; it's the easiest way to get
+		// what the user sees regardless of charset handling.
+		rc, err := session.GetDocumentHTML(ctx)
+		if err != nil {
+			return nil, err
+		}
+		domBytes, _ := io.ReadAll(rc)
+		rc.Close()
+		body := stripPreWrapper(domBytes)
+		ct := guessContentTypeFromURL(urlStr)
+		r := rawfetch.BuildFromText(body, ct, urlStr)
+		out.entry.Text = r.Text
+		out.entry.MarkdownReader = r.Markdown
+		out.entry.HTML = r.HTML
+		out.entry.TOC = r.TOC
+	}
+
+	return out.entry, nil
+}
+
+func httpHeaderFrom(headers []firefox.HTTPHeader) http.Header {
+	h := http.Header{}
+	for _, hh := range headers {
+		h.Set(hh.Name, hh.Value)
+	}
+	return h
+}
+
+func headerValue(headers []firefox.HTTPHeader, name string) string {
+	for _, h := range headers {
+		if strings.EqualFold(h.Name, name) {
+			return h.Value
+		}
+	}
+	return ""
+}
+
+func classPathLabel(c rawfetch.Class) string {
+	switch c {
+	case rawfetch.ClassHTML:
+		return "html"
+	case rawfetch.ClassText:
+		return "text"
+	default:
+		return "unknown"
+	}
+}
+
+// stripPreWrapper removes Firefox's auto-rendering of text/plain in a
+// <pre> wrapper, returning the raw body. If the input doesn't have a
+// <pre> wrapper, returns it unchanged.
+func stripPreWrapper(domBytes []byte) []byte {
+	s := string(domBytes)
+	// Look for <pre>...</pre> tag, possibly with attributes.
+	open := strings.Index(s, "<pre")
+	if open < 0 {
+		return domBytes
+	}
+	openEnd := strings.Index(s[open:], ">")
+	if openEnd < 0 {
+		return domBytes
+	}
+	bodyStart := open + openEnd + 1
+	closeIdx := strings.LastIndex(s, "</pre>")
+	if closeIdx < bodyStart {
+		return domBytes
+	}
+	return []byte(s[bodyStart:closeIdx])
+}
+
+// guessContentTypeFromURL infers a content-type from a URL extension
+// for use with rawfetch.BuildFromText when the response Content-Type
+// isn't directly threaded through to this point. (BuildFromText also
+// considers URL ext for the markdown branch, so this is mostly a
+// best-effort label.)
+func guessContentTypeFromURL(urlStr string) string {
+	parsed, err := url.Parse(urlStr)
+	if err != nil {
+		return ""
+	}
+	ext := strings.ToLower(path.Ext(parsed.Path))
+	switch ext {
+	case ".md", ".markdown":
+		return "text/markdown"
+	case ".json":
+		return "application/json"
+	case ".xml":
+		return "application/xml"
+	case ".yaml", ".yml":
+		return "application/yaml"
+	}
+	return "text/plain"
 }
