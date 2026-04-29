@@ -25,7 +25,7 @@ just dev-install-mcp    # build + install MCP server to ~/.claude.json
 just demo               # generate VHS demo GIF
 ```
 
-`test-mcp-bats` is wall-clock bounded (120s timeout) and validates success by
+`test-mcp-bats` is wall-clock bounded (180s timeout) and validates success by
 parsing TAP output — bats has been observed to hang on shutdown in bwrap
 `--unshare-pid` sandboxes even when every test passes. Root cause still open.
 

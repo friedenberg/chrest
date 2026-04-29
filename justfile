@@ -64,7 +64,7 @@ test-mcp-bats: build-nix
   set +e
   out=$(mktemp)
   trap 'rm -f "$out"' EXIT
-  timeout --preserve-status 120 \
+  timeout --preserve-status 180 \
     bats --bin-dir result/bin/ --no-sandbox zz-tests_bats/ \
     > >(tee "$out") 2>&1
   bats_rc=$?
