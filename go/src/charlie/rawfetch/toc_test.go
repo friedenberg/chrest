@@ -50,10 +50,30 @@ func TestExtractMarkdownTOCFromText(t *testing.T) {
 			"this is just\nplain text\nwith no headings\n",
 			nil,
 		},
+		{
+			"info-string fence is recognised",
+			"# Real\n```python\n# Not a heading\n```\n## Also Real\n",
+			[]markdown.Heading{
+				{ID: "real", Text: "Real", Level: 1},
+				{ID: "also-real", Text: "Also Real", Level: 2},
+			},
+		},
+		{
+			"three-collision sequence yields -2 and -3",
+			"# Foo\n## Foo\n### Foo\n",
+			[]markdown.Heading{
+				{ID: "foo", Text: "Foo", Level: 1},
+				{ID: "foo-2", Text: "Foo", Level: 2},
+				{ID: "foo-3", Text: "Foo", Level: 3},
+			},
+		},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			got := ExtractMarkdownTOCFromText([]byte(tc.body))
+			got, err := ExtractMarkdownTOCFromText([]byte(tc.body))
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
 			if !reflect.DeepEqual(got, tc.want) {
 				t.Errorf("got %+v\nwant %+v", got, tc.want)
 			}
