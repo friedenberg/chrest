@@ -274,6 +274,9 @@ func runMCP(ctx context.Context, app *command.Utility, p *proxy.BrowserProxy) er
 			if err := json.Unmarshal(args, &p0); err != nil {
 				return protocol.ErrorResultV1(err.Error()), nil
 			}
+			if p0.URL == "" {
+				return protocol.ErrorResultV1("web-fetch: url is required"), nil
+			}
 			if p0.Format == "" {
 				p0.Format = "markdown"
 			}
