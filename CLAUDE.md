@@ -192,6 +192,18 @@ Exposes browser management as MCP tools and resources over stdio (JSON-RPC 2.0).
 
 **Annotations:** read-only tools have `readOnlyHint`, destructive tools (close-*, state-restore, items-put) have `destructiveHint`. Validated by `just test-mcp`.
 
+### Runtime configuration
+
+`CHREST_WEB_FETCH_DISPATCH` controls how the `web-fetch` MCP tool fetches URLs:
+
+- `bidi-intercept` (default) — classify via WebDriver BiDi response interception;
+  HTML routes through Firefox/MultiExtract, raw text routes through
+  `charlie/rawfetch/`, binary and non-2xx responses return structured errors. See
+  `docs/plans/2026-04-29-web-fetch-content-type-dispatch-design.md`.
+- `firefox-only` — preserve the pre-dispatch behavior (every URL through
+  Firefox/MultiExtract, no classification). Rollback target during the
+  dual-architecture period.
+
 ### Extension REST Routes (`extension/src/routes.js`)
 - `/` - Browser info
 - `/windows`, `/windows/#WINDOW_ID` - Window CRUD
