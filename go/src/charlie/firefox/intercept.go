@@ -99,6 +99,10 @@ func (s *Session) AddResponseIntercept(ctx context.Context, protocol, hostname s
 			for _, h := range decoded.Response.Headers {
 				headers = append(headers, HTTPHeader{Name: h.Name, Value: h.Value.Value})
 			}
+			// Send the typed event to the caller. If the caller has stopped
+			// reading (single-event intercept pattern: read one, classify, ignore
+			// the rest), drop rather than block. The 4-slot buffer absorbs
+			// short bursts; sustained backlog is treated as caller disinterest.
 			select {
 			case out <- InterceptedResponse{
 				Navigation: decoded.Navigation,
@@ -111,6 +115,9 @@ func (s *Session) AddResponseIntercept(ctx context.Context, protocol, hostname s
 			}:
 			case <-ctx.Done():
 				return
+			default:
+				// Caller has stopped reading. Drop the event and keep draining
+				// sub.Events so the subscription's send-side is never blocked.
 			}
 		}
 	}()

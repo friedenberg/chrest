@@ -445,6 +445,11 @@ func (s *Session) Close() error {
 		s.networkSub.Close()
 		s.networkSub = nil
 	}
+	s.intercepts.Range(func(k, v any) bool {
+		v.(*bidi.Subscription).Close()
+		s.intercepts.Delete(k)
+		return true
+	})
 	if s.conn != nil {
 		// Best-effort session end.
 		_, _ = s.conn.Send("session.end", map[string]any{})
