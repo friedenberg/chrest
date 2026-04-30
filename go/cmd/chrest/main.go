@@ -540,6 +540,20 @@ func fetchViaDispatch(ctx context.Context, urlStr string) (*fetchCacheEntry, err
 			select {
 			case ev, ok := <-events:
 				if !ok {
+					// Intercept producer closed the channel — happens
+					// when sub.Events closes, i.e. the BiDi connection
+					// died (browser crashed or was killed) or the
+					// session was torn down. If nav was already
+					// classified, the main goroutine has already
+					// received its outcome and is waiting on
+					// Navigate; nothing to do here. If nav was NOT
+					// classified, the main goroutine will block
+					// forever on <-outcome unless we write something.
+					if !navHandled {
+						outcome <- dispatchOutcome{
+							err: fmt.Errorf("web-fetch: intercept channel closed before navigation event for %s", scrubURL(urlStr)),
+						}
+					}
 					return
 				}
 
