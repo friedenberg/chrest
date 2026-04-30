@@ -243,14 +243,18 @@ func (s *Session) drainNetworkEvents() {
 // pickLastNavigationHTTP drains the subscription non-blockingly and
 // returns the HTTPResponse for the final navigation-tagged event
 // belonging to this session's browsing context. Returns nil if no
-// matching event was seen.
+// matching event was seen, including when the subscription channel
+// closes (BiDi connection died) before any event arrived.
 func (s *Session) pickLastNavigationHTTP(navStart int64) *HTTPResponse {
 	var picked *responseCompletedEvent
 	for {
 		select {
 		case ev, ok := <-s.networkSub.Events:
 			if !ok {
-				break
+				// Channel closed. A bare `break` would exit only the
+				// select and the for-loop would re-select the same
+				// closed-channel case forever (busy-loop, 100% CPU).
+				return responseCompletedToHTTP(picked)
 			}
 			var decoded responseCompletedEvent
 			if err := json.Unmarshal(ev.Params, &decoded); err != nil {
@@ -262,24 +266,31 @@ func (s *Session) pickLastNavigationHTTP(navStart int64) *HTTPResponse {
 			}
 			picked = &decoded
 		default:
-			if picked == nil {
-				return nil
-			}
-			headers := make([]HTTPHeader, 0, len(picked.Response.Headers))
-			for _, h := range picked.Response.Headers {
-				headers = append(headers, HTTPHeader{Name: h.Name, Value: h.Value.Value})
-			}
-			var timing int64
-			if picked.Request.Timings.ResponseEnd > 0 && picked.Request.Timings.FetchStart > 0 {
-				timing = int64(picked.Request.Timings.ResponseEnd - picked.Request.Timings.FetchStart)
-			}
-			return &HTTPResponse{
-				URL:      picked.Response.URL,
-				Status:   picked.Response.Status,
-				Headers:  headers,
-				TimingMs: timing,
-			}
+			return responseCompletedToHTTP(picked)
 		}
+	}
+}
+
+// responseCompletedToHTTP converts a captured BiDi
+// network.responseCompleted event into the typed HTTPResponse the
+// caller cares about. Returns nil if no event was captured.
+func responseCompletedToHTTP(picked *responseCompletedEvent) *HTTPResponse {
+	if picked == nil {
+		return nil
+	}
+	headers := make([]HTTPHeader, 0, len(picked.Response.Headers))
+	for _, h := range picked.Response.Headers {
+		headers = append(headers, HTTPHeader{Name: h.Name, Value: h.Value.Value})
+	}
+	var timing int64
+	if picked.Request.Timings.ResponseEnd > 0 && picked.Request.Timings.FetchStart > 0 {
+		timing = int64(picked.Request.Timings.ResponseEnd - picked.Request.Timings.FetchStart)
+	}
+	return &HTTPResponse{
+		URL:      picked.Response.URL,
+		Status:   picked.Response.Status,
+		Headers:  headers,
+		TimingMs: timing,
 	}
 }
 
