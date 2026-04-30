@@ -192,3 +192,57 @@ EOF
   echo "$resp" | jq -e '.result.isError != true'
   echo "$resp" | jq -e '.result.content[] | select(.type == "resource") | .resource.text | contains("UNIQUE_BODY_MARKER")'
 }
+
+function web_fetch_many_subresources_overflow_buffer { # @test
+  require_firefox
+
+  # Regression test for chrest#66: when many subresources arrive in a
+  # burst, the producer goroutine in firefox/intercept.go used to drop
+  # events on the `default:` branch of its select without releasing
+  # the corresponding paused BiDi request. Each dropped event left a
+  # request paused at the BiDi server; if any of them was on the
+  # critical path to the `load` event, Navigate deadlocked at the 30s
+  # BiDi RPC timeout.
+  #
+  # We force the overflow by loading 24 <img> subresources from the
+  # same origin. The intercept's consumer-facing channel has buffer=4
+  # and the dispatcher is serialized on ContinueResponse RPCs, so a
+  # 6-concurrent burst (Firefox's default per-origin limit) overflows
+  # the buffer and drops on the producer side without the fix.
+
+  port=$(python3 -c 'import socket;s=socket.socket();s.bind(("127.0.0.1",0));print(s.getsockname()[1]);s.close()')
+
+  {
+    printf '<!doctype html><html><head><title>overflow</title></head><body>\n'
+    printf '<p>OVERFLOW_BODY_MARKER</p>\n'
+    for i in $(seq 1 24); do
+      printf '<img src="image-%d.png" alt="">\n' "$i"
+    done
+    printf '</body></html>\n'
+  } >"$BATS_TEST_TMPDIR/index.html"
+
+  # Same minimal 1x1 transparent PNG, served under 24 distinct paths
+  # so each is a distinct subresource request.
+  for i in $(seq 1 24); do
+    printf '\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x06\x00\x00\x00\x1f\x15\xc4\x89\x00\x00\x00\rIDATx\x9cc\x00\x01\x00\x00\x05\x00\x01\r\n-\xb4\x00\x00\x00\x00IEND\xaeB`\x82' >"$BATS_TEST_TMPDIR/image-$i.png"
+  done
+
+  (cd "$BATS_TEST_TMPDIR" && timeout 60 python3 -m http.server "$port" </dev/null >/dev/null 2>&1) &
+  srv_pid=$!
+  for _ in $(seq 1 50); do
+    if curl -sf "http://127.0.0.1:$port/index.html" >/dev/null; then break; fi
+    sleep 0.1
+  done
+
+  url="http://127.0.0.1:$port/index.html"
+  call=$(jq -nc --arg url "$url" '{jsonrpc:"2.0",id:2,method:"tools/call",params:{name:"web-fetch",arguments:{url:$url,format:"text"}}}')
+  result=$(printf '%s\n' "$INIT_MSG" "$INITIALIZED_MSG" "$call" |
+    timeout 60 "$CHREST_BIN" mcp)
+
+  kill "$srv_pid" 2>/dev/null || true
+  wait "$srv_pid" 2>/dev/null || true
+
+  resp=$(echo "$result" | grep '"id":2')
+  echo "$resp" | jq -e '.result.isError != true'
+  echo "$resp" | jq -e '.result.content[] | select(.type == "resource") | .resource.text | contains("OVERFLOW_BODY_MARKER")'
+}

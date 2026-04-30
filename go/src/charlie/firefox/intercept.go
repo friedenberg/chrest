@@ -117,9 +117,13 @@ func (s *Session) AddResponseIntercept(ctx context.Context, protocol, hostname s
 				headers = append(headers, HTTPHeader{Name: h.Name, Value: h.Value.Value})
 			}
 			// Send the typed event to the caller. If the caller has stopped
-			// reading (single-event intercept pattern: read one, classify, ignore
-			// the rest), drop rather than block. The 4-slot buffer absorbs
-			// short bursts; sustained backlog is treated as caller disinterest.
+			// reading or can't keep up with the burst, drop rather than block.
+			// On drop we MUST release the paused request ourselves —
+			// `IsBlocked` events represent a request held at the BiDi server
+			// at responseStarted, and abandoning one without ContinueResponse
+			// (or FailRequest) leaves it paused indefinitely. That keeps the
+			// page from reaching `load` and makes Navigate's wait:complete
+			// deadlock until the BiDi RPC times out at 30s.
 			select {
 			case out <- InterceptedResponse{
 				Navigation: decoded.Navigation,
@@ -133,8 +137,15 @@ func (s *Session) AddResponseIntercept(ctx context.Context, protocol, hostname s
 			case <-ctx.Done():
 				return
 			default:
-				// Caller has stopped reading. Drop the event and keep draining
-				// sub.Events so the subscription's send-side is never blocked.
+				// Caller can't keep up. Release the paused request inline so
+				// the browser can continue loading, then drop the event.
+				// Errors are ignored — by definition we have no caller to
+				// surface them to, and the connection death case is handled
+				// by the next `for ev := range sub.Events` iteration falling
+				// off the closed channel.
+				if decoded.IsBlocked {
+					_ = s.ContinueResponse(ctx, decoded.Request.Request)
+				}
 			}
 		}
 	}()
