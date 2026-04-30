@@ -445,7 +445,23 @@ func (s *Session) Close() error {
 		s.networkSub.Close()
 		s.networkSub = nil
 	}
+	// Send network.removeIntercept to the BiDi server for each
+	// registered intercept BEFORE closing the local subscription. The
+	// caller's defer-RemoveIntercept normally handles this, but if a
+	// caller forgot — or aborts mid-fetch and skips its own cleanup
+	// — leaving the intercept registered means any in-flight responses
+	// remain paused until the connection is torn down. We then close
+	// the subscription locally. Errors are swallowed: the connection
+	// is presumably about to die anyway, and forcing Close() to fail
+	// would mask the more important error path.
 	s.intercepts.Range(func(k, v any) bool {
+		if s.conn != nil {
+			if id, ok := k.(string); ok {
+				_, _ = s.conn.Send("network.removeIntercept", map[string]any{
+					"intercept": id,
+				})
+			}
+		}
 		v.(*bidi.Subscription).Close()
 		s.intercepts.Delete(k)
 		return true
