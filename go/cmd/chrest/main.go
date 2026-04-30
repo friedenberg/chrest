@@ -529,9 +529,42 @@ func fetchViaDispatch(ctx context.Context, urlStr string) (*fetchCacheEntry, err
 	outcome := make(chan dispatchOutcome, 1)
 
 	go func() {
+		// Once we've classified the top-level navigation we keep
+		// looping to auto-continue subresources — they arrive on the
+		// same `events` channel after the nav event, and if we don't
+		// drain them the BiDi server keeps them paused, the page
+		// never fires `load`, and Navigate deadlocks on its
+		// wait:complete promise.
+		var navHandled bool
 		for {
 			select {
-			case ev := <-events:
+			case ev, ok := <-events:
+				if !ok {
+					return
+				}
+
+				// Subresource (CSS / JS / image / XHR) — not part of
+				// the top-level navigation chain. The intercept fires
+				// for every response in this browsing context (the
+				// urlPatterns scoping was dropped to follow cross-host
+				// redirects), so we must explicitly continue every
+				// non-navigation response. We swallow continue errors
+				// here: a subresource we couldn't release is the
+				// browser's problem, not the dispatch's, and the page
+				// will still reach `load` for everything else.
+				if ev.Navigation == "" {
+					_ = session.ContinueResponse(ctx, ev.RequestID)
+					continue
+				}
+
+				// Defensive: if a second top-level navigation event
+				// shows up after we've already classified, just let
+				// it through. Should not happen in practice.
+				if navHandled {
+					_ = session.ContinueResponse(ctx, ev.RequestID)
+					continue
+				}
+
 				// 3xx redirect: let it follow and wait for the next event.
 				// Without this, the dispatcher would misclassify the redirect
 				// as an HTTPError and surface "HTTP 301" to the user even
@@ -551,16 +584,20 @@ func fetchViaDispatch(ctx context.Context, urlStr string) (*fetchCacheEntry, err
 					class, ct, ev.Status, scrubURL(urlStr))
 
 				switch class {
-				case rawfetch.ClassHTML:
+				case rawfetch.ClassHTML, rawfetch.ClassText:
 					if err := session.ContinueResponse(ctx, ev.RequestID); err != nil {
 						outcome <- dispatchOutcome{err: err}
 						return
 					}
-				case rawfetch.ClassText:
-					if err := session.ContinueResponse(ctx, ev.RequestID); err != nil {
-						outcome <- dispatchOutcome{err: err}
-						return
+					outcome <- dispatchOutcome{
+						entry: &fetchCacheEntry{
+							FetchedAt: time.Now(),
+							Path:      classPathLabel(class),
+						},
 					}
+					navHandled = true
+					// Stay in the loop so subresources can be drained
+					// while the main goroutine waits on Navigate.
 				case rawfetch.ClassBinary:
 					_ = session.FailRequest(ctx, ev.RequestID)
 					outcome <- dispatchOutcome{
@@ -588,19 +625,10 @@ func fetchViaDispatch(ctx context.Context, urlStr string) (*fetchCacheEntry, err
 					return
 				}
 
-				// HTML or Text: we let navigate complete in the main goroutine,
-				// and signal success here so the main goroutine knows which
-				// path to populate the entry from.
-				outcome <- dispatchOutcome{
-					entry: &fetchCacheEntry{
-						FetchedAt: time.Now(),
-						Path:      classPathLabel(class),
-					},
-				}
-				return
-
 			case <-ctx.Done():
-				outcome <- dispatchOutcome{err: ctx.Err()}
+				if !navHandled {
+					outcome <- dispatchOutcome{err: ctx.Err()}
+				}
 				return
 			}
 		}

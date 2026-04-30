@@ -56,7 +56,15 @@ func (s *Session) AddResponseIntercept(ctx context.Context, protocol, hostname s
 			if err := json.Unmarshal(ev.Params, &peek); err != nil {
 				return false
 			}
-			return peek.Context == s.contextID && peek.Navigation != "" && peek.IsBlocked
+			// Deliver every blocked response in this context. The
+			// consumer is responsible for distinguishing the top-level
+			// navigation event (Navigation != "") from subresource
+			// events and continuing each one — see the dispatcher
+			// loop in cmd/chrest/main.go. Filtering out subresources
+			// here would leave them paused at the BiDi server, the
+			// page would never reach the load event, and Navigate
+			// would deadlock until its 30s timeout.
+			return peek.Context == s.contextID && peek.IsBlocked
 		},
 	)
 

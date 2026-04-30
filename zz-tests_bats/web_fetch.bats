@@ -127,3 +127,68 @@ function web_fetch_binary_url_returns_structured_refusal { # @test
   # client when SDK schema parsing rejects the result.
   echo "$resp" | jq -e '.result.content[0].text | contains("invalid_union") | not'
 }
+
+function web_fetch_subresource_heavy_page_completes { # @test
+  require_firefox
+
+  # Regression test for the BiDi navigate timeout on subresource-heavy
+  # pages, observed against docs.github.com (every fetch hits a
+  # deterministic 30s "bidi: timed out waiting for response to
+  # browsingContext.navigate" error).
+  #
+  # Hypothesis: after commit 47f9578 dropped urlPatterns scoping on the
+  # BiDi intercept, network.addIntercept now matches every response in
+  # the browsing context. Subresource responses (CSS/JS/img) are paused
+  # at responseStarted but the consumer-side filter in
+  # firefox/intercept.go (peek.Navigation != "") drops them, so the
+  # dispatcher never calls ContinueResponse on them. The page never
+  # reaches the `load` event and `wait: "complete"` in
+  # firefox/session.go blocks indefinitely.
+  #
+  # Reproduced locally with a throwaway Python HTTP server serving an
+  # HTML page with a CSS link, a script tag, and an <img>. The server
+  # self-terminates via `timeout 60`, so no EXIT trap is needed —
+  # overriding bats' EXIT trap was observed to swallow the TAP
+  # not-ok line for the test.
+
+  port=$(python3 -c 'import socket;s=socket.socket();s.bind(("127.0.0.1",0));print(s.getsockname()[1]);s.close()')
+
+  cat >"$BATS_TEST_TMPDIR/index.html" <<'EOF'
+<!doctype html>
+<html>
+  <head>
+    <title>subresource-heavy</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="script.js"></script>
+  </head>
+  <body>
+    <h1>subresource page</h1>
+    <p>UNIQUE_BODY_MARKER</p>
+    <img src="image.png" alt="">
+  </body>
+</html>
+EOF
+  printf 'body { color: #333; }\n' >"$BATS_TEST_TMPDIR/style.css"
+  printf 'console.log("hi");\n' >"$BATS_TEST_TMPDIR/script.js"
+  # Minimal 1x1 transparent PNG.
+  printf '\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x06\x00\x00\x00\x1f\x15\xc4\x89\x00\x00\x00\rIDATx\x9cc\x00\x01\x00\x00\x05\x00\x01\r\n-\xb4\x00\x00\x00\x00IEND\xaeB`\x82' >"$BATS_TEST_TMPDIR/image.png"
+
+  (cd "$BATS_TEST_TMPDIR" && timeout 60 python3 -m http.server "$port" </dev/null >/dev/null 2>&1) &
+  srv_pid=$!
+  for _ in $(seq 1 50); do
+    if curl -sf "http://127.0.0.1:$port/index.html" >/dev/null; then break; fi
+    sleep 0.1
+  done
+
+  url="http://127.0.0.1:$port/index.html"
+  call=$(jq -nc --arg url "$url" '{jsonrpc:"2.0",id:2,method:"tools/call",params:{name:"web-fetch",arguments:{url:$url,format:"text"}}}')
+  result=$(printf '%s\n' "$INIT_MSG" "$INITIALIZED_MSG" "$call" |
+    timeout 60 "$CHREST_BIN" mcp)
+
+  kill "$srv_pid" 2>/dev/null || true
+  wait "$srv_pid" 2>/dev/null || true
+
+  resp=$(echo "$result" | grep '"id":2')
+  echo "$resp" | jq -e '.result.isError != true'
+  echo "$resp" | jq -e '.result.content[] | select(.type == "resource") | .resource.text | contains("UNIQUE_BODY_MARKER")'
+}
