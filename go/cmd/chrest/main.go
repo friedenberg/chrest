@@ -628,8 +628,30 @@ func fetchViaDispatch(ctx context.Context, urlStr string) (*fetchCacheEntry, err
 			case <-ctx.Done():
 				if !navHandled {
 					outcome <- dispatchOutcome{err: ctx.Err()}
+					return
 				}
-				return
+				// Nav was already classified, but the dispatch ctx
+				// expired before extraction finished. Drain any
+				// subresource events still buffered in `events` and
+				// release their paused requests so they don't outlive
+				// session.Close. We use a fresh background ctx because
+				// the dispatch ctx is dead; bound it tightly so we
+				// don't extend the fetch's effective deadline by much.
+				drainCtx, drainCancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
+				defer drainCancel()
+				for {
+					select {
+					case ev, ok := <-events:
+						if !ok {
+							return
+						}
+						_ = session.ContinueResponse(drainCtx, ev.RequestID)
+					case <-drainCtx.Done():
+						return
+					default:
+						return
+					}
+				}
 			}
 		}
 	}()
