@@ -247,22 +247,20 @@ function web_fetch_many_subresources_overflow_buffer { # @test
   echo "$resp" | jq -e '.result.content[] | select(.type == "resource") | .resource.text | contains("OVERFLOW_BODY_MARKER")'
 }
 
-function web_fetch_empty_extraction_resource_keeps_text_field { # @test
+function web_fetch_empty_extraction_returns_diagnostic { # @test
   require_firefox
 
-  # Regression test for chrest#65: when readability/text extraction
-  # returns an empty string (e.g. on a meta-refresh redirect page that
-  # has no <body> content), the EmbeddedTextResourceContent helper
-  # used to build a `resource` block whose `text` field was elided by
-  # `omitempty` during JSON marshaling. The MCP client schema requires
-  # one of `resource.text` or `resource.blob` to be a string; missing
-  # both is a hard validation failure (`invalid_union` at content[1]).
+  # Regression test for chrest#74: when readability/text extraction
+  # returns nothing (e.g. on a meta-refresh redirect page with no
+  # <body> content), the response substitutes a text diagnostic at
+  # content[1] explaining why and pointing at the raw-HTML
+  # resource_link. Earlier this case returned an embedded resource
+  # block with empty `text`; chrest#65 made that MCP-valid but it's
+  # still bad UX — the caller sees nothing and can't tell why.
   #
-  # We reproduce locally with an HTML page whose body contains no
-  # extractable content. format=markdown then yields an empty
-  # entry.MarkdownReader; the resulting resource block must still
-  # serialize a `text` field (empty string is fine) so MCP validation
-  # passes.
+  # The marshal contract that closed chrest#65 is now exercised by
+  # a Go unit test in golf/protocol/content_v1_test.go; this BATS
+  # test asserts the user-facing behavior of the web-fetch tool.
 
   port=$(python3 -c 'import socket;s=socket.socket();s.bind(("127.0.0.1",0));print(s.getsockname()[1]);s.close()')
 
@@ -294,9 +292,12 @@ EOF
 
   resp=$(echo "$result" | grep '"id":2')
   echo "$resp" | jq -e '.result.isError != true'
-  # The embedded resource block must include a `text` field, even
-  # when extraction was empty — this is the actual MCP validation
-  # contract that broke chrest#65.
-  echo "$resp" | jq -e '.result.content[1].type == "resource"'
-  echo "$resp" | jq -e '.result.content[1].resource | has("text")'
+  # content[1] is now a text diagnostic, not an empty resource block.
+  echo "$resp" | jq -e '.result.content[1].type == "text"'
+  echo "$resp" | jq -e '.result.content[1].text | contains("No markdown content extracted")'
+  echo "$resp" | jq -e '.result.content[1].text | contains("read-resource")'
+  # The raw-HTML resource_link is promoted to content[2] (adjacent to
+  # the diagnostic) so the caller can see how to recover the body.
+  echo "$resp" | jq -e '.result.content[2].type == "resource_link"'
+  echo "$resp" | jq -e '.result.content[2].uri | endswith("#html")'
 }

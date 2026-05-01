@@ -331,17 +331,33 @@ func runMCP(ctx context.Context, app *command.Utility, p *proxy.BrowserProxy) er
 				blocks := []protocol.ContentBlockV1{tocBlock}
 				switch p0.Format {
 				case "markdown":
-					blocks = append(blocks,
-						protocol.EmbeddedTextResourceContent(markdownURI, string(entry.MarkdownReader), mimeMarkdown),
-						protocol.ResourceLinkContent(textURI, "Plain text", "", mimeText),
-						protocol.ResourceLinkContent(htmlURI, "Raw HTML", "", mimeHTML),
-					)
+					if len(entry.MarkdownReader) == 0 {
+						blocks = append(blocks,
+							protocol.TextContentV1(emptyExtractionDiagnostic(p0.URL, "markdown")),
+							protocol.ResourceLinkContent(htmlURI, "Raw HTML", "", mimeHTML),
+							protocol.ResourceLinkContent(textURI, "Plain text", "", mimeText),
+						)
+					} else {
+						blocks = append(blocks,
+							protocol.EmbeddedTextResourceContent(markdownURI, string(entry.MarkdownReader), mimeMarkdown),
+							protocol.ResourceLinkContent(textURI, "Plain text", "", mimeText),
+							protocol.ResourceLinkContent(htmlURI, "Raw HTML", "", mimeHTML),
+						)
+					}
 				case "text":
-					blocks = append(blocks,
-						protocol.EmbeddedTextResourceContent(textURI, string(entry.Text), mimeText),
-						protocol.ResourceLinkContent(markdownURI, "Reader-mode Markdown", "", mimeMarkdown),
-						protocol.ResourceLinkContent(htmlURI, "Raw HTML", "", mimeHTML),
-					)
+					if len(entry.Text) == 0 {
+						blocks = append(blocks,
+							protocol.TextContentV1(emptyExtractionDiagnostic(p0.URL, "text")),
+							protocol.ResourceLinkContent(htmlURI, "Raw HTML", "", mimeHTML),
+							protocol.ResourceLinkContent(markdownURI, "Reader-mode Markdown", "", mimeMarkdown),
+						)
+					} else {
+						blocks = append(blocks,
+							protocol.EmbeddedTextResourceContent(textURI, string(entry.Text), mimeText),
+							protocol.ResourceLinkContent(markdownURI, "Reader-mode Markdown", "", mimeMarkdown),
+							protocol.ResourceLinkContent(htmlURI, "Raw HTML", "", mimeHTML),
+						)
+					}
 				case "html":
 					blocks = append(blocks,
 						protocol.EmbeddedTextResourceContent(htmlURI, string(entry.HTML), mimeHTML),
@@ -408,6 +424,23 @@ func runMCP(ctx context.Context, app *command.Utility, p *proxy.BrowserProxy) er
 	}
 
 	return srv.Run(ctx)
+}
+
+// emptyExtractionDiagnostic builds the user-facing message we surface
+// when the named format extracted no content from the fetched page.
+// Common cause is a meta-refresh redirect or a page whose body is
+// rendered entirely by JavaScript (SPA shells). The caller still has
+// the raw HTML available via a resource_link in the same response —
+// we promote it to position content[2] so the diagnostic and the
+// fallback are adjacent.
+func emptyExtractionDiagnostic(url, format string) string {
+	return fmt.Sprintf(
+		"No %s content extracted from %s. The page may be a redirect, "+
+			"a single-page app shell, or have no readable body. "+
+			"The raw HTML is available via the resource_link below; "+
+			"call read-resource on web-fetch://%s#html to fetch it.",
+		format, url, url,
+	)
 }
 
 // splitWebFetchURI parses "web-fetch://<url>#<fragment>" into its url and
