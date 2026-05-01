@@ -104,7 +104,12 @@ func (s *Session) AddResponseIntercept(ctx context.Context, protocol, hostname s
 		return "", nil, errors.Wrap(err)
 	}
 
-	out := make(chan InterceptedResponse, 4)
+	// Buffer matches `subBuffer` in bravo/bidi/protocol.go so the
+	// producer can drain the broker as fast as the broker can fill
+	// it. Overflow still falls through to the producer's continue-on-
+	// drop path (chrest#66), but a deeper buffer means we don't pay
+	// that latency on every burst.
+	out := make(chan InterceptedResponse, 64)
 	go func() {
 		defer close(out)
 		for ev := range sub.Events {
