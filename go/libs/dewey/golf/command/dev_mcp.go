@@ -1,6 +1,7 @@
 package command
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -74,25 +75,26 @@ func generateDevMCP(buildDir, projectDir, suffix string) error {
 		break
 	}
 
-	// 1. Write .mcp.json
-	mcpConfig := devMcpConfig{
-		McpServers: map[string]pluginMcpServer{
-			serverKey: {
-				Type:    "stdio",
-				Command: binaryPath,
-				Args:    mcpArgs,
-			},
-		},
-	}
-
-	mcpData, err := json.MarshalIndent(mcpConfig, "", "  ")
+	// 1. Merge our server entry into the project-local .mcp.json.
+	// Read-modify-write rather than overwrite so we don't clobber
+	// other servers the project already registered (e.g. spinclass).
+	mcpPath := filepath.Join(projectDir, ".mcp.json")
+	mcpRaw, err := readUserMCPConfig(mcpPath)
 	if err != nil {
-		return fmt.Errorf("marshaling .mcp.json: %w", err)
+		return err
 	}
-	mcpData = append(mcpData, '\n')
-
-	if err := os.WriteFile(filepath.Join(projectDir, ".mcp.json"), mcpData, 0o644); err != nil {
-		return fmt.Errorf("writing .mcp.json: %w", err)
+	mcpServers, _ := mcpRaw["mcpServers"].(map[string]any)
+	if mcpServers == nil {
+		mcpServers = make(map[string]any)
+	}
+	mcpServers[serverKey] = map[string]any{
+		"type":    "stdio",
+		"command": binaryPath,
+		"args":    mcpArgs,
+	}
+	mcpRaw["mcpServers"] = mcpServers
+	if err := writeUserMCPConfig(mcpPath, mcpRaw); err != nil {
+		return err
 	}
 
 	// 2. Write .purse-first/<name>.json with tool_prefix
@@ -131,9 +133,33 @@ func generateDevMCP(buildDir, projectDir, suffix string) error {
 	return nil
 }
 
-func cleanDevMCP(projectDir string) error {
-	os.Remove(filepath.Join(projectDir, ".mcp.json"))
-	os.RemoveAll(filepath.Join(projectDir, ".purse-first"))
+// cleanDevMCP removes only the dev entry written by generateDevMCP,
+// preserving any other servers the project registered. The mappings
+// file is named per-plugin so it can be deleted unconditionally; the
+// .purse-first/ directory is removed only if it ends up empty.
+func cleanDevMCP(projectDir, serverKey, name string) error {
+	mcpPath := filepath.Join(projectDir, ".mcp.json")
+	if mcpRaw, err := readUserMCPConfig(mcpPath); err == nil {
+		if mcpServers, ok := mcpRaw["mcpServers"].(map[string]any); ok {
+			delete(mcpServers, serverKey)
+			if len(mcpServers) == 0 {
+				delete(mcpRaw, "mcpServers")
+			} else {
+				mcpRaw["mcpServers"] = mcpServers
+			}
+			if len(mcpRaw) == 0 {
+				_ = os.Remove(mcpPath)
+			} else if err := writeUserMCPConfig(mcpPath, mcpRaw); err != nil {
+				return err
+			}
+		}
+	}
+
+	purseDir := filepath.Join(projectDir, ".purse-first")
+	_ = os.Remove(filepath.Join(purseDir, name+".json"))
+	if entries, err := os.ReadDir(purseDir); err == nil && len(entries) == 0 {
+		_ = os.Remove(purseDir)
+	}
 	return nil
 }
 
@@ -147,6 +173,39 @@ func (u *Utility) addDevMCPCommand() {
 		OldParams: []OldParam{
 			{Name: "suffix", Type: String, Description: "Suffix for the MCP server name", Default: "dev"},
 			{Name: "clean", Type: Bool, Description: "Remove generated dev artifacts", Default: false},
+		},
+		RunCLI: func(ctx context.Context, args json.RawMessage) error {
+			projectDir, err := os.Getwd()
+			if err != nil {
+				return fmt.Errorf("resolving project dir: %w", err)
+			}
+
+			var p struct {
+				Suffix string `json:"suffix"`
+				Clean  bool   `json:"clean"`
+			}
+			p.Suffix = "dev"
+			if len(args) > 0 {
+				if err := json.Unmarshal(args, &p); err != nil {
+					return fmt.Errorf("parsing dev-mcp args: %w", err)
+				}
+			}
+
+			if p.Clean {
+				serverKey := u.Name + "-" + p.Suffix
+				return cleanDevMCP(projectDir, serverKey, u.Name)
+			}
+
+			buildDir, err := resolveBuildDir()
+			if err != nil {
+				return err
+			}
+			if err := generateDevMCP(buildDir, projectDir, p.Suffix); err != nil {
+				return err
+			}
+			fmt.Printf("wrote .mcp.json with %s-%s server pointing at %s/bin/\n",
+				u.Name, p.Suffix, buildDir)
+			return nil
 		},
 	})
 }
