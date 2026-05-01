@@ -6,11 +6,11 @@ build-one browser:
 
   root="$(git rev-parse --show-toplevel)"
 
-  nix build --out-link "result-{{browser}}" "$root#extension-{{browser}}"
+  out_path="$(nix build --no-link --print-out-paths "$root#extension-{{browser}}")"
 
   rm -rf "dist-{{browser}}" "dist-{{browser}}.zip"
-  cp -rL "result-{{browser}}/dist-{{browser}}" "./dist-{{browser}}"
-  cp -L "result-{{browser}}/dist-{{browser}}.zip" "./dist-{{browser}}.zip"
+  cp -rL "$out_path/dist-{{browser}}" "./dist-{{browser}}"
+  cp -L "$out_path/dist-{{browser}}.zip" "./dist-{{browser}}.zip"
   chmod -R u+w "dist-{{browser}}" "dist-{{browser}}.zip"
 
 build-chrome: (build-one "chrome")

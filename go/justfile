@@ -36,7 +36,7 @@ build-nix-gomod:
   fi
 
 build-nix: build-nix-gomod
-  nix build
+  nix build --no-link
 
 tests-go:
   go test -v ./...
