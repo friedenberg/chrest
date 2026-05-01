@@ -246,3 +246,57 @@ function web_fetch_many_subresources_overflow_buffer { # @test
   echo "$resp" | jq -e '.result.isError != true'
   echo "$resp" | jq -e '.result.content[] | select(.type == "resource") | .resource.text | contains("OVERFLOW_BODY_MARKER")'
 }
+
+function web_fetch_empty_extraction_resource_keeps_text_field { # @test
+  require_firefox
+
+  # Regression test for chrest#65: when readability/text extraction
+  # returns an empty string (e.g. on a meta-refresh redirect page that
+  # has no <body> content), the EmbeddedTextResourceContent helper
+  # used to build a `resource` block whose `text` field was elided by
+  # `omitempty` during JSON marshaling. The MCP client schema requires
+  # one of `resource.text` or `resource.blob` to be a string; missing
+  # both is a hard validation failure (`invalid_union` at content[1]).
+  #
+  # We reproduce locally with an HTML page whose body contains no
+  # extractable content. format=markdown then yields an empty
+  # entry.MarkdownReader; the resulting resource block must still
+  # serialize a `text` field (empty string is fine) so MCP validation
+  # passes.
+
+  port=$(python3 -c 'import socket;s=socket.socket();s.bind(("127.0.0.1",0));print(s.getsockname()[1]);s.close()')
+
+  cat >"$BATS_TEST_TMPDIR/index.html" <<'EOF'
+<!doctype html>
+<html>
+  <head>
+    <title>empty</title>
+    <meta http-equiv="refresh" content="999; url=elsewhere/">
+  </head>
+  <body></body>
+</html>
+EOF
+
+  (cd "$BATS_TEST_TMPDIR" && timeout 60 python3 -m http.server "$port" </dev/null >/dev/null 2>&1) &
+  srv_pid=$!
+  for _ in $(seq 1 50); do
+    if curl -sf "http://127.0.0.1:$port/index.html" >/dev/null; then break; fi
+    sleep 0.1
+  done
+
+  url="http://127.0.0.1:$port/index.html"
+  call=$(jq -nc --arg url "$url" '{jsonrpc:"2.0",id:2,method:"tools/call",params:{name:"web-fetch",arguments:{url:$url,format:"markdown"}}}')
+  result=$(printf '%s\n' "$INIT_MSG" "$INITIALIZED_MSG" "$call" |
+    timeout 60 "$CHREST_BIN" mcp)
+
+  kill "$srv_pid" 2>/dev/null || true
+  wait "$srv_pid" 2>/dev/null || true
+
+  resp=$(echo "$result" | grep '"id":2')
+  echo "$resp" | jq -e '.result.isError != true'
+  # The embedded resource block must include a `text` field, even
+  # when extraction was empty — this is the actual MCP validation
+  # contract that broke chrest#65.
+  echo "$resp" | jq -e '.result.content[1].type == "resource"'
+  echo "$resp" | jq -e '.result.content[1].resource | has("text")'
+}

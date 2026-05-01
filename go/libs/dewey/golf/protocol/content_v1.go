@@ -28,13 +28,23 @@ type BlobResourceContents struct {
 	MimeType string `json:"mimeType,omitempty"`
 }
 
-// EmbeddedResourceContents is the union of TextResourceContents and BlobResourceContents.
-// Exactly one of Text or Blob should be populated.
+// EmbeddedResourceContents is the union of TextResourceContents and
+// BlobResourceContents. Exactly one of Text or Blob should be populated.
+//
+// Text and Blob are *string rather than string because the MCP spec
+// requires whichever discriminator is set to be present as a string
+// in the JSON, even when empty. Plain `string` + `omitempty` would
+// elide an empty `text` field — making a TextResourceContents look
+// like neither variant — and clients (Zod, etc.) reject the response
+// with `invalid_union`. The pointer distinguishes "set to empty
+// string" (emit `"text": ""`) from "not the active variant" (omit
+// entirely). Always construct via EmbeddedTextResourceContent or
+// EmbeddedBlobResourceContent.
 type EmbeddedResourceContents struct {
-	URI      string `json:"uri"`
-	Text     string `json:"text,omitempty"`
-	Blob     string `json:"blob,omitempty"`
-	MimeType string `json:"mimeType,omitempty"`
+	URI      string  `json:"uri"`
+	Text     *string `json:"text,omitempty"`
+	Blob     *string `json:"blob,omitempty"`
+	MimeType string  `json:"mimeType,omitempty"`
 }
 
 // ContentBlockV1 represents a piece of content with optional annotations.
@@ -91,7 +101,7 @@ func EmbeddedTextResourceContent(uri, text, mimeType string) ContentBlockV1 {
 		Type: "resource",
 		Resource: &EmbeddedResourceContents{
 			URI:      uri,
-			Text:     text,
+			Text:     &text,
 			MimeType: mimeType,
 		},
 	}
@@ -103,7 +113,7 @@ func EmbeddedBlobResourceContent(uri, blob, mimeType string) ContentBlockV1 {
 		Type: "resource",
 		Resource: &EmbeddedResourceContents{
 			URI:      uri,
-			Blob:     blob,
+			Blob:     &blob,
 			MimeType: mimeType,
 		},
 	}
