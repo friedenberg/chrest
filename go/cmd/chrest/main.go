@@ -599,6 +599,13 @@ func fetchViaDispatch(ctx context.Context, urlStr string) (*fetchCacheEntry, err
 
 				switch class {
 				case rawfetch.ClassHTML, rawfetch.ClassText:
+					// Mark nav handled up front so the rest of the
+					// case reads in execution order: classify → release
+					// → notify main → loop on for subresources. We
+					// don't return from this branch — we stay in the
+					// outer for-loop to drain subresources while the
+					// main goroutine waits on Navigate.
+					navHandled = true
 					if err := session.ContinueResponse(ctx, ev.RequestID); err != nil {
 						outcome <- dispatchOutcome{err: err}
 						return
@@ -609,9 +616,6 @@ func fetchViaDispatch(ctx context.Context, urlStr string) (*fetchCacheEntry, err
 							Path:      classPathLabel(class),
 						},
 					}
-					navHandled = true
-					// Stay in the loop so subresources can be drained
-					// while the main goroutine waits on Navigate.
 				case rawfetch.ClassBinary:
 					_ = session.FailRequest(ctx, ev.RequestID)
 					outcome <- dispatchOutcome{

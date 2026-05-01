@@ -203,8 +203,6 @@ func (s *Session) Navigate(ctx context.Context, url string) error {
 	s.drainNetworkEvents()
 	s.lastHTTP = nil
 
-	navStart := navTimestampMs()
-
 	_, err := s.conn.Send("browsingContext.navigate", map[string]any{
 		"context": s.contextID,
 		"url":     url,
@@ -220,7 +218,7 @@ func (s *Session) Navigate(ctx context.Context, url string) error {
 	// last event for this context with a navigation id — that's the
 	// final hop if the response chain had redirects.
 	if s.networkSub != nil {
-		s.lastHTTP = s.pickLastNavigationHTTP(navStart)
+		s.lastHTTP = s.pickLastNavigationHTTP()
 	}
 	return nil
 }
@@ -245,7 +243,7 @@ func (s *Session) drainNetworkEvents() {
 // belonging to this session's browsing context. Returns nil if no
 // matching event was seen, including when the subscription channel
 // closes (BiDi connection died) before any event arrived.
-func (s *Session) pickLastNavigationHTTP(navStart int64) *HTTPResponse {
+func (s *Session) pickLastNavigationHTTP() *HTTPResponse {
 	var picked *responseCompletedEvent
 	for {
 		select {
@@ -292,15 +290,6 @@ func responseCompletedToHTTP(picked *responseCompletedEvent) *HTTPResponse {
 		Headers:  headers,
 		TimingMs: timing,
 	}
-}
-
-// navTimestampMs is a monotonic wall-clock ms stamp used only to
-// disambiguate "events before this navigate" vs "events after" if
-// the drain-first-then-call sequencing ever becomes unreliable.
-// Currently unused by the filter logic but kept on hand as a hook for
-// a future refinement once we see how BiDi timings actually line up.
-func navTimestampMs() int64 {
-	return 0
 }
 
 // LastNavigationHTTP returns the response captured during the most
