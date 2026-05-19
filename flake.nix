@@ -19,7 +19,6 @@
       url = "github:amarbel-llc/tommy";
       inputs.nixpkgs-master.follows = "nixpkgs-master";
       inputs.utils.follows = "utils";
-      inputs.bob.follows = "bob";
     };
   };
 
@@ -179,7 +178,6 @@
               nodejs_latest
               poppler-utils
               unixtools.xxd
-              vhs
               zip
             ]
           ) ++ [
@@ -198,7 +196,7 @@
               gotools
               govulncheck
               httpie
-              nodePackages.bash-language-server
+              bash-language-server
               parallel
               shellcheck
               shfmt
