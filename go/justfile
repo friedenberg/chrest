@@ -1,42 +1,11 @@
 
-dir_build := absolute_path("build")
 files_go := "src/ cmd/"
 
-default: build
+default: tests-go
 
-build: build-nix-gomod build-go
-
-build-go-binary tags output:
-  mkdir -p '{{output}}'
-  go build -tags '{{tags}}' -o '{{output}}' ./cmd/*
-
-build-go-generate:
-  go generate ./src/alfa/...
-  go generate ./src/bravo/...
-  go generate ./src/charlie/...
-  go generate ./src/delta/...
-
-build-go: build-go-generate \
-    (build-go-binary "debug" "build/debug") \
-    (build-go-binary "" "build/release")
-
-build-nix-gomod:
-  #!/usr/bin/env bash
-  set -euo pipefail
-  gomod2nix
-  # Fail loud if gomod2nix regenerated the manifest, rather than let a
-  # downstream hook (e.g. sc merge's pre-merge check) report success
-  # and then silently drop the regenerated file from the committed
-  # tree. Happened once with the pdfcpu add; the fix was a trailing
-  # commit to stage the regenerated file.
-  if ! git diff --quiet -- gomod2nix.toml; then
-    echo "gomod2nix.toml is dirty after regeneration — stage and commit it, then re-run." >&2
-    git --no-pager diff --stat -- gomod2nix.toml >&2
-    exit 1
-  fi
-
-build-nix: build-nix-gomod
-  nix build --no-link
+# Builds (`nix build`, `just build-go`) and the gomod2nix-regeneration
+# maintenance step live in the top-level justfile so they are
+# discoverable without a `cd go`. See ../justfile.
 
 tests-go:
   go test -v ./...

@@ -16,11 +16,15 @@ justfile — prefer adding recipes there over writing one-off shell scripts.
 
 ### Full Build
 ```bash
-just build              # builds both go and extension
-just reload             # builds and reinstalls extension
-just test               # runs test-go + test-mcp + test-mcp-bats
+just build              # nix build (chrest derivation: builds three binaries + runs unit tests in checkPhase)
+just                    # default: build check-nix test (the spinclass pre-merge surface)
+just reload             # nix-builds chrest, reinstalls native-messaging manifest, reloads extension
+just test               # test-mcp + test-mcp-bats (unit tests already ran in checkPhase)
 just test-mcp           # validates MCP tools, resources, and annotations
 just test-mcp-bats      # BATS integration suite against a real unix socket
+just build-go           # devshell-only rapid iteration: cd go && go build -o build/release/ ./cmd/...
+just test-go [flags]    # devshell-only rapid iteration: cd go && go test {{flags}} ./...
+just gomod2nix          # manual maint: regenerate gomod2nix.toml after a go.mod change
 just dev-install-mcp    # build + install MCP server to ~/.claude.json
 just demo               # generate VHS demo GIF
 ```
@@ -32,24 +36,33 @@ parsing TAP output — bats has been observed to hang on shutdown in bwrap
 `sweatfile` wires `pre-merge = "just"` — spinclass merge runs the full suite
 before merging a worktree branch back to master.
 
+The chrest derivation (`flake.nix`) builds three binaries — `chrest` (main
+CLI + native messaging host + MCP server), `chrest-server`, and `chrest-jcs`
+(standalone JCS canonicalizer for cross-implementation byte-stability
+fixtures) — and runs the Go unit suite in `checkPhase` (with `HOME=$TMPDIR`
+so pdfcpu's config-dir creation succeeds in the sandbox; no `-tags test` —
+the single test file behind that tag references a `ui.T` type that was
+never vendored across from dewey upstream and does not compile). A clean
+`nix build` therefore proves both compile and unit tests in one step.
+
+Adding a Go dependency: from inside the nix devshell, `just go/add-dep
+<pkg>` (or hand-edit `go/go.mod` + `go mod tidy`), then `just gomod2nix`
+to regenerate `go/gomod2nix.toml`. Stage `go.mod`, `go.sum`, and
+`gomod2nix.toml` together. `nix build` is the drift signal — it fails
+loudly if the manifest is out of sync — so there is no longer a justfile-
+level drift-guard recipe.
+
 ### Go (from `go/` directory)
 ```bash
-just build              # builds debug and release binaries to build/ for every cmd/*
-just build-nix          # builds via nix
 just tests-go           # run tests: go test -v ./...
 just check              # run govulncheck and go vet
 just codemod-go-fmt     # format with goimports and gofumpt
 just update-go          # update dependencies
-just add-dep <pkg>      # go get <pkg> + go mod tidy (keeps gomod2nix in sync)
+just add-dep <pkg>      # go get <pkg> + go mod tidy
 ```
 
-`go/build` builds three binaries: `chrest` (the main CLI + native messaging
-host + MCP server), `chrest-jcs` (standalone JCS canonicalizer, used for
-cross-implementation byte-stability fixtures), and `chrest-server`.
-
-`build-nix-gomod` fails loudly if `gomod2nix.toml` drifts during regeneration
-— a silent regen-then-lose loop caused a broken nix build during the pdfcpu
-add. Always stage the regenerated toml.
+Builds (`nix build`, `just build-go`) and `gomod2nix` maintenance live in
+the top-level justfile so they are discoverable without `cd go`.
 
 ### Extension (from `extension/` directory)
 ```bash

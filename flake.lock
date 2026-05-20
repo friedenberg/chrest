@@ -3,22 +3,21 @@
     "bats": {
       "inputs": {
         "nixpkgs": [
-          "bob",
           "nixpkgs"
         ],
-        "nixpkgs-master": "nixpkgs-master",
-        "tap": [
-          "bob",
-          "tap"
+        "nixpkgs-master": [
+          "nixpkgs-master"
         ],
-        "utils": "utils"
+        "utils": [
+          "utils"
+        ]
       },
       "locked": {
-        "lastModified": 1779022474,
-        "narHash": "sha256-+Rjls+05i2v/GDnqQ2qnzrJTfi7k6wrQyO7m0wUsPyw=",
+        "lastModified": 1779023746,
+        "narHash": "sha256-/nKo2NgJ3IZsmoGz+mO9kWIP/4kJOmVHOBEjfc+cdkA=",
         "owner": "amarbel-llc",
         "repo": "bats",
-        "rev": "78baf94fa36fddfda2514bd636aeca882c2c95d0",
+        "rev": "4cf0a411f2930b8faab8d42005706ea60ba264e6",
         "type": "github"
       },
       "original": {
@@ -28,6 +27,54 @@
       }
     },
     "bats_10": {
+      "inputs": {
+        "nixpkgs": [
+          "tommy",
+          "bats",
+          "tap",
+          "bats",
+          "tap",
+          "bats",
+          "tap",
+          "nixpkgs"
+        ],
+        "nixpkgs-master": [
+          "tommy",
+          "bats",
+          "tap",
+          "bats",
+          "tap",
+          "bats",
+          "tap",
+          "nixpkgs-master"
+        ],
+        "tap": "tap_9",
+        "utils": [
+          "tommy",
+          "bats",
+          "tap",
+          "bats",
+          "tap",
+          "bats",
+          "tap",
+          "utils"
+        ]
+      },
+      "locked": {
+        "lastModified": 1777821181,
+        "narHash": "sha256-ITg34IBiPnzBuYGEPy/CcZy77EgCL10SVrY+HZymcKA=",
+        "owner": "amarbel-llc",
+        "repo": "bats",
+        "rev": "7df322178c70d5430eb4859d66f50494fca579ca",
+        "type": "github"
+      },
+      "original": {
+        "owner": "amarbel-llc",
+        "repo": "bats",
+        "type": "github"
+      }
+    },
+    "bats_11": {
       "inputs": {
         "nixpkgs": [
           "tommy",
@@ -60,7 +107,7 @@
         "type": "github"
       }
     },
-    "bats_11": {
+    "bats_12": {
       "inputs": {
         "nixpkgs": [
           "tommy",
@@ -99,7 +146,7 @@
         "type": "github"
       }
     },
-    "bats_12": {
+    "bats_13": {
       "inputs": {
         "nixpkgs": [
           "tommy",
@@ -144,7 +191,7 @@
         "type": "github"
       }
     },
-    "bats_13": {
+    "bats_14": {
       "inputs": {
         "nixpkgs": [
           "tommy",
@@ -199,6 +246,33 @@
       "inputs": {
         "nixpkgs": [
           "bob",
+          "nixpkgs"
+        ],
+        "nixpkgs-master": "nixpkgs-master",
+        "tap": [
+          "bob",
+          "tap"
+        ],
+        "utils": "utils"
+      },
+      "locked": {
+        "lastModified": 1779022474,
+        "narHash": "sha256-+Rjls+05i2v/GDnqQ2qnzrJTfi7k6wrQyO7m0wUsPyw=",
+        "owner": "amarbel-llc",
+        "repo": "bats",
+        "rev": "78baf94fa36fddfda2514bd636aeca882c2c95d0",
+        "type": "github"
+      },
+      "original": {
+        "owner": "amarbel-llc",
+        "repo": "bats",
+        "type": "github"
+      }
+    },
+    "bats_3": {
+      "inputs": {
+        "nixpkgs": [
+          "bob",
           "tap",
           "nixpkgs"
         ],
@@ -228,7 +302,7 @@
         "type": "github"
       }
     },
-    "bats_3": {
+    "bats_4": {
       "inputs": {
         "nixpkgs": [
           "bob",
@@ -267,7 +341,7 @@
         "type": "github"
       }
     },
-    "bats_4": {
+    "bats_5": {
       "inputs": {
         "nixpkgs": [
           "bob",
@@ -312,7 +386,7 @@
         "type": "github"
       }
     },
-    "bats_5": {
+    "bats_6": {
       "inputs": {
         "nixpkgs": [
           "bob",
@@ -363,7 +437,7 @@
         "type": "github"
       }
     },
-    "bats_6": {
+    "bats_7": {
       "inputs": {
         "nixpkgs": [
           "tommy",
@@ -393,7 +467,7 @@
         "type": "github"
       }
     },
-    "bats_7": {
+    "bats_8": {
       "inputs": {
         "nixpkgs": [
           "tommy",
@@ -429,7 +503,7 @@
         "type": "github"
       }
     },
-    "bats_8": {
+    "bats_9": {
       "inputs": {
         "nixpkgs": [
           "tommy",
@@ -471,57 +545,9 @@
         "type": "github"
       }
     },
-    "bats_9": {
-      "inputs": {
-        "nixpkgs": [
-          "tommy",
-          "bats",
-          "tap",
-          "bats",
-          "tap",
-          "bats",
-          "tap",
-          "nixpkgs"
-        ],
-        "nixpkgs-master": [
-          "tommy",
-          "bats",
-          "tap",
-          "bats",
-          "tap",
-          "bats",
-          "tap",
-          "nixpkgs-master"
-        ],
-        "tap": "tap_9",
-        "utils": [
-          "tommy",
-          "bats",
-          "tap",
-          "bats",
-          "tap",
-          "bats",
-          "tap",
-          "utils"
-        ]
-      },
-      "locked": {
-        "lastModified": 1777821181,
-        "narHash": "sha256-ITg34IBiPnzBuYGEPy/CcZy77EgCL10SVrY+HZymcKA=",
-        "owner": "amarbel-llc",
-        "repo": "bats",
-        "rev": "7df322178c70d5430eb4859d66f50494fca579ca",
-        "type": "github"
-      },
-      "original": {
-        "owner": "amarbel-llc",
-        "repo": "bats",
-        "type": "github"
-      }
-    },
     "bob": {
       "inputs": {
-        "bats": "bats",
+        "bats": "bats_2",
         "gomod2nix": "gomod2nix",
         "nixpkgs": "nixpkgs",
         "nixpkgs-master": [
@@ -1900,6 +1926,7 @@
     },
     "root": {
       "inputs": {
+        "bats": "bats",
         "bob": "bob",
         "bun2nix": "bun2nix",
         "nixpkgs": "nixpkgs_3",
@@ -2797,7 +2824,7 @@
     },
     "tap": {
       "inputs": {
-        "bats": "bats_2",
+        "bats": "bats_3",
         "crane": "crane_6",
         "gomod2nix": "gomod2nix_7",
         "nixpkgs": [
@@ -2824,7 +2851,7 @@
     },
     "tap_10": {
       "inputs": {
-        "bats": "bats_10",
+        "bats": "bats_11",
         "crane": "crane_15",
         "gomod2nix": "gomod2nix_16",
         "nixpkgs": [
@@ -2857,7 +2884,7 @@
     },
     "tap_11": {
       "inputs": {
-        "bats": "bats_11",
+        "bats": "bats_12",
         "crane": "crane_14",
         "gomod2nix": "gomod2nix_15",
         "nixpkgs": [
@@ -2886,7 +2913,7 @@
     },
     "tap_12": {
       "inputs": {
-        "bats": "bats_12",
+        "bats": "bats_13",
         "crane": "crane_13",
         "gomod2nix": "gomod2nix_14",
         "nixpkgs": [
@@ -2917,7 +2944,7 @@
     },
     "tap_13": {
       "inputs": {
-        "bats": "bats_13",
+        "bats": "bats_14",
         "crane": "crane_12",
         "gomod2nix": "gomod2nix_13",
         "nixpkgs": [
@@ -2984,7 +3011,7 @@
     },
     "tap_2": {
       "inputs": {
-        "bats": "bats_3",
+        "bats": "bats_4",
         "crane": "crane_5",
         "gomod2nix": "gomod2nix_6",
         "nixpkgs": [
@@ -3013,7 +3040,7 @@
     },
     "tap_3": {
       "inputs": {
-        "bats": "bats_4",
+        "bats": "bats_5",
         "crane": "crane_4",
         "gomod2nix": "gomod2nix_5",
         "nixpkgs": [
@@ -3044,7 +3071,7 @@
     },
     "tap_4": {
       "inputs": {
-        "bats": "bats_5",
+        "bats": "bats_6",
         "crane": "crane_3",
         "gomod2nix": "gomod2nix_4",
         "nixpkgs": [
@@ -3111,7 +3138,7 @@
     },
     "tap_6": {
       "inputs": {
-        "bats": "bats_7",
+        "bats": "bats_8",
         "crane": "crane_10",
         "gomod2nix": "gomod2nix_11",
         "nixpkgs": [
@@ -3139,7 +3166,7 @@
     },
     "tap_7": {
       "inputs": {
-        "bats": "bats_8",
+        "bats": "bats_9",
         "crane": "crane_9",
         "gomod2nix": "gomod2nix_10",
         "nixpkgs": [
@@ -3169,7 +3196,7 @@
     },
     "tap_8": {
       "inputs": {
-        "bats": "bats_9",
+        "bats": "bats_10",
         "crane": "crane_8",
         "gomod2nix": "gomod2nix_9",
         "nixpkgs": [
@@ -3234,7 +3261,7 @@
     },
     "tommy": {
       "inputs": {
-        "bats": "bats_6",
+        "bats": "bats_7",
         "nixpkgs": "nixpkgs_5",
         "nixpkgs-master": [
           "nixpkgs-master"

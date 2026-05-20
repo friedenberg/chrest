@@ -1,10 +1,22 @@
 
-default: build build-nix check-nix test
+default: build check-nix test
 
-build: build-go build-extension
-
-build-nix:
+# `nix build` runs the chrest derivation, which builds chrest +
+# chrest-server + chrest-jcs and runs the Go unit suite in checkPhase.
+# A clean `just build` therefore proves both compile and unit tests.
+build:
   nix build --no-link
+
+# Devshell rapid-iteration: builds all three binaries into
+# go/build/release/ so the explore-* recipes (which reference
+# go/build/release/chrest by path) keep working. Skips checkPhase and
+# the firefox/monolith wrap. Mirrors madder's `build-go`.
+[group("dev")]
+build-go:
+  cd go && go build -o build/release/ ./cmd/...
+
+build-extension:
+  just extension/build
 
 # Evaluate flake outputs for every supported system. Catches malformed
 # fixed-output hashes on non-host platforms before they surface in
@@ -12,20 +24,37 @@ build-nix:
 check-nix:
   nix flake check --no-build
 
-reload: build
-  go/build/release/chrest install jbcogiaaaaikinoljmplilmcnicpfoek
+# Reinstalls the native-messaging-host manifest pointing at the
+# nix-built (firefox-wrapped) chrest, then reloads the running
+# extension. Uses the nix output rather than go/build/release/ so the
+# manifest points at a binary with firefox + monolith on PATH.
+reload:
+  #!/usr/bin/env bash
+  set -euo pipefail
+  out=$(nix build --no-link --print-out-paths)
+  "$out/bin/chrest" install jbcogiaaaaikinoljmplilmcnicpfoek
   chrest reload-extension
 
-build-go:
-  just go/build
+# Bats + MCP-inspector integration on top of the nix-built chrest.
+# Unit tests already ran inside the nix sandbox during `build`'s
+# checkPhase, so this layer only adds integration coverage. Matches
+# madder, where `nix build` covers unit tests and `just test` runs
+# the integration lanes.
+test: test-mcp test-mcp-bats
 
-build-extension:
-  just extension/build
+# Devshell rapid-iteration. Mirrors madder's `test-go *flags`.
+[group("dev")]
+test-go *flags:
+  cd go && go test {{flags}} ./...
 
-test: test-go test-mcp test-mcp-bats
-
-test-go:
-  just go/tests-go
+# Regenerate gomod2nix.toml from go.mod / go.sum. Run after
+# `just go/add-dep <pkg>` (or any manual go.mod edit); stage the
+# updated gomod2nix.toml alongside go.mod and go.sum. `nix build`
+# will fail loudly if the manifest is out of sync — that's the
+# drift signal now, not a justfile drift-guard.
+[group("maint")]
+gomod2nix:
+  cd go && gomod2nix
 
 mcp-inspect := "npx @modelcontextprotocol/inspector --cli"
 
@@ -62,13 +91,18 @@ test-mcp-bats:
   # We validate the TAP output ourselves: if the plan line `1..N` is
   # present and every line 1..N is `ok`, the suite succeeded regardless
   # of whether bats itself exited cleanly.
+  #
+  # Uses amarbel-llc/bats's fork via the devshell. The fork dropped
+  # `--bin-dir`; tests find the chrest binary via CHREST_BIN env var
+  # (see zz-tests_bats/lib/common.bash).
   set -e
   out_path=$(nix build --no-link --print-out-paths)
   set +e
   out=$(mktemp)
   trap 'rm -f "$out"' EXIT
   timeout --preserve-status 180 \
-    bats --bin-dir "$out_path/bin/" --no-sandbox zz-tests_bats/ \
+    env CHREST_BIN="$out_path/bin/chrest" \
+    bats zz-tests_bats/ \
     > >(tee "$out") 2>&1
   bats_rc=$?
   expected=$(grep -m1 -E '^1\.\.[0-9]+$' "$out" | sed 's/^1\.\.//')

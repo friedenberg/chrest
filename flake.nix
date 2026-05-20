@@ -20,6 +20,17 @@
       inputs.nixpkgs-master.follows = "nixpkgs-master";
       inputs.utils.follows = "utils";
     };
+
+    # amarbel-llc/bats provides the `batman` bundle (wrapped bats + the
+    # bats-* helper libs `common.bash` calls via `bats_load_library`).
+    # The fork's bats does NOT accept `--bin-dir`; tests find binaries
+    # by env var (`CHREST_BIN`, etc.) instead.
+    bats = {
+      url = "github:amarbel-llc/bats";
+      inputs.nixpkgs.follows = "nixpkgs";
+      inputs.nixpkgs-master.follows = "nixpkgs-master";
+      inputs.utils.follows = "utils";
+    };
   };
 
   outputs =
@@ -31,6 +42,7 @@
       bun2nix,
       bob,
       tommy,
+      bats,
     }:
     let
       # Burnt into the binary via the fork's auto-injected -ldflags
@@ -89,11 +101,29 @@
           subPackages = [
             "cmd/chrest"
             "cmd/chrest-server"
+            "cmd/chrest-jcs"
           ];
           modules = ./go/gomod2nix.toml;
           go = pkgs.go_1_26;
           GOTOOLCHAIN = "local";
           nativeBuildInputs = [ pkgs.makeWrapper ];
+          checkPhase = ''
+            runHook preCheck
+            # pdfcpu writes config to $HOME on first call; the nix
+            # sandbox's default $HOME (/homeless-shelter) is read-only,
+            # so capturebatch's PDF normalization tests fail without
+            # this. $TMPDIR is the per-build writable scratch dir.
+            export HOME=$TMPDIR
+            # No -tags test: the only //go:build test file
+            # (charlie/browser_items/item_test.go) references a
+            # ui.T type that was never vendored across from dewey
+            # upstream, so it does not compile under -tags test. The
+            # file is marked "// TODO fix this test" and is silently
+            # skipped by `just test-go` today (no tag passed). Matches
+            # current behavior.
+            go test -p $NIX_BUILD_CORES ./...
+            runHook postCheck
+          '';
           postInstall = ''
             $out/bin/chrest generate-plugin $out
             cat > $out/share/purse-first/chrest/clown.json <<'JSON'
@@ -183,10 +213,15 @@
           ) ++ [
             firefox
             pkgs.monolith
+            # amarbel-llc/bats: wrapped bats + bats-* libs +
+            # batman orchestrator. Replaces pkgs-master.bats (upstream),
+            # which the test-mcp-bats recipe required (the fork's
+            # bats dropped --bin-dir; chrest now sets CHREST_BIN env
+            # var instead). BATS_LIB_PATH is set in shellHook below.
+            bats.packages.${system}.default
           ] ++ (
             with pkgs-master;
             [
-              bats
               delve
               go_1_26
               gofumpt
@@ -209,9 +244,9 @@
           # Passthru: use the outer-shell git (user's nix profile, NixOS
           # system path, or distro). Respects the user's gitconfig,
           # signing keys, and hooks, and keeps `git` behavior identical
-          # inside and outside the devshell. Without this,
-          # `just go/build-nix-gomod`'s drift guard fails with
-          # `git: command not found` under `nix develop --command`.
+          # inside and outside the devshell. Without this, any recipe
+          # that shells out to `git` under `nix develop --command` fails
+          # with `git: command not found`.
           #
           # Only prepends the single directory the located git lives in
           # — avoids polluting PATH with /usr/bin wholesale.
@@ -229,6 +264,10 @@
                 fi
               done
             fi
+            # bats_load_library bats-assert (etc.) in common.bash
+            # needs BATS_LIB_PATH to point at the amarbel-llc/bats
+            # bats-libs path.
+            export BATS_LIB_PATH="${bats.packages.${system}.bats-libs.batsLibPath}''${BATS_LIB_PATH:+:}''${BATS_LIB_PATH:-}"
           '';
         };
       }
