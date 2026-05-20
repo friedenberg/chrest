@@ -1,5 +1,7 @@
 #!/usr/bin/env bats
 
+# bats file_tags=firefox
+
 # End-to-end coverage for the web-fetch content-type-aware dispatcher.
 # Pins the contract of the CHREST_WEB_FETCH_DISPATCH=bidi-intercept path
 # (default) against real upstream URLs:

@@ -84,13 +84,24 @@ test-mcp:
 
 test-mcp-bats:
   #!/usr/bin/env bash
-  # Wrap bats in a hard wall-clock timeout because bats has been observed
-  # to hang on post-test shutdown in bwrap --unshare-pid sandboxes after
-  # several Firefox captures, even though every individual test passes.
-  # Root cause is still open; this guard keeps `just test` finite.
-  # We validate the TAP output ourselves: if the plan line `1..N` is
-  # present and every line 1..N is `ok`, the suite succeeded regardless
-  # of whether bats itself exited cleanly.
+  # Two bats lanes against the same nix-built chrest:
+  #
+  # 1. Fence lane: --filter-tags '!firefox'. Runs the pure-MCP tests
+  #    under fence (network denied, /tmp-only writes, credential dirs
+  #    blocked) for free baseline isolation.
+  # 2. Firefox lane: --no-sandbox --filter-tags 'firefox'. Runs the
+  #    capture / web-fetch tests that launch headless Firefox.
+  #    Firefox's content-process sandbox wants to write its own
+  #    /proc/self/uid_map, which fails inside fence's userns
+  #    (EACCES → ECONNRESET → per-test timeout). --no-sandbox
+  #    bypasses fence so the inner Firefox sandbox can do its work.
+  #    The chrest tests do their own per-test profile-dir isolation.
+  #
+  # Each lane runs under a wall-clock timeout (bats has been observed
+  # to hang on post-test shutdown after several Firefox captures in
+  # bwrap --unshare-pid; root cause open). We validate the TAP output
+  # ourselves: if the plan line `1..N` is present and every line is
+  # `ok`, the suite succeeded regardless of bats's own exit code.
   #
   # Uses amarbel-llc/bats's fork via the devshell. The fork dropped
   # `--bin-dir`; tests find the chrest binary via CHREST_BIN env var
@@ -98,26 +109,37 @@ test-mcp-bats:
   set -e
   out_path=$(nix build --no-link --print-out-paths)
   set +e
-  out=$(mktemp)
-  trap 'rm -f "$out"' EXIT
-  timeout --preserve-status 180 \
-    env CHREST_BIN="$out_path/bin/chrest" \
-    bats zz-tests_bats/ \
-    > >(tee "$out") 2>&1
-  bats_rc=$?
-  expected=$(grep -m1 -E '^1\.\.[0-9]+$' "$out" | sed 's/^1\.\.//')
-  passing=$(grep -cE '^ok [0-9]+ ' "$out")
-  failing=$(grep -cE '^not ok [0-9]+ ' "$out")
-  if [ -z "$expected" ]; then
-    echo "FAIL: no TAP plan line (bats exit $bats_rc)"; exit 1
-  fi
-  if [ "$failing" -gt 0 ]; then
-    echo "FAIL: $failing test(s) failed"; exit 1
-  fi
-  if [ "$passing" -ne "$expected" ]; then
-    echo "FAIL: expected $expected, saw $passing ok (bats exit $bats_rc)"; exit 1
-  fi
-  echo "PASS: $expected tests ok (bats exit $bats_rc)"
+
+  run_lane() {
+    local label=$1; shift
+    local logfile
+    logfile=$(mktemp)
+    timeout --preserve-status 180 \
+      env CHREST_BIN="$out_path/bin/chrest" \
+      "$@" > >(tee "$logfile") 2>&1
+    local rc=$?
+    local expected passing failing
+    expected=$(grep -m1 -E '^1\.\.[0-9]+$' "$logfile" | sed 's/^1\.\.//')
+    passing=$(grep -cE '^ok [0-9]+ ' "$logfile")
+    failing=$(grep -cE '^not ok [0-9]+ ' "$logfile")
+    rm -f "$logfile"
+    if [ -z "$expected" ]; then
+      echo "FAIL [$label]: no TAP plan line (bats exit $rc)"; return 1
+    fi
+    if [ "$failing" -gt 0 ]; then
+      echo "FAIL [$label]: $failing test(s) failed"; return 1
+    fi
+    if [ "$passing" -ne "$expected" ]; then
+      echo "FAIL [$label]: expected $expected, saw $passing ok (bats exit $rc)"; return 1
+    fi
+    echo "PASS [$label]: $expected tests ok (bats exit $rc)"
+    return 0
+  }
+
+  rc=0
+  run_lane fence bats --filter-tags '!firefox' zz-tests_bats/ || rc=1
+  run_lane firefox bats --no-sandbox --filter-tags 'firefox' zz-tests_bats/ || rc=1
+  exit $rc
 
 dev-install-mcp:
   #!/usr/bin/env bash

@@ -61,6 +61,7 @@ function web_fetch_rejects_missing_url { # @test
   echo "$result" | grep '"id":2' | jq -e '.result.isError == true'
 }
 
+# bats test_tags=firefox
 function web_fetch_defaults_to_markdown_with_resource_links { # @test
   firefox="$(command -v firefox || command -v firefox-esr || true)"
   if [ -z "$firefox" ]; then
@@ -93,6 +94,7 @@ FIXTURE
   echo "$resp" | jq -e '[.result.content[] | select(.type == "resource_link")] | length == 2'
 }
 
+# bats test_tags=firefox
 function web_fetch_format_text_returns_text_inline { # @test
   firefox="$(command -v firefox || command -v firefox-esr || true)"
   if [ -z "$firefox" ]; then
@@ -125,6 +127,7 @@ FIXTURE
   echo "$resp" | jq -e '[.result.content[] | select(.type == "resource_link")] | length == 2'
 }
 
+# bats test_tags=firefox
 function web_fetch_toc_lists_anchors { # @test
   firefox="$(command -v firefox || command -v firefox-esr || true)"
   if [ -z "$firefox" ]; then
@@ -159,6 +162,7 @@ FIXTURE
   echo "$resp" | jq -e '.result.content[0].text | contains("#details")'
 }
 
+# bats test_tags=firefox
 function web_fetch_selector_hit_trims_body { # @test
   firefox="$(command -v firefox || command -v firefox-esr || true)"
   if [ -z "$firefox" ]; then
@@ -201,6 +205,7 @@ FIXTURE
   echo "$resp" | jq -e '.result.content[1].resource.text | contains("Details body text.") | not'
 }
 
+# bats test_tags=firefox
 function web_fetch_selector_miss_returns_diagnostic { # @test
   firefox="$(command -v firefox || command -v firefox-esr || true)"
   if [ -z "$firefox" ]; then
@@ -240,6 +245,7 @@ FIXTURE
   echo "$resp" | jq -e '[.result.content[] | select(.type == "resource_link")] | length == 3'
 }
 
+# bats test_tags=firefox
 function web_fetch_selector_rejected_with_non_markdown_format { # @test
   firefox="$(command -v firefox || command -v firefox-esr || true)"
   if [ -z "$firefox" ]; then
@@ -269,6 +275,7 @@ FIXTURE
   echo "$resp" | jq -e '.result.content[0].text | contains("selector is only supported with format=markdown")'
 }
 
+# bats test_tags=firefox
 function web_fetch_refresh_param_accepted { # @test
   # full cache-vs-refresh behavior requires a single-session driver; this just
   # validates the refresh param is accepted and produces a valid envelope.

@@ -1,7 +1,10 @@
 #!/usr/bin/env bats
 
+# bats file_tags=firefox
+
 # Integration tests for `chrest capture-batch` (RFC 0001 — Web Capture
-# Archive Protocol, capturer role).
+# Archive Protocol, capturer role). Every test launches headless
+# Firefox; the `firefox` tag steers them into the --no-sandbox lane.
 
 setup() {
   load "$(dirname "$BATS_TEST_FILE")/common.bash"

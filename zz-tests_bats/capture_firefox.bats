@@ -1,7 +1,10 @@
 #!/usr/bin/env bats
 
+# bats file_tags=firefox
+
 # Integration tests for Firefox headless capture via WebDriver BiDi.
 # Requires firefox on PATH. Uses local fixture files only (no network).
+# The `firefox` tag steers the file into the --no-sandbox lane.
 
 setup() {
   load "$(dirname "$BATS_TEST_FILE")/common.bash"
